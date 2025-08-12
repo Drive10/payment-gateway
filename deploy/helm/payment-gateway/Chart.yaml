@@ -1,0 +1,4 @@
+apiVersion: v2
+name: payment-gateway
+version: 0.1.0
+type: application

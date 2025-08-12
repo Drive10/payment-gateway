@@ -1,0 +1,22 @@
+server: { port: 8081 }
+spring:
+  application: { name: payment-service }
+  datasource:
+    url: ${JDBC_URL:jdbc:postgresql://localhost:5432/payments}
+    username: ${JDBC_USERNAME:postgres}
+    password: ${JDBC_PASSWORD:postgres}
+  sql: { init: { mode: always } }
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties: { spring.json.add.type.headers: false }
+  data:
+    redis: { host: ${REDIS_HOST:localhost}, port: ${REDIS_PORT:6379} }
+  security:
+    oauth2:
+      resourceserver:
+        jwt: { issuer-uri: ${OAUTH_ISSUER_URI:http://localhost:8080/realms/demo} }
+management:
+  endpoints: { web: { exposure: { include: health,info,prometheus } } }
+  metrics: { tags: { application: ${spring.application.name} } }
+  tracing: { sampling: { probability: 1.0 } }
+tracing: { otlp: { endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4317} } }

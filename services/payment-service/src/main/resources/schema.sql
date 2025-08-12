@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS payments (
+  id VARCHAR(64) PRIMARY KEY,
+  order_id VARCHAR(64) NOT NULL,
+  customer_id VARCHAR(64) NOT NULL,
+  currency VARCHAR(8) NOT NULL,
+  amount NUMERIC(19,4) NOT NULL,
+  status VARCHAR(32) NOT NULL
+);

@@ -1,0 +1,7 @@
+global:
+  image:
+    repository: ghcr.io/your/repo
+    tag: latest
+services:
+  payment-service:
+    replicas: 2

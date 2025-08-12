@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: payment-service }
+spec:
+  replicas: {{ .Values.services.payment-service.replicas }}
+  selector: { matchLabels: { app: payment-service } }
+  template:
+    metadata: { labels: { app: payment-service } }
+    spec:
+      containers:
+        - name: svc
+          image: "{{ .Values.global.image.repository }}/payment-service:{{ .Values.global.image.tag }}"
+          ports: [{ containerPort: 8081 }]
+          env:
+            - name: JDBC_URL
+              valueFrom: { secretKeyRef: { name: pg-conn, key: url } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: payment-service }
+spec:
+  selector: { app: payment-service }
+  ports: [{ port: 80, targetPort: 8081 }]
