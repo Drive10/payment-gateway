@@ -1,34 +1,41 @@
 package com.example.txn.api;
 
-import com.example.txn.service.TxnStore;
-import lombok.RequiredArgsConstructor;
+import com.example.txn.model.Transaction;
+import com.example.txn.service.TxnService;
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
-@RequiredArgsConstructor
 public class TxnApi {
-  private final TxnStore store;
+  private final TxnService service;
 
+  public TxnApi(TxnService service) { this.service = service; }
+
+  // called by orchestration to create a PENDING txn
   @PostMapping("/internal/payments/{id}")
-  public ResponseEntity<Void> create(@PathVariable UUID id){
-    store.create(id);
+  public ResponseEntity<Void> create(@PathVariable UUID id, @RequestBody Map<String, Object> body) {
+    UUID userId = UUID.fromString((String) body.get("userId"));
+    BigDecimal amount = new BigDecimal(body.get("amount").toString());
+    String currency = (String) body.get("currency");
+    service.create(id, userId, amount, currency);
     return ResponseEntity.accepted().build();
   }
 
+  // public read
   @GetMapping("/payments/{id}")
-  public ResponseEntity<TxnStore.Txn> get(@PathVariable UUID id){
-    var txn = store.get(id);
-    if (txn == null) return ResponseEntity.notFound().build();
-    return ResponseEntity.ok(txn);
+  public ResponseEntity<Transaction> get(@PathVariable UUID id){
+    Optional<Transaction> txn = service.get(id);
+    return txn.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
   }
 
-  // temporary endpoint to simulate provider success
+  // temp simulate success
   @PostMapping("/internal/payments/{id}/succeed")
   public ResponseEntity<Void> succeed(@PathVariable UUID id){
-    store.markSucceeded(id);
+    service.succeed(id);
     return ResponseEntity.accepted().build();
   }
 }
