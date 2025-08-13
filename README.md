@@ -1,6 +1,5 @@
 # Cloud-Native Payment Gateway
 
-[![CI](https://github.com/Drive10/cloud-payment-gateway/actions/workflows/ci.yml/badge.svg)](https://github.com/Drive10/cloud-payment-gateway/actions/workflows/ci.yml)
 ![Java](https://img.shields.io/badge/Java-21-007396?logo=java)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot)
 ![Kafka](https://img.shields.io/badge/Kafka-Event%20Driven-231F20?logo=apachekafka)
