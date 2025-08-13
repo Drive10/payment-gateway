@@ -1,22 +1,10 @@
 # Contributing
 
-Thanks for helping improve this project!
+1. Fork & clone the repo.
+2. Create a feature branch: `git checkout -b feature/xyz`.
+3. Run locally with Docker Compose and IntelliJ.
+4. Make changes with tests; run `mvn -B verify` at the project root.
+5. Submit a PR with a clear description and screenshots/notes if UI/API changes.
 
-## Workflow
-- Create a feature branch from `main`.
-- Run `./mvnw verify` and ensure tests pass.
-- Follow conventional commits: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`.
-- Open a PR with a clear description and screenshots/logs when helpful.
-
-## Code Style
-- Java 21, Spring Boot 3 (annotations over XML).
-- Avoid static util singletons; prefer dependency injection.
-- Unit tests with JUnit 5 + Mockito.
-- Test containers for integration tests with PostgreSQL/Kafka/MongoDB.
-
-## Security
-- Never commit real secrets. Use `.env.example` and Kubernetes Secrets.
-- Dependencies are scanned in CI (Trivy/OWASP/CodeQL). Fix critical issues before merge.
-
-## DCO / CLA
-By contributing, you agree your work is licensed under the repository license.
+## Commit Style
+- Conventional commits recommended (feat:, fix:, chore:, docs:, refactor:, test:).

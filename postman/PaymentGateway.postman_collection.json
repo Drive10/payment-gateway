@@ -1,0 +1,32 @@
+{
+  "info": {
+    "name": "Payment Gateway",
+    "_postman_id": "placeholder",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:8081/actuator/health"
+      }
+    },
+    {
+      "name": "Create Payment",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8081/payments",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amount\":100,\"currency\":\"INR\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

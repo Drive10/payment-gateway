@@ -8,5 +8,5 @@ Copy `.env.example` to `.env` and adjust values.
 
 ## Start Dev Dependencies
 ```bash
-docker compose -f deploy/docker-compose.dev.yml up -d
+docker compose -f deploy/local/docker-compose.yml up -d
 ```

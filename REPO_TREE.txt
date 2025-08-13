@@ -15,7 +15,7 @@ infra/
     variables.tf
 payment-orchestration/
 deploy/
-  docker-compose.dev.yml
+  local/docker-compose.yml
   deploy/observability/
     deploy/observability/grafana/
       deploy/observability/grafana/provisioning/

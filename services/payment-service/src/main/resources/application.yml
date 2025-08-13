@@ -1,6 +1,5 @@
 server:
   port: 8081
-
 spring:
   application:
     name: payment-service
@@ -11,7 +10,8 @@ spring:
   sql:
     init:
       mode: always
-
+  profiles:
+    default: local
 management:
   endpoints:
     web:
