@@ -3,7 +3,6 @@ WORKDIR /app
 COPY . /app
 RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests package
 FROM eclipse-temurin:21-jre
-ENV JAVA_TOOL_OPTIONS="-XX:+UseZGC -XX:+AlwaysPreTouch"
 WORKDIR /app
 COPY --from=build /app/target/*.jar /app/service.jar
 EXPOSE 8080

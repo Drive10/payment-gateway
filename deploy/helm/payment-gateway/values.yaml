@@ -4,4 +4,4 @@ global:
     tag: latest
 services:
   payment-service:
-    replicas: 2
+    replicas: 1
