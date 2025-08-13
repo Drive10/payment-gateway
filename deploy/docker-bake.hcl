@@ -1,5 +1,8 @@
 group "default" {
-  targets = ["api-gateway","auth-service","payment-service","ledger-service","risk-service","settlement-service","notification-service"]
+  targets = [
+    "api-gateway", "auth-service", "payment-service", "ledger-service", "risk-service", "settlement-service",
+    "notification-service"
+  ]
 }
 
 variable "REGISTRY" {

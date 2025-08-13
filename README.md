@@ -10,7 +10,8 @@
 ![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-Orchestration-326CE5?logo=kubernetes)
 
-Production-grade, microservices-based payment gateway built with **Java 21**, **Spring Boot 3**, **Spring Cloud**, **Kafka**, **PostgreSQL**, **MongoDB**, **Redis**, and deployable to **Docker/Kubernetes**.  
+Production-grade, microservices-based payment gateway built with **Java 21**, **Spring Boot 3**, **Spring Cloud**, *
+*Kafka**, **PostgreSQL**, **MongoDB**, **Redis**, and deployable to **Docker/Kubernetes**.  
 Default profile is **`local`**; future `prod` profile can be added easily.
 
 ---
@@ -18,18 +19,22 @@ Default profile is **`local`**; future `prod` profile can be added easily.
 ## Quick Start (Local)
 
 ### 1) Prereqs
+
 - Java 21, Docker, Docker Compose
 - IntelliJ IDEA (recommended)
 
 ### 2) Start infra & dependencies
+
 ```bash
 docker compose -f deploy/local/docker-compose.yml up -d
 ```
 
 ### 3) Run services (IntelliJ)
+
 Open the project, and run each Spring Boot application. No profile flag required — `local` is the default.
 
 ### 4) Smoke check
+
 - API Gateway: http://localhost:8080 (adjust if different)
 - Payment Service: http://localhost:8081/actuator/health
 
@@ -76,12 +81,14 @@ flowchart LR
 ---
 
 ## CI/CD (GitHub Actions)
+
 - Build & test on PRs
 - On tags, build & push Docker images to GHCR (`ghcr.io`)
 
 ---
 
 ## Security
+
 - OAuth2/JWT between services
 - TLS termination at gateway/ingress
 - Secrets via environment or Vault (recommended in prod)
@@ -89,6 +96,7 @@ flowchart LR
 ---
 
 ## Observability
+
 - OpenTelemetry instrumentation for traces
 - Prometheus scraping for metrics
 - Grafana dashboards (starter JSON in `docs/observability/`)
@@ -96,9 +104,11 @@ flowchart LR
 ---
 
 ## Contributing
+
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
 ## License
+
 [MIT](LICENSE)

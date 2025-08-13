@@ -10,6 +10,7 @@ This repository demonstrates a microservice payment gateway with the following s
 - **settlement-service**: Payouts and reconciliation.
 - **notification-service**: Webhooks, emails, provider callbacks.
 
-Core components: Kafka for events, PostgreSQL for relational storage, MongoDB for document data, Redis for caching/idempotency.
+Core components: Kafka for events, PostgreSQL for relational storage, MongoDB for document data, Redis for
+caching/idempotency.
 
 See README for the Mermaid diagram.

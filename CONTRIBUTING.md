@@ -7,4 +7,5 @@
 5. Submit a PR with a clear description and screenshots/notes if UI/API changes.
 
 ## Commit Style
+
 - Conventional commits recommended (feat:, fix:, chore:, docs:, refactor:, test:).
