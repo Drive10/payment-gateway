@@ -1,6 +1,6 @@
 # Cloud-Native Payment Gateway
 
-[![CI](https://github.com/your-user/your-repo/actions/workflows/ci.yml/badge.svg)](https://github.com/your-user/your-repo/actions/workflows/ci.yml)
+[![CI](https://github.com/Drive10/cloud-payment-gateway/actions/workflows/ci.yml/badge.svg)](https://github.com/Drive10/cloud-payment-gateway/actions/workflows/ci.yml)
 ![Java](https://img.shields.io/badge/Java-21-007396?logo=java)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot)
 ![Kafka](https://img.shields.io/badge/Kafka-Event%20Driven-231F20?logo=apachekafka)
@@ -9,10 +9,18 @@
 ![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?logo=redis)
 ![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-Orchestration-326CE5?logo=kubernetes)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-Production-grade, microservices-based payment gateway built with **Java 21**, **Spring Boot 3**, **Spring Cloud**, *
-*Kafka**, **PostgreSQL**, **MongoDB**, **Redis**, and deployable to **Docker/Kubernetes**.  
-Default profile is **`local`**; future `prod` profile can be added easily.
+
+This repository is a **production-grade, microservices-based payment gateway** built with modern Java and cloud-native best practices. It demonstrates:
+- **Microservices architecture** with Spring Boot 3 & Spring Cloud
+- **Event-driven design** with Apache Kafka
+- **Polyglot persistence** (PostgreSQL, MongoDB, Redis)
+- **Full CI/CD pipeline** using GitHub Actions & Docker
+- **Kubernetes-ready** deployments with sample manifests
+- **Observability** via OpenTelemetry, Prometheus, and Grafana
+
+It’s designed as a **portfolio-grade project** to showcase enterprise-level architecture, DevOps practices, and cutting-edge Java development skills.
 
 ---
 
