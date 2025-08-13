@@ -1,3 +1,4 @@
 # Architecture
-- DDD layers: api -> application -> domain -> infrastructure
-- Outbox; SAGA via Kafka; CQRS with Redis read models; MongoDB for audits.
+
+This document complements the README diagram and captures domain boundaries,
+message flows, and data ownership. See `adr/` for decisions.

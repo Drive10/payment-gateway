@@ -1,47 +1,92 @@
-# Cloud-Native Payment Gateway (Clean Build)
+# Cloud-Native Payment Gateway
 
-This repo is ready for local dev and production deployments without custom Maven repos.
+[![Build](https://github.com/your-username/payment-gateway/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
+[![CodeQL](https://github.com/your-username/payment-gateway/actions/workflows/codeql.yml/badge.svg)](./.github/workflows/codeql.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-## Prereqs
-- Java 21
-- Maven 3.9+
-- Docker (for local infra)
-- kubectl + Helm (for prod)
+Production-grade, modular payment gateway built with **Java 21**, **Spring Boot 3**, **Spring Cloud**, **Kafka**, **PostgreSQL**, **MongoDB**, **Redis**, **Docker**, **Kubernetes**, **Helm**, **Terraform**, and **GitHub Actions**.
 
-## Local Development
-```bash
-# 1) Start local infra
-docker compose -f deploy/local/docker-compose.yml up -d
+> Last updated: 2025-08-13
 
-# 2) Build
-mvn -U clean install
+## Highlights
+- Domain-driven microservices: `payment-service`, `ledger-service`, `settlement-service`, `risk-service`, `notification-service`, `auth-service`, `api-gateway`.
+- End-to-end security: TLS, OAuth2/JWT (Keycloak/OIDC), Secrets via Kubernetes and GitHub OIDC to AWS.
+- Observability: OpenTelemetry, Prometheus, Grafana, structured logging.
+- Deploy anywhere: Docker + Helm charts, K8s manifests, Terraform (AWS EKS), GitOps-ready.
+- CI/CD: Build, test, SBOM, vulnerability scan (Trivy), CodeQL, container publish.
 
-# 3) Run payment service
-java -jar services/payment-service/target/payment-service.jar
-# or
-mvn -pl services/payment-service spring-boot:run
+## Architecture
+
+```mermaid
+graph LR
+    C[Client / Merchant] --> APIG[API Gateway]
+    APIG --> AUTH[Auth Service]
+    APIG --> PAY[Payment Service]
+    PAY --> RISK[Risk Service]
+    PAY --> LED[Ledger Service]
+    PAY --> SETT[Settlement Service]
+    PAY --> NOTIF[Notification Service]
+
+    subgraph Data Stores
+      PSQL[(PostgreSQL)]
+      MONGO[(MongoDB)]
+      REDIS[(Redis)]
+    end
+
+    PAY <--> PSQL
+    LED <--> PSQL
+    RISK <--> MONGO
+    AUTH <--> PSQL
+    NOTIF --> REDIS
+
+    subgraph Messaging
+      KAFKA[(Kafka Topics)]
+    end
+    PAY <--> KAFKA
+    LED <--> KAFKA
+    SETT <--> KAFKA
+
+    subgraph Observability
+      OTEL[OpenTelemetry]
+      PROM[Prometheus]
+      GRAF[Grafana]
+    end
+    PAY --> OTEL
+    OTEL --> PROM
+    PROM --> GRAF
 ```
 
-### API Smoke Test
+## Quickstart (Local)
+
 ```bash
-curl -X POST http://localhost:8081/payments \
-  -H 'Content-Type: application/json' \
-  -d '{"orderId":"o-1","customerId":"c-1","currency":"USD","amount":100.00}'
+# 1) Build all modules
+./mvnw -q -DskipTests=false clean verify
+
+# 2) Start dependencies (dev): Kafka, Postgres, Redis, Mongo
+docker compose -f deploy/docker-compose.dev.yml up -d
+
+# 3) Run a service (example)
+cd services/payment-service && ./mvnw spring-boot:run
 ```
 
-## Production (Kubernetes with Helm)
-```bash
-# Build & push image
-docker build -t ghcr.io/<org>/<repo>/payment-service:latest services/payment-service
-docker push ghcr.io/<org>/<repo>/payment-service:latest
+> See `docs/LOCAL_DEV.md` for detailed instructions and sample `.env`.
 
-# Deploy
-helm upgrade --install pgw deploy/helm/payment-gateway \
-  --set global.image.repository=ghcr.io/<org>/<repo> \
-  --set global.image.tag=latest
+## Kubernetes (Helm)
+
+```bash
+helm upgrade --install payment-gateway ./helm/payment-gateway   --namespace payments --create-namespace   -f helm/values/dev.yaml
 ```
 
-## CI (GitHub Actions)
-- `.github/workflows/build-test.yml` builds and tests on push/PR.
-- `.github/workflows/docker-publish.yml` publishes images on version tags.
-- `.github/workflows/deploy-eks.yml` provides a manual Helm deploy (configure AWS OIDC role).
+## Repository Map
+- `.github/workflows/` – CI/CD pipelines
+- `docs/` – Guides (local dev, architecture, runbooks)
+- `helm/` – Helm charts for services
+- `k8s/` – Raw manifests (optional alternative to Helm)
+- `infra/terraform/` – EKS cluster, RDS, MSK (Kafka) skeleton
+- `adr/` – Architecture Decision Records
+
+## Security
+See [SECURITY.md](SECURITY.md). Report issues responsibly.
+
+## License
+[Apache-2.0](LICENSE)
