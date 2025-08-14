@@ -1,0 +1,25 @@
+# NOTE: remove the top-level `version:` key in both files to avoid the warning
+
+services:
+  # Disabled by default; only runs when profile `manual` is enabled
+  payment-service:
+    profiles: ["manual"]
+
+  # Uncomment any block below to also disable those by default
+  # auth-service:
+  #   profiles: ["manual"]
+
+  # ledger-service:
+  #   profiles: ["manual"]
+
+  # risk-service:
+  #   profiles: ["manual"]
+
+  # notification-service:
+  #   profiles: ["manual"]
+
+  # settlement-service:
+  #   profiles: ["manual"]
+
+  # api-gateway:
+  #   profiles: ["manual"]

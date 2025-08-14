@@ -1,0 +1,12 @@
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /workspace
+COPY . .
+ARG SERVICE_PATH
+RUN --mount=type=cache,target=/root/.m2 mvn -q -U -DskipTests -pl ${SERVICE_PATH} -am package
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+ARG SERVICE_PATH
+COPY --from=build /workspace/${SERVICE_PATH}/target/*.jar /app/app.jar
+EXPOSE 8080
+ENTRYPOINT ["java","-jar","/app/app.jar"]
