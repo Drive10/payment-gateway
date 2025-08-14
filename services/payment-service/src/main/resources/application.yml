@@ -1,19 +1,51 @@
 server:
-  port: 8081
+  port: ${PORT:8084}
+
+api:
+  key: ${API_KEY:}
+
 spring:
-  application:
-    name: payment-service
   datasource:
-    url: ${JDBC_URL:jdbc:postgresql://localhost:5432/payments}
-    username: ${JDBC_USERNAME:postgres}
-    password: ${JDBC_PASSWORD:postgres}
-  sql:
-    init:
-      mode: always
-  profiles:
-    default: local
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/${POSTGRES_DB:paymentdb}}
+    username: ${POSTGRES_USER:payment}
+    password: ${POSTGRES_PASSWORD:paymentpass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate.format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+payment:
+  defaultProvider: ${PAYMENT_DEFAULT_PROVIDER:stripe}
+  providers:
+    stripe:
+      apiKey: ${STRIPE_API_KEY:}
+      webhookSecret: ${STRIPE_WEBHOOK_SECRET:}
+    paypal:
+      clientId: ${PAYPAL_CLIENT_ID:}
+      clientSecret: ${PAYPAL_CLIENT_SECRET:}
+      webhookId: ${PAYPAL_WEBHOOK_ID:}
+    razorpay:
+      keyId: ${RAZORPAY_KEY_ID:}
+      keySecret: ${RAZORPAY_KEY_SECRET:}
+    phonepe:
+      secret: ${PHONEPE_SECRET:}
+    paytm:
+      secret: ${PAYTM_SECRET:}

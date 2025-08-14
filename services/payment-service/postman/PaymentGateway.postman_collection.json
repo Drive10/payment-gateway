@@ -1,0 +1,372 @@
+{
+  "info": {
+    "name": "Payment Gateway Backend",
+    "_postman_id": "e3f3e0d8-3f2a-4bdb-aad1-pg-collection",
+    "description": "Requests to exercise the Payment Gateway backend across providers and methods.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "apiKey",
+      "value": "dev-local-api-key"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/actuator/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "actuator",
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Banks - List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/banks",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "banks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Payments - Create (Generic)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amountMinor\":9900,\"currency\":\"INR\",\"customerEmail\":\"demo@example.com\",\"idempotencyKey\":\"k1\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "payments"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Refunds - Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"transactionId\":\"<replace_pi_or_txn>\",\"amountMinor\":9900,\"reason\":\"requested_by_customer\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/refunds",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "refunds"
+          ]
+        }
+      }
+    },
+    {
+      "name": "UPI - Create (Intent/App)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amountMinor\":9900,\"currency\":\"INR\",\"app\":\"gpay\",\"merchantOrderId\":\"order-1\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/upi",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "payments",
+            "upi"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Card - Charge (capture=true)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amountMinor\":9900,\"currency\":\"INR\",\"cardToken\":\"tok_demo\",\"capture\":true}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/card",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "payments",
+            "card"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Card - Authorize (capture later)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amountMinor\":9900,\"currency\":\"INR\",\"cardToken\":\"tok_demo\",\"capture\":false}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/card",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "payments",
+            "card"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Card - Capture",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"transactionId\":\"<replace_auth_txn>\",\"amountMinor\":9900}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/card/capture",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "payments",
+            "card",
+            "capture"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Netbanking - Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amountMinor\":9900,\"currency\":\"INR\",\"bankCode\":\"HDFC\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/netbanking",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "payments",
+            "netbanking"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Wallet - Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amountMinor\":9900,\"currency\":\"INR\",\"wallet\":\"paytm\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/wallet",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "payments",
+            "wallet"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Webhook - Stripe (sample)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Stripe-Signature",
+            "value": "<replace_with_sig>"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"type\":\"payment_intent.succeeded\",\"data\":{\"object\":{\"id\":\"pi_demo\"}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/webhooks/stripe",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "webhooks",
+            "stripe"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Simulator (dev only) - Set Status",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/sim/bank/status/<replace_txn>?status=CAPTURED",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "sim",
+            "bank",
+            "status",
+            "<replace_txn>"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "CAPTURED"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
