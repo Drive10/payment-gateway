@@ -40,12 +40,6 @@
             <artifactId>postgresql</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
-            <version>${flyway.version}</version>
-        </dependency>
-
         <!-- Flyway (now pinned to latest compatible version) -->
         <dependency>
             <groupId>org.flywaydb</groupId>

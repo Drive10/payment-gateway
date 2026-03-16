@@ -1,9 +1,0 @@
-package dev.payment.paymentservice.domain;
-
-import java.util.Optional;
-
-public interface PaymentRepository {
-  void save(Payment p);
-
-  Optional<Payment> findById(String id);
-}
