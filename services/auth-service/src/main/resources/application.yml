@@ -1,14 +1,30 @@
 server:
-  port: ${PORT:8080}
+  port: ${SERVER_PORT:8081}
+
 spring:
   application:
-    name: ${APP_NAME:app}
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-  profiles:
-    default: local
+    name: auth-service
+  datasource:
+    url: ${AUTH_DB_URL:jdbc:postgresql://localhost:5432/paymentdb?currentSchema=auth_core}
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD:paymentpass}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    create-schemas: true
+    schemas: auth_core
+    default-schema: auth_core
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

@@ -1,11 +1,9 @@
 server:
-  port: ${PORT:8080}
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
-    name: ${APP_NAME:api-gateway}
-  profiles:
-    default: local
+    name: api-gateway
   cloud:
     gateway:
       default-filters:
@@ -14,27 +12,40 @@ spring:
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/payments,/api/payments/**
+            - Path=/api/v1/**,/swagger-ui.html,/swagger-ui/**,/v3/api-docs/**
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/platform/auth/**
           filters:
-            - StripPrefix=1
+            - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
+        - id: ledger-service
+          uri: ${LEDGER_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/platform/ledger/**
+          filters:
+            - RewritePath=/platform/ledger/(?<segment>.*), /internal/platform/${segment}
+        - id: notification-service
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/platform/notification/**
+          filters:
+            - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
+        - id: risk-service
+          uri: ${RISK_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/platform/risk/**
+          filters:
+            - RewritePath=/platform/risk/(?<segment>.*), /internal/platform/${segment}
+        - id: settlement-service
+          uri: ${SETTLEMENT_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/platform/settlement/**
+          filters:
+            - RewritePath=/platform/settlement/(?<segment>.*), /internal/platform/${segment}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
-
----
-spring:
-  config:
-    activate:
-      on-profile: docker
-  cloud:
-    gateway:
-      routes:
-        - id: payment-service
-          uri: ${PAYMENT_SERVICE_URL:http://payment-service:8080}
-          predicates:
-            - Path=/api/payments,/api/payments/**
-          filters:
-            - StripPrefix=1
+        include: health,info

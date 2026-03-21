@@ -1,35 +1,65 @@
 package dev.payment.paymentservice.domain;
 
+import dev.payment.paymentservice.domain.enums.PaymentMethod;
+import dev.payment.paymentservice.domain.enums.PaymentStatus;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
-import jakarta.persistence.*;
-
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
 @Table(name = "payments")
-public class Payment {
+public class Payment extends BaseEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private UUID orderId;
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "order_id", nullable = false)
+    private Order order;
 
-    private String provider;
+    @Column(name = "provider_order_id", nullable = false, unique = true, length = 64)
+    private String providerOrderId;
 
+    @Column(name = "provider_payment_id", unique = true, length = 64)
     private String providerPaymentId;
 
-    private Long amount;
+    @Column(name = "idempotency_key", nullable = false, unique = true, length = 120)
+    private String idempotencyKey;
 
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal amount;
+
+    @Column(nullable = false, length = 3)
     private String currency;
 
+    @Column(nullable = false, length = 32)
+    private String provider;
+
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private PaymentMethod method;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
     private PaymentStatus status;
 
-    private LocalDateTime createdAt;
+    @Column(name = "provider_signature", length = 255)
+    private String providerSignature;
 
-    public Payment() {
-    }
+    @Column(length = 255)
+    private String notes;
 
     public UUID getId() {
         return id;
@@ -39,20 +69,20 @@ public class Payment {
         this.id = id;
     }
 
-    public UUID getOrderId() {
-        return orderId;
+    public Order getOrder() {
+        return order;
     }
 
-    public void setOrderId(UUID orderId) {
-        this.orderId = orderId;
+    public void setOrder(Order order) {
+        this.order = order;
     }
 
-    public String getProvider() {
-        return provider;
+    public String getProviderOrderId() {
+        return providerOrderId;
     }
 
-    public void setProvider(String provider) {
-        this.provider = provider;
+    public void setProviderOrderId(String providerOrderId) {
+        this.providerOrderId = providerOrderId;
     }
 
     public String getProviderPaymentId() {
@@ -63,11 +93,19 @@ public class Payment {
         this.providerPaymentId = providerPaymentId;
     }
 
-    public Long getAmount() {
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
+    }
+
+    public BigDecimal getAmount() {
         return amount;
     }
 
-    public void setAmount(Long amount) {
+    public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
 
@@ -79,6 +117,22 @@ public class Payment {
         this.currency = currency;
     }
 
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public PaymentMethod getMethod() {
+        return method;
+    }
+
+    public void setMethod(PaymentMethod method) {
+        this.method = method;
+    }
+
     public PaymentStatus getStatus() {
         return status;
     }
@@ -87,11 +141,19 @@ public class Payment {
         this.status = status;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public String getProviderSignature() {
+        return providerSignature;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+    public void setProviderSignature(String providerSignature) {
+        this.providerSignature = providerSignature;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 }

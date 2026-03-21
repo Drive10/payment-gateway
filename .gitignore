@@ -1,3 +1,9 @@
 target/
 .idea/
 .DS_Store
+.env
+*.iml
+.mvn/wrapper/maven-wrapper.jar
+logs/
+*.log
+out/

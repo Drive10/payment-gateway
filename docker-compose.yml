@@ -1,97 +1,40 @@
-version: "3.9"
-
 services:
-
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.6.1
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-    ports:
-      - "2181:2181"
-    networks:
-      - pgw-net
-
-  kafka:
-    image: confluentinc/cp-kafka:7.6.1
-    container_name: kafka
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    depends_on:
-      - zookeeper
-    networks:
-      - pgw-net
-
   postgres:
-    image: postgres:16
-    container_name: payment-postgres
+    image: postgres:16-alpine
+    container_name: fintech-postgres
     environment:
-      POSTGRES_DB: paymentdb
-      POSTGRES_USER: payment
-      POSTGRES_PASSWORD: paymentpass
+      POSTGRES_DB: ${POSTGRES_DB:-paymentdb}
+      POSTGRES_USER: ${POSTGRES_USER:-payment}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U payment"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-payment} -d ${POSTGRES_DB:-paymentdb}"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    networks:
-      - pgw-net
+      retries: 10
 
-  redis:
-    image: redis:7
-    container_name: redis
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payment-service
+    environment:
+      SERVER_PORT: 8084
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-paymentdb}
+      DB_USERNAME: ${POSTGRES_USER:-payment}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-VGhpc0lzQVN0cm9uZ0Jhc2U2NEVuY29kZWRKU1dUU2VjcmV0S2V5Rm9yRmluVGVjaEFQSUM=}
+      JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
+      DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-RAZORPAY_SIMULATOR}
+      CHECKOUT_BASE_URL: ${CHECKOUT_BASE_URL:-https://checkout.fintech.local}
     ports:
-      - "6379:6379"
-    volumes:
-      - redisdata:/data
-    networks:
-      - pgw-net
-
-  mongo:
-    image: mongo:7
-    container_name: mongo
-    ports:
-      - "27017:27017"
-    networks:
-      - pgw-net
-
-  otel-collector:
-    image: otel/opentelemetry-collector:0.104.0
-    container_name: otel-collector
-    command: ["--config=/etc/otel-collector-config.yml"]
-    ports:
-      - "4317:4317"
-      - "9464:9464"
-    networks:
-      - pgw-net
-
-  prometheus:
-    image: prom/prometheus:v2.54.1
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./observability/prometheus:/etc/prometheus
-    networks:
-      - pgw-net
-
-  grafana:
-    image: grafana/grafana:10.4.6
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    networks:
-      - pgw-net
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   api-gateway:
     build:
@@ -101,16 +44,22 @@ services:
         SERVICE_PATH: services/api-gateway
     container_name: api-gateway
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8080
+      PAYMENT_SERVICE_URL: http://payment-service:8084
+      AUTH_SERVICE_URL: http://auth-service:8081
+      LEDGER_SERVICE_URL: http://ledger-service:8082
+      NOTIFICATION_SERVICE_URL: http://notification-service:8083
+      RISK_SERVICE_URL: http://risk-service:8085
+      SETTLEMENT_SERVICE_URL: http://settlement-service:8086
     ports:
       - "8080:8080"
-    restart: unless-stopped
     depends_on:
-      - postgres
-      - kafka
-      - redis
-    networks:
-      - pgw-net
+      - payment-service
+      - auth-service
+      - ledger-service
+      - notification-service
+      - risk-service
+      - settlement-service
 
   auth-service:
     build:
@@ -120,16 +69,9 @@ services:
         SERVICE_PATH: services/auth-service
     container_name: auth-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8081
     ports:
-      - "8081:8080"
-    restart: unless-stopped
-    depends_on:
-      - postgres
-      - kafka
-      - redis
-    networks:
-      - pgw-net
+      - "8081:8081"
 
   ledger-service:
     build:
@@ -139,15 +81,9 @@ services:
         SERVICE_PATH: services/ledger-service
     container_name: ledger-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8082
     ports:
-      - "8082:8080"
-    restart: unless-stopped
-    depends_on:
-      - postgres
-      - kafka
-    networks:
-      - pgw-net
+      - "8082:8082"
 
   notification-service:
     build:
@@ -157,35 +93,9 @@ services:
         SERVICE_PATH: services/notification-service
     container_name: notification-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8083
     ports:
-      - "8083:8080"
-    restart: unless-stopped
-    depends_on:
-      - postgres
-      - kafka
-      - redis
-    networks:
-      - pgw-net
-
-  payment-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/payment-service
-    container_name: payment-service
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-    ports:
-      - "8084:8080"
-    restart: unless-stopped
-    depends_on:
-      - postgres
-      - kafka
-      - redis
-    networks:
-      - pgw-net
+      - "8083:8083"
 
   risk-service:
     build:
@@ -195,16 +105,9 @@ services:
         SERVICE_PATH: services/risk-service
     container_name: risk-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8085
     ports:
-      - "8085:8080"
-    restart: unless-stopped
-    depends_on:
-      - postgres
-      - kafka
-      - redis
-    networks:
-      - pgw-net
+      - "8085:8085"
 
   settlement-service:
     build:
@@ -214,20 +117,9 @@ services:
         SERVICE_PATH: services/settlement-service
     container_name: settlement-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8086
     ports:
-      - "8086:8080"
-    restart: unless-stopped
-    depends_on:
-      - postgres
-      - kafka
-    networks:
-      - pgw-net
-
-networks:
-  pgw-net:
-    driver: bridge
+      - "8086:8086"
 
 volumes:
-  pgdata:
-  redisdata:
+  postgres_data:

@@ -1,30 +1,65 @@
 server:
-  port: ${PORT:8084}
+  port: ${SERVER_PORT:8084}
+  shutdown: graceful
 
 spring:
+  application:
+    name: payment-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/paymentdb
-    username: payment
-    password: paymentpass
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/paymentdb}
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD:paymentpass}
     driver-class-name: org.postgresql.Driver
-
   jpa:
+    open-in-view: false
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  jackson:
+    default-property-inclusion: non_null
+  threads:
+    virtual:
+      enabled: true
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
 
-payment:
-  default-provider: razorpay
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
 
-  razorpay:
-    key-id: ${RAZORPAY_KEY_ID:}
-    key-secret: ${RAZORPAY_KEY_SECRET:}
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY:VGhpc0lzQVN0cm9uZ0Jhc2U2NEVuY29kZWRKU1dUU2VjcmV0S2V5Rm9yRmluVGVjaEFQSUM=}
+      expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+  payment:
+    default-provider: ${DEFAULT_PROVIDER:RAZORPAY_SIMULATOR}
+    checkout-base-url: ${CHECKOUT_BASE_URL:https://checkout.fintech.local}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5level service=${spring.application.name} trace=%X{traceId:-na} span=%X{spanId:-na} logger=%logger{36} msg=\"%msg\"%n"
+
+info:
+  app:
+    name: Fintech Payment Platform
+    description: Gateway-ready enterprise payment backend
+    version: 1.0.0
