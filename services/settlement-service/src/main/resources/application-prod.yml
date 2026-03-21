@@ -1,0 +1,3 @@
+spring:
+  datasource:
+    url: ${SETTLEMENT_DB_URL}

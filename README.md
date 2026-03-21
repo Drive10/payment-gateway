@@ -7,7 +7,7 @@
 ![Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture%20%2B%20DDD-0F766E)
 ![OpenAPI](https://img.shields.io/badge/API-OpenAPI%203-85EA2D)
 
-Production-style fintech backend built with Java 21 and Spring Boot 3.3. The repository is structured like a real payments team codebase: a gateway-ready edge module, a hardened payment domain core, bounded platform services, PostgreSQL migrations, JWT security, pagination and filtering, idempotent payment APIs, auditability, and containerized local runtime.
+Production-style fintech backend built with Java 21 and Spring Boot 3.3. The repository is structured like a real payments team codebase: a gateway-ready edge module, a hardened payment domain core, bounded platform services, PostgreSQL persistence, JWT security, pagination and filtering, idempotent payment APIs, auditability, and containerized local runtime.
 
 ## Why It Looks Enterprise
 
@@ -15,7 +15,7 @@ Production-style fintech backend built with Java 21 and Spring Boot 3.3. The rep
 - Domain-driven aggregates for users, roles, orders, payments, transactions, and audit logs.
 - JWT authentication with role-based access for `ADMIN` and `USER`.
 - Razorpay-style order and payment capture simulation with idempotency protection.
-- Flyway-driven PostgreSQL schema with constraints, indexes, and seed data.
+- PostgreSQL-backed domain model with automatic table creation for local development and bootstrap seed data for the payment core.
 - Standard API envelope, global exception handling, validation, structured logging, and OpenAPI docs.
 - API Gateway module wired to front the payment core and expose supporting service boundaries.
 
@@ -116,7 +116,7 @@ Swagger UI is available at [http://localhost:8084/swagger-ui.html](http://localh
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up --build postgres api-gateway
 ```
 
 ### Local with Maven
@@ -124,6 +124,94 @@ docker compose up --build
 ```bash
 mvn -q -pl services/payment-service -am spring-boot:run
 ```
+
+## Docker Architecture
+
+This project uses a clean Docker setup that supports both local debugging and full containerized execution.
+
+The base [docker-compose.yml](/Users/macbookair/Documents/GitHub/payment-gateway/docker-compose.yml) contains the core platform services, including PostgreSQL, the API gateway, and all backend microservices. The microservices are marked with the `services` Docker profile, which makes them optional. This means you can start only the services you need instead of running the full stack every time.
+
+Service URLs are controlled through environment variables in `.env`. In local development, the gateway can call services running outside Docker through `host.docker.internal`. This is useful when you want to run one microservice directly from IntelliJ or VS Code for debugging while the rest of the platform stays inside Docker.
+
+When you want everything to run inside Docker, use [docker-compose.docker.yml](/Users/macbookair/Documents/GitHub/payment-gateway/docker-compose.docker.yml). That file overrides the service URLs so containers communicate with each other using Docker service names such as `payment-service`, `auth-service`, and `risk-service`.
+
+This approach makes it easy to:
+
+- run one service locally for debugging
+- run the remaining services in Docker
+- switch to full Docker mode without changing application code
+- scale the same pattern across multiple microservices
+
+It also follows good engineering practices:
+
+- environment-driven configuration
+- no hardcoded service URLs
+- clean separation between local and container networking
+- flexible, production-friendly service composition
+
+## Spring Profiles
+
+Each service now supports four Spring profiles:
+
+- `local`: for running from the IDE on your machine
+- `docker`: for running inside Docker
+- `staging`: for staging deployments
+- `prod`: for production deployments
+
+The default profile is `local`, so an IDE run works without extra service URL setup.
+
+Profile behavior:
+
+- `local` uses local defaults such as `localhost`
+- `docker` uses Docker-safe defaults such as `postgres` and `host.docker.internal`
+- `staging` expects staging environment variables
+- `prod` expects production environment variables
+
+This means:
+
+- when you run from the IDE, Spring uses local defaults automatically
+- when Docker runs a service, Compose sets `SPRING_PROFILES_ACTIVE=docker`
+- when staging or production runs a service, you set `SPRING_PROFILES_ACTIVE=staging` or `prod` and provide deployment env vars
+
+If you run `payment-service` from IntelliJ, you usually only need:
+
+```text
+SPRING_PROFILES_ACTIVE=local
+```
+
+In Docker, the compose file sets:
+
+```text
+SPRING_PROFILES_ACTIVE=docker
+```
+
+So the service automatically switches to Docker-friendly settings such as connecting to `postgres` instead of `localhost`.
+
+### Common Commands
+
+Run only PostgreSQL and the gateway, while a service runs from your IDE:
+
+```bash
+cp .env.example .env
+docker compose up --build postgres api-gateway
+```
+
+Then run your service locally from the IDE with `SPRING_PROFILES_ACTIVE=local`.
+
+Run one backend service in Docker:
+
+```bash
+docker compose --profile services up --build postgres payment-service
+```
+
+Run the full platform inside Docker:
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services up --build
+```
+
+For staging or production, run the application with the matching profile and provide the required environment variables such as `DB_URL`, `AUTH_DB_URL`, `LEDGER_DB_URL`, and service URLs.
 
 Open:
 
@@ -204,8 +292,7 @@ curl -X POST http://localhost:8084/api/v1/payments/<PAYMENT_ID>/capture \
 
 ## Engineering Notes
 
-- Database migrations live in `services/payment-service/src/main/resources/db/migration`.
-- Seed SQL also exists in `services/payment-service/src/main/resources/db/seed/seed-data.sql`.
+- Payment bootstrap seed data lives in [services/payment-service/src/main/resources/data.sql](/Users/macbookair/Documents/GitHub/payment-gateway/services/payment-service/src/main/resources/data.sql).
 - Shared API wrapper contracts live in `libs/common`.
 - `services/api-gateway` includes route configuration to forward `/api/v1/**` to the payment service.
 - Service architecture notes live in `docs/ARCHITECTURE.md`.

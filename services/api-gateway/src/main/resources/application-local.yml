@@ -1,0 +1,7 @@
+gateway:
+  payment-service-url: http://localhost:8084
+  auth-service-url: http://localhost:8081
+  ledger-service-url: http://localhost:8082
+  notification-service-url: http://localhost:8083
+  risk-service-url: http://localhost:8085
+  settlement-service-url: http://localhost:8086

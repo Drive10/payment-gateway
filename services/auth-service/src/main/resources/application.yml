@@ -4,20 +4,16 @@ server:
 spring:
   application:
     name: auth-service
+  profiles:
+    default: local
   datasource:
-    url: ${AUTH_DB_URL:jdbc:postgresql://localhost:5432/paymentdb?currentSchema=auth_core}
     username: ${DB_USERNAME:payment}
     password: ${DB_PASSWORD:paymentpass}
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate
-  flyway:
-    enabled: true
-    create-schemas: true
-    schemas: auth_core
-    default-schema: auth_core
+      ddl-auto: update
 
 management:
   endpoints:

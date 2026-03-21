@@ -56,7 +56,7 @@ This keeps delivery concerns separate from domain modeling and persistence, whil
 - `transactions`
 - `audit_logs`
 
-The schema is managed via Flyway migrations and uses explicit indexes, foreign keys, uniqueness constraints, and amount checks.
+The schema is managed directly by the application at startup for local development, with JPA mappings enforcing the core domain relationships and constraints.
 
 ## Local Runtime
 

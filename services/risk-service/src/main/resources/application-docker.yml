@@ -1,0 +1,3 @@
+spring:
+  datasource:
+    url: ${RISK_DB_URL:jdbc:postgresql://postgres:5432/paymentdb}

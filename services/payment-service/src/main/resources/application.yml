@@ -5,23 +5,25 @@ server:
 spring:
   application:
     name: payment-service
+  profiles:
+    default: local
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/paymentdb}
     username: ${DB_USERNAME:payment}
     password: ${DB_PASSWORD:paymentpass}
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
+    defer-datasource-initialization: true
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: false
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
   jackson:
     default-property-inclusion: non_null
+  sql:
+    init:
+      mode: always
   threads:
     virtual:
       enabled: true

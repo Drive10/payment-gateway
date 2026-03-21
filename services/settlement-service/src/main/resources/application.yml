@@ -3,20 +3,16 @@ server:
 spring:
   application:
     name: settlement-service
+  profiles:
+    default: local
   datasource:
-    url: ${SETTLEMENT_DB_URL:jdbc:postgresql://localhost:5432/paymentdb?currentSchema=settlement_core}
     username: ${DB_USERNAME:payment}
     password: ${DB_PASSWORD:paymentpass}
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate
-  flyway:
-    enabled: true
-    create-schemas: true
-    schemas: settlement_core
-    default-schema: settlement_core
+      ddl-auto: update
 
 management:
   endpoints:

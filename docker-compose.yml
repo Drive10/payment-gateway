@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-payment}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,13 +17,14 @@ services:
       retries: 10
 
   payment-service:
+    profiles: ["services"]
     build:
       context: .
       dockerfile: Dockerfile
     container_name: payment-service
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8084
-      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-paymentdb}
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-VGhpc0lzQVN0cm9uZ0Jhc2U2NEVuY29kZWRKU1dUU2VjcmV0S2V5Rm9yRmluVGVjaEFQSUM=}
@@ -44,24 +45,15 @@ services:
         SERVICE_PATH: services/api-gateway
     container_name: api-gateway
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8080
-      PAYMENT_SERVICE_URL: http://payment-service:8084
-      AUTH_SERVICE_URL: http://auth-service:8081
-      LEDGER_SERVICE_URL: http://ledger-service:8082
-      NOTIFICATION_SERVICE_URL: http://notification-service:8083
-      RISK_SERVICE_URL: http://risk-service:8085
-      SETTLEMENT_SERVICE_URL: http://settlement-service:8086
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:8080"
-    depends_on:
-      - payment-service
-      - auth-service
-      - ledger-service
-      - notification-service
-      - risk-service
-      - settlement-service
 
   auth-service:
+    profiles: ["services"]
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -69,8 +61,8 @@ services:
         SERVICE_PATH: services/auth-service
     container_name: auth-service
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8081
-      AUTH_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-paymentdb}?currentSchema=auth_core
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
@@ -80,6 +72,7 @@ services:
         condition: service_healthy
 
   ledger-service:
+    profiles: ["services"]
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -87,8 +80,8 @@ services:
         SERVICE_PATH: services/ledger-service
     container_name: ledger-service
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8082
-      LEDGER_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-paymentdb}?currentSchema=ledger_core
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
@@ -98,6 +91,7 @@ services:
         condition: service_healthy
 
   notification-service:
+    profiles: ["services"]
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -105,8 +99,8 @@ services:
         SERVICE_PATH: services/notification-service
     container_name: notification-service
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8083
-      NOTIFICATION_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-paymentdb}?currentSchema=notification_core
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
@@ -116,6 +110,7 @@ services:
         condition: service_healthy
 
   risk-service:
+    profiles: ["services"]
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -123,8 +118,8 @@ services:
         SERVICE_PATH: services/risk-service
     container_name: risk-service
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8085
-      RISK_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-paymentdb}?currentSchema=risk_core
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
@@ -134,6 +129,7 @@ services:
         condition: service_healthy
 
   settlement-service:
+    profiles: ["services"]
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -141,8 +137,8 @@ services:
         SERVICE_PATH: services/settlement-service
     container_name: settlement-service
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8086
-      SETTLEMENT_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-paymentdb}?currentSchema=settlement_core
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
