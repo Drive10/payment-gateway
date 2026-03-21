@@ -40,13 +40,6 @@
             <artifactId>postgresql</artifactId>
         </dependency>
 
-        <!-- Flyway (now pinned to latest compatible version) -->
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
-            <version>${flyway.version}</version>
-        </dependency>
-
         <!-- Redis -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
