@@ -126,6 +126,46 @@ All public business APIs are versioned under `/api/v1`. The gateway now explicit
 
 ## Quick Start
 
+### One-Command Developer Flow
+
+Windows PowerShell:
+
+```powershell
+./scripts/dev.ps1 doctor
+./scripts/dev.ps1 hybrid
+./scripts/dev.ps1 payment-local
+```
+
+macOS / Linux:
+
+```bash
+./scripts/dev.sh doctor
+./scripts/dev.sh hybrid
+./scripts/dev.sh payment-local
+```
+
+Useful commands:
+
+- `doctor`: checks Java, Docker, optional Node/npm, and `.env`
+- `hybrid`: starts Docker for everything except local `payment-service`
+- `full`: starts the full Docker platform
+- `payment-local`: runs `payment-service` with `SPRING_PROFILES_ACTIVE=local`
+- `frontend-check`: runs `npm ci && npm run check` in `services/frontend`
+- `verify`: runs backend Maven verification
+- `compose-check`: validates Compose rendering for hybrid and full modes
+
+### Command Matrix By OS
+
+| Task | Windows PowerShell | Windows cmd | macOS / Linux |
+| --- | --- | --- | --- |
+| Doctor | `./scripts/dev.ps1 doctor` | `scripts\\dev.cmd doctor` | `./scripts/dev.sh doctor` |
+| Hybrid stack | `./scripts/dev.ps1 hybrid` | `scripts\\dev.cmd hybrid` | `./scripts/dev.sh hybrid` |
+| Full stack | `./scripts/dev.ps1 full` | `scripts\\dev.cmd full` | `./scripts/dev.sh full` |
+| Local payment-service | `./scripts/dev.ps1 payment-local` | `scripts\\dev.cmd payment-local` | `./scripts/dev.sh payment-local` |
+| Frontend check | `./scripts/dev.ps1 frontend-check` | `scripts\\dev.cmd frontend-check` | `./scripts/dev.sh frontend-check` |
+| Backend verify | `./scripts/dev.ps1 verify` | `scripts\\dev.cmd verify` | `./scripts/dev.sh verify` |
+| Compose validation | `./scripts/dev.ps1 compose-check` | `scripts\\dev.cmd compose-check` | `./scripts/dev.sh compose-check` |
+
 ### Full Docker
 
 ```bash
@@ -147,14 +187,34 @@ Open:
 
 Run infrastructure and all services EXCEPT `payment-service` in Docker. This allows you to work on the payment microservice locally while the rest of the ecosystem runs seamlessly via Docker.
 
-**1. Start the hybrid Docker stack**
+**1. Validate your machine**
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services up --build -d
+./scripts/dev.sh doctor
 ```
 
-**2. Run `payment-service` locally**
+On Windows, use:
+```powershell
+./scripts/dev.ps1 doctor
+```
+
+**2. Start the hybrid Docker stack**
 ```bash
-SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run -pl services/payment-service -am
+./scripts/dev.sh hybrid
+```
+
+On Windows, use:
+```powershell
+./scripts/dev.ps1 hybrid
+```
+
+**3. Run `payment-service` locally**
+```bash
+./scripts/dev.sh payment-local
+```
+
+On Windows, use:
+```powershell
+./scripts/dev.ps1 payment-local
 ```
 
 ### Full Local (Dev) Development
@@ -187,9 +247,12 @@ mvn -pl services/payment-service -Ptestcontainers -Dtest=PaymentFlowContainersIn
 Frontend quality check:
 
 ```bash
-cd services/frontend
-npm ci
-npm run check
+./scripts/dev.sh frontend-check
+```
+
+On Windows, use:
+```powershell
+./scripts/dev.ps1 frontend-check
 ```
 
 Notification retry / dead-letter verification:

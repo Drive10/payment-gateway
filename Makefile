@@ -1,16 +1,22 @@
-.PHONY: up up-full up-hybrid down test build verify compose-check
+.PHONY: doctor up up-full up-hybrid down test build verify compose-check frontend-check payment-local
+
+doctor:
+	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 doctor
 
 up:
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services up -d --build
+	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 hybrid
 
 up-full:
-	docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services --profile full --profile optional up -d --build
+	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 full
 
 up-hybrid:
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services --profile optional up -d --build
+	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 hybrid
 
 down:
-	docker compose down -v
+	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 down
+
+payment-local:
+	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 payment-local
 
 test:
 	mvn -B -q test
@@ -19,8 +25,10 @@ build:
 	mvn -B -q -DskipTests package
 
 verify:
-	mvn -B -q verify
+	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 verify
 
 compose-check:
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services config > NUL
-	docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services --profile full --profile optional config > NUL
+	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 compose-check
+
+frontend-check:
+	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 frontend-check
