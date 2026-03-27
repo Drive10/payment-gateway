@@ -56,21 +56,18 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${PAYMENT_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8084
+      SPRING_CONFIG_IMPORT: "optional:file:/config/"
       DB_URL: ${PAYMENT_DB_URL:-jdbc:postgresql://postgres:5432/paymentdb}
-      DB_USERNAME: ${POSTGRES_USER:-payment}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in .env}
       JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
       DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-RAZORPAY_SIMULATOR}
       CHECKOUT_BASE_URL: ${CHECKOUT_BASE_URL:-http://frontend}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
       PAYMENT_EVENTS_TOPIC: ${PAYMENT_EVENTS_TOPIC:-payment.events}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-dev_webhook_secret}
-      SIMULATOR_SERVICE_URL: ${SIMULATOR_SERVICE_URL:-http://simulator-service:8087}
-      LEDGER_SERVICE_URL: ${LEDGER_SERVICE_URL:-http://ledger-service:8082}
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+    volumes:
+      - ./config:/config:ro
     ports:
       - "8084:8084"
     depends_on:
@@ -78,6 +75,12 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8084/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   api-gateway:
     build:
@@ -89,16 +92,9 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${API_GATEWAY_PROFILE:-stage}
       SERVER_PORT: 8080
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
-      REDIS_HOST: ${REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8084}
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:8081}
-      LEDGER_SERVICE_URL: ${LEDGER_SERVICE_URL:-http://ledger-service:8082}
-      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL:-http://notification-service:8083}
-      RISK_SERVICE_URL: ${RISK_SERVICE_URL:-http://risk-service:8085}
-      SETTLEMENT_SERVICE_URL: ${SETTLEMENT_SERVICE_URL:-http://settlement-service:8086}
-      SIMULATOR_SERVICE_URL: ${SIMULATOR_SERVICE_URL:-http://simulator-service:8087}
+      SPRING_CONFIG_IMPORT: "optional:file:/config/"
+    volumes:
+      - ./config:/config:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -106,6 +102,12 @@ services:
     depends_on:
       redis:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   frontend:
     build:
@@ -113,7 +115,8 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_healthy
     ports:
       - "${FRONTEND_PORT:-3000}:80"
     healthcheck:
@@ -133,14 +136,21 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${AUTH_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8081
+      SPRING_CONFIG_IMPORT: "optional:file:/config/"
       AUTH_DB_URL: ${AUTH_DB_URL:-jdbc:postgresql://postgres:5432/authdb}
-      DB_USERNAME: ${POSTGRES_USER:-payment}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
+    volumes:
+      - ./config:/config:ro
     ports:
       - "8081:8081"
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   ledger-service:
     profiles: ["services"]
@@ -153,14 +163,21 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${LEDGER_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8082
+      SPRING_CONFIG_IMPORT: "optional:file:/config/"
       LEDGER_DB_URL: ${LEDGER_DB_URL:-jdbc:postgresql://postgres:5432/ledgerdb}
-      DB_USERNAME: ${POSTGRES_USER:-payment}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
+    volumes:
+      - ./config:/config:ro
     ports:
       - "8082:8082"
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   notification-service:
     profiles: ["services"]
@@ -173,12 +190,12 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${NOTIFICATION_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8083
+      SPRING_CONFIG_IMPORT: "optional:file:/config/"
       NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL:-jdbc:postgresql://postgres:5432/notificationdb}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
       PAYMENT_EVENTS_TOPIC: ${PAYMENT_EVENTS_TOPIC:-payment.events}
       PAYMENT_EVENTS_DLT_TOPIC: ${PAYMENT_EVENTS_DLT_TOPIC:-payment.events.dlt}
-      DB_USERNAME: ${POSTGRES_USER:-payment}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
+    volumes:
+      - ./config:/config:ro
     ports:
       - "8083:8083"
     depends_on:
@@ -186,6 +203,12 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8083/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   risk-service:
     profiles: ["services"]
@@ -198,14 +221,21 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${RISK_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8085
+      SPRING_CONFIG_IMPORT: "optional:file:/config/"
       RISK_DB_URL: ${RISK_DB_URL:-jdbc:postgresql://postgres:5432/riskdb}
-      DB_USERNAME: ${POSTGRES_USER:-payment}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
+    volumes:
+      - ./config:/config:ro
     ports:
       - "8085:8085"
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8085/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   settlement-service:
     profiles: ["services"]
@@ -218,14 +248,21 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SETTLEMENT_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8086
+      SPRING_CONFIG_IMPORT: "optional:file:/config/"
       SETTLEMENT_DB_URL: ${SETTLEMENT_DB_URL:-jdbc:postgresql://postgres:5432/settlementdb}
-      DB_USERNAME: ${POSTGRES_USER:-payment}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
+    volumes:
+      - ./config:/config:ro
     ports:
       - "8086:8086"
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8086/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   simulator-service:
     profiles: ["services"]
@@ -238,14 +275,21 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SIMULATOR_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8087
+      SPRING_CONFIG_IMPORT: "optional:file:/config/"
       SIMULATOR_DB_URL: ${SIMULATOR_DB_URL:-jdbc:postgresql://postgres:5432/simulatordb}
-      DB_USERNAME: ${POSTGRES_USER:-payment}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
+    volumes:
+      - ./config:/config:ro
     ports:
       - "8087:8087"
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8087/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   prometheus:
     profiles: ["services"]
