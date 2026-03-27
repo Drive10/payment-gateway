@@ -1,0 +1,8 @@
+services:
+  api-gateway:
+    environment:
+      PAYMENT_SERVICE_URL: http://host.docker.internal:8084
+
+  frontend:
+    environment:
+      API_BASE_URL: http://api-gateway:8080

@@ -1,31 +1,31 @@
 services:
   payment:
-    url: ${PAYMENT_SERVICE_URL:http://payment-service:8084}
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8084}
   auth:
-    url: ${AUTH_SERVICE_URL:http://auth-service:8081}
+    url: ${AUTH_SERVICE_URL:http://localhost:8081}
   ledger:
-    url: ${LEDGER_SERVICE_URL:http://ledger-service:8082}
+    url: ${LEDGER_SERVICE_URL:http://localhost:8082}
   notification:
-    url: ${NOTIFICATION_SERVICE_URL:http://notification-service:8083}
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
   risk:
-    url: ${RISK_SERVICE_URL:http://risk-service:8085}
+    url: ${RISK_SERVICE_URL:http://localhost:8085}
   settlement:
-    url: ${SETTLEMENT_SERVICE_URL:http://settlement-service:8086}
+    url: ${SETTLEMENT_SERVICE_URL:http://localhost:8086}
   simulator:
-    url: ${SIMULATOR_SERVICE_URL:http://simulator-service:8087}
+    url: ${SIMULATOR_SERVICE_URL:http://localhost:8087}
 
 spring:
   datasource:
-    username: ${POSTGRES_USER:payment}
-    password: ${POSTGRES_PASSWORD:paymentpass}
+    username: ${DB_USERNAME:${POSTGRES_USER:payment}}
+    password: ${DB_PASSWORD:${POSTGRES_PASSWORD:paymentpass}}
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   data:
     redis:
-      host: ${REDIS_HOST:redis}
+      host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
 management:
   zipkin:
     tracing:
-      endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}

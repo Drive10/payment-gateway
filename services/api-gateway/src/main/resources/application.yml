@@ -5,7 +5,7 @@ spring:
   application:
     name: api-gateway
   profiles:
-    default: dev
+    default: local
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -16,7 +16,7 @@ spring:
         - PreserveHostHeader
       routes:
         - id: payment-auth
-          uri: ${gateway.payment-service-url}
+          uri: ${services.payment.url}
           predicates:
             - Path=/api/v1/auth/**
           filters:
@@ -31,7 +31,7 @@ spring:
                 redis-rate-limiter.replenishRate: ${application.rate-limit.auth.replenish-rate:20}
                 redis-rate-limiter.burstCapacity: ${application.rate-limit.auth.burst-capacity:20}
         - id: payment-orders
-          uri: ${gateway.payment-service-url}
+          uri: ${services.payment.url}
           predicates:
             - Path=/api/v1/orders/**
           filters:
@@ -46,7 +46,7 @@ spring:
                 redis-rate-limiter.replenishRate: ${application.rate-limit.orders.replenish-rate:40}
                 redis-rate-limiter.burstCapacity: ${application.rate-limit.orders.burst-capacity:40}
         - id: payment-transactions
-          uri: ${gateway.payment-service-url}
+          uri: ${services.payment.url}
           predicates:
             - Path=/api/v1/payments/**,/api/v1/admin/**
           filters:
@@ -61,7 +61,7 @@ spring:
                 redis-rate-limiter.replenishRate: ${application.rate-limit.payments.replenish-rate:60}
                 redis-rate-limiter.burstCapacity: ${application.rate-limit.payments.burst-capacity:60}
         - id: payment-webhooks
-          uri: ${gateway.payment-service-url}
+          uri: ${services.payment.url}
           predicates:
             - Path=/api/v1/webhooks/**
           filters:
@@ -71,7 +71,7 @@ spring:
                 methods: POST
                 statuses: BAD_GATEWAY,GATEWAY_TIMEOUT,SERVICE_UNAVAILABLE
         - id: payment-docs
-          uri: ${gateway.payment-service-url}
+          uri: ${services.payment.url}
           predicates:
             - Path=/swagger-ui.html,/swagger-ui/**,/v3/api-docs/**
           filters:
@@ -81,37 +81,37 @@ spring:
                 methods: GET
                 statuses: BAD_GATEWAY,GATEWAY_TIMEOUT,SERVICE_UNAVAILABLE
         - id: auth-service
-          uri: ${gateway.auth-service-url}
+          uri: ${services.auth.url}
           predicates:
             - Path=/platform/auth/**
           filters:
             - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
         - id: ledger-service
-          uri: ${gateway.ledger-service-url}
+          uri: ${services.ledger.url}
           predicates:
             - Path=/platform/ledger/**
           filters:
             - RewritePath=/platform/ledger/(?<segment>.*), /internal/platform/${segment}
         - id: notification-service
-          uri: ${gateway.notification-service-url}
+          uri: ${services.notification.url}
           predicates:
             - Path=/platform/notification/**
           filters:
             - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
         - id: risk-service
-          uri: ${gateway.risk-service-url}
+          uri: ${services.risk.url}
           predicates:
             - Path=/platform/risk/**
           filters:
             - RewritePath=/platform/risk/(?<segment>.*), /internal/platform/${segment}
         - id: settlement-service
-          uri: ${gateway.settlement-service-url}
+          uri: ${services.settlement.url}
           predicates:
             - Path=/platform/settlement/**
           filters:
             - RewritePath=/platform/settlement/(?<segment>.*), /internal/platform/${segment}
         - id: simulator-service
-          uri: ${gateway.simulator-service-url}
+          uri: ${services.simulator.url}
           predicates:
             - Path=/platform/simulator/**
           filters:
@@ -127,7 +127,7 @@ management:
       probability: 1.0
   zipkin:
     tracing:
-      endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
 logging:
   pattern:
@@ -144,3 +144,19 @@ application:
     payments:
       replenish-rate: ${RATE_LIMIT_PAYMENT_REPLENISH_RATE:60}
       burst-capacity: ${RATE_LIMIT_PAYMENT_BURST_CAPACITY:60}
+
+services:
+  payment:
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8084}
+  auth:
+    url: ${AUTH_SERVICE_URL:http://localhost:8081}
+  ledger:
+    url: ${LEDGER_SERVICE_URL:http://localhost:8082}
+  notification:
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
+  risk:
+    url: ${RISK_SERVICE_URL:http://localhost:8085}
+  settlement:
+    url: ${SETTLEMENT_SERVICE_URL:http://localhost:8086}
+  simulator:
+    url: ${SIMULATOR_SERVICE_URL:http://localhost:8087}

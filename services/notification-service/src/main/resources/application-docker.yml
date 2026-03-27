@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: ${NOTIFICATION_DB_URL:jdbc:postgresql://postgres:5432/notificationdb}
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD:paymentpass}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}

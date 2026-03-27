@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/paymentdb}
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD:paymentpass}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+
+application:
+  payment:
+    checkout-base-url: ${CHECKOUT_BASE_URL:http://frontend}
+  simulator:
+    base-url: ${SIMULATOR_SERVICE_URL:http://simulator-service:8087}
+  ledger:
+    base-url: ${LEDGER_SERVICE_URL:http://ledger-service:8082}
+  bootstrap:
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}

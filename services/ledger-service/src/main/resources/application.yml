@@ -4,7 +4,7 @@ spring:
   application:
     name: ledger-service
   profiles:
-    default: dev
+    default: local
   datasource:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
