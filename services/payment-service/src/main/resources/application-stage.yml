@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/paymentdb}
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD:paymentpass}
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+application:
+  payment:
+    checkout-base-url: ${CHECKOUT_BASE_URL:http://frontend}
+  bootstrap:
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}

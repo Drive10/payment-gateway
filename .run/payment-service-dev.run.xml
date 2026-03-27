@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration name="payment-service (local)" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+  <configuration name="payment-service (dev)" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <module name="payment-service" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="dev.payment.paymentservice.Application" />
-    <option name="ACTIVE_PROFILES" value="local" />
+    <option name="ACTIVE_PROFILES" value="dev" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />

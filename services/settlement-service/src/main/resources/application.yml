@@ -4,15 +4,13 @@ spring:
   application:
     name: settlement-service
   profiles:
-    default: local
+    default: dev
   datasource:
-    username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD:paymentpass}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
-    hibernate:
-      ddl-auto: update
 
 management:
   endpoints:

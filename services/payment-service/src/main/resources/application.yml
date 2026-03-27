@@ -6,24 +6,18 @@ spring:
   application:
     name: payment-service
   profiles:
-    default: local
+    default: dev
   datasource:
-    username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD:paymentpass}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
-    defer-datasource-initialization: true
-    hibernate:
-      ddl-auto: update
     properties:
       hibernate:
         format_sql: false
   jackson:
     default-property-inclusion: non_null
-  sql:
-    init:
-      mode: always
   threads:
     virtual:
       enabled: true
@@ -50,11 +44,11 @@ springdoc:
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET_KEY:VGhpc0lzQVN0cm9uZ0Jhc2U2NEVuY29kZWRKU1dUU2VjcmV0S2V5Rm9yRmluVGVjaEFQSUM=}
+      secret-key: ${JWT_SECRET_KEY}
       expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
   payment:
     default-provider: ${DEFAULT_PROVIDER:RAZORPAY_SIMULATOR}
-    checkout-base-url: ${CHECKOUT_BASE_URL:https://checkout.fintech.local}
+    checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}
 
 logging:
   pattern:

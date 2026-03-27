@@ -7,7 +7,7 @@
 ![Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture%20%2B%20DDD-0F766E)
 ![OpenAPI](https://img.shields.io/badge/API-OpenAPI%203-85EA2D)
 
-Production-style fintech backend built with Java 21 and Spring Boot 3.3. The repository is structured like a real payments team codebase: a gateway-ready edge module, a hardened payment domain core, bounded platform services, PostgreSQL persistence, JWT security, pagination and filtering, idempotent payment APIs, auditability, and containerized local runtime.
+Production-style fintech platform built with Java 21 and Spring Boot 3.3. The repository is structured like a real payments team codebase: a gateway-ready edge module, a hardened payment domain core, bounded platform services, isolated service databases, JWT security, pagination and filtering, idempotent payment APIs, auditability, a Dockerized React checkout, and containerized local runtime.
 
 ## Why It Looks Enterprise
 
@@ -15,7 +15,7 @@ Production-style fintech backend built with Java 21 and Spring Boot 3.3. The rep
 - Domain-driven aggregates for users, roles, orders, payments, transactions, and audit logs.
 - JWT authentication with role-based access for `ADMIN` and `USER`.
 - Razorpay-style order and payment capture simulation with idempotency protection.
-- PostgreSQL-backed domain model with automatic table creation for local development and bootstrap seed data for the payment core.
+- PostgreSQL-backed domain model with per-service database isolation and environment-specific startup behavior.
 - Standard API envelope, global exception handling, validation, structured logging, and OpenAPI docs.
 - API Gateway module wired to front the payment core and expose supporting service boundaries.
 
@@ -25,6 +25,8 @@ Production-style fintech backend built with Java 21 and Spring Boot 3.3. The rep
 payment-gateway
 ├── Dockerfile
 ├── docker-compose.yml
+├── docker
+│   └── postgres
 ├── libs
 │   └── common
 ├── services
@@ -33,6 +35,7 @@ payment-gateway
 │   ├── ledger-service
 │   ├── notification-service
 │   ├── payment-service
+│   ├── frontend
 │   ├── risk-service
 │   └── settlement-service
 └── observability
@@ -108,7 +111,7 @@ Supporting platform service status routes are also available through the gateway
 - `GET /api/v1/admin/payments`
 - `GET /api/v1/admin/audit-logs`
 
-Swagger UI is available at [http://localhost:8084/swagger-ui.html](http://localhost:8084/swagger-ui.html).
+The frontend entrypoint is [http://localhost:3000](http://localhost:3000). Gateway health is available at [http://localhost:3000/actuator/health](http://localhost:3000/actuator/health).
 
 ## Quick Start
 
@@ -116,24 +119,25 @@ Swagger UI is available at [http://localhost:8084/swagger-ui.html](http://localh
 
 ```bash
 cp .env.example .env
-docker compose up --build postgres api-gateway
+docker compose --profile services up --build frontend postgres api-gateway auth-service ledger-service notification-service risk-service settlement-service
 ```
 
-### Local with Maven
+Then run `payment-service` from the IDE with `SPRING_PROFILES_ACTIVE=dev`.
+
+### Full Docker
 
 ```bash
-mvn -q -pl services/payment-service -am spring-boot:run
+cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services up --build
 ```
 
 ## Docker Architecture
 
 This project uses a clean Docker setup that supports both local debugging and full containerized execution.
 
-The base [docker-compose.yml](/Users/macbookair/Documents/GitHub/payment-gateway/docker-compose.yml) contains the core platform services, including PostgreSQL, the API gateway, and all backend microservices. The microservices are marked with the `services` Docker profile, which makes them optional. This means you can start only the services you need instead of running the full stack every time.
+The base [docker-compose.yml](/Users/macbookair/Documents/GitHub/payment-gateway/docker-compose.yml) contains PostgreSQL, the API gateway, the Dockerized frontend, and the backend microservices. The backend microservices are marked with the `services` Docker profile, which makes it easy to run one service locally while the rest of the platform stays in Docker.
 
-Service URLs are controlled through environment variables in `.env`. In local development, the gateway can call services running outside Docker through `host.docker.internal`. This is useful when you want to run one microservice directly from IntelliJ or VS Code for debugging while the rest of the platform stays inside Docker.
-
-When you want everything to run inside Docker, use [docker-compose.docker.yml](/Users/macbookair/Documents/GitHub/payment-gateway/docker-compose.docker.yml). That file overrides the service URLs so containers communicate with each other using Docker service names such as `payment-service`, `auth-service`, and `risk-service`.
+Service URLs are profile-driven. In local hybrid development, the gateway can call a service running outside Docker through `host.docker.internal`. In full Docker mode, [docker-compose.docker.yml](/Users/macbookair/Documents/GitHub/payment-gateway/docker-compose.docker.yml) overrides those URLs so containers talk to each other by service name.
 
 This approach makes it easy to:
 
@@ -142,12 +146,13 @@ This approach makes it easy to:
 - switch to full Docker mode without changing application code
 - scale the same pattern across multiple microservices
 
-It also follows good engineering practices:
+It also follows stronger engineering practices:
 
 - environment-driven configuration
-- no hardcoded service URLs
+- no hardcoded service URLs in runtime routing
 - clean separation between local and container networking
 - flexible, production-friendly service composition
+- isolated service databases inside one local PostgreSQL container
 
 ## Spring Profiles
 
@@ -155,14 +160,14 @@ Each service now supports four Spring profiles:
 
 - `local`: for running from the IDE on your machine
 - `docker`: for running inside Docker
-- `staging`: for staging deployments
+- `stage`: for staging and containerized non-production runs
 - `prod`: for production deployments
 
 The default profile is `local`, so an IDE run works without extra service URL setup.
 
 Profile behavior:
 
-- `local` uses local defaults such as `localhost`
+- `local` uses Docker-hosted local databases on `localhost:5433`
 - `docker` uses Docker-safe defaults such as `postgres` and `host.docker.internal`
 - `staging` expects staging environment variables
 - `prod` expects production environment variables
@@ -170,22 +175,22 @@ Profile behavior:
 This means:
 
 - when you run from the IDE, Spring uses local defaults automatically
-- when Docker runs a service, Compose sets `SPRING_PROFILES_ACTIVE=docker`
-- when staging or production runs a service, you set `SPRING_PROFILES_ACTIVE=staging` or `prod` and provide deployment env vars
+- when Docker runs a service, Compose sets `SPRING_PROFILES_ACTIVE=stage` by default
+- when staging or production runs a service, you set `SPRING_PROFILES_ACTIVE=stage` or `prod` and provide deployment env vars
 
 If you run `payment-service` from IntelliJ, you usually only need:
 
 ```text
-SPRING_PROFILES_ACTIVE=local
+SPRING_PROFILES_ACTIVE=dev
 ```
 
 In Docker, the compose file sets:
 
 ```text
-SPRING_PROFILES_ACTIVE=docker
+SPRING_PROFILES_ACTIVE=stage
 ```
 
-So the service automatically switches to Docker-friendly settings such as connecting to `postgres` instead of `localhost`.
+So the service automatically switches between local, Docker, and deployment-safe settings without code changes.
 
 ### Common Commands
 
@@ -193,15 +198,15 @@ Run only PostgreSQL and the gateway, while a service runs from your IDE:
 
 ```bash
 cp .env.example .env
-docker compose up --build postgres api-gateway
+docker compose --profile services up --build frontend postgres api-gateway auth-service ledger-service notification-service risk-service settlement-service
 ```
 
-Then run your service locally from the IDE with `SPRING_PROFILES_ACTIVE=local`.
+Then run your service locally from the IDE with `SPRING_PROFILES_ACTIVE=dev`.
 
 Run one backend service in Docker:
 
 ```bash
-docker compose --profile services up --build postgres payment-service
+docker compose --profile services up --build frontend postgres api-gateway payment-service
 ```
 
 Run the full platform inside Docker:
@@ -211,25 +216,21 @@ cp .env.example .env
 docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services up --build
 ```
 
-For staging or production, run the application with the matching profile and provide the required environment variables such as `DB_URL`, `AUTH_DB_URL`, `LEDGER_DB_URL`, and service URLs.
+For stage or production, run the application with the matching profile and provide required environment variables such as `DB_URL`, service-specific database URLs, and `JWT_SECRET_KEY`. The `stage` profile is container-friendly, while `prod` stays strict for production deployments.
 
 Open:
 
+- Frontend: [http://localhost:3000](http://localhost:3000)
 - Gateway: [http://localhost:8080](http://localhost:8080)
-- API docs: [http://localhost:8084/swagger-ui.html](http://localhost:8084/swagger-ui.html)
-- Health: [http://localhost:8084/actuator/health](http://localhost:8084/actuator/health)
-
-## Seed Credentials
-
-- Admin email: `admin@fintech.local`
-- Admin password: `Admin@1234`
+- Payment API docs: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- Gateway health through Nginx: [http://localhost:3000/actuator/health](http://localhost:3000/actuator/health)
 
 ## Example Flow
 
 ### 1. Register
 
 ```bash
-curl -X POST http://localhost:8084/api/v1/auth/register \
+curl -X POST http://localhost:3000/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "fullName":"Rahul Sharma",
@@ -241,7 +242,7 @@ curl -X POST http://localhost:8084/api/v1/auth/register \
 ### 2. Login
 
 ```bash
-curl -X POST http://localhost:8084/api/v1/auth/login \
+curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email":"rahul@example.com",
@@ -252,7 +253,7 @@ curl -X POST http://localhost:8084/api/v1/auth/login \
 ### 3. Create Order
 
 ```bash
-curl -X POST http://localhost:8084/api/v1/orders \
+curl -X POST http://localhost:3000/api/v1/orders \
   -H "Authorization: Bearer <JWT>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -292,7 +293,7 @@ curl -X POST http://localhost:8084/api/v1/payments/<PAYMENT_ID>/capture \
 
 ## Engineering Notes
 
-- Payment bootstrap seed data lives in [services/payment-service/src/main/resources/data.sql](/Users/macbookair/Documents/GitHub/payment-gateway/services/payment-service/src/main/resources/data.sql).
+- Payment roles are bootstrapped automatically in `local` and `docker` profiles, and an admin user is created only when `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` are explicitly provided.
 - Shared API wrapper contracts live in `libs/common`.
 - `services/api-gateway` includes route configuration to forward `/api/v1/**` to the payment service.
 - Service architecture notes live in `docs/ARCHITECTURE.md`.

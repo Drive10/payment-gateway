@@ -25,8 +25,12 @@ function buildCustomerIdentity() {
   return {
     email: `nova.${sessionKey}@example.com`,
     fullName: "Nova Demo Customer",
-    password: "User1234",
+    password: `Nova${sessionKey}1234`,
   };
+}
+
+function persistCheckoutState(value) {
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value));
 }
 
 async function apiRequest(path, options = {}) {
@@ -128,7 +132,7 @@ export async function startCheckout({ amount, method, cardholder }) {
     cardholder,
   };
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(checkout));
+  persistCheckoutState(checkout);
   return checkout;
 }
 
@@ -166,7 +170,7 @@ export async function captureCheckout(checkout) {
     }),
   };
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transaction));
+  persistCheckoutState(transaction);
   return transaction;
 }
 
@@ -277,7 +281,7 @@ export function buildTransaction({ amount, method, cardholder }) {
 
 export function getStoredTransaction() {
   try {
-    const value = localStorage.getItem(STORAGE_KEY);
+    const value = sessionStorage.getItem(STORAGE_KEY);
     return value ? JSON.parse(value) : null;
   } catch {
     return null;

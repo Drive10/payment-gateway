@@ -3,15 +3,16 @@ services:
     image: postgres:16-alpine
     container_name: fintech-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-paymentdb}
+      POSTGRES_DB: ${POSTGRES_DB:-platform}
       POSTGRES_USER: ${POSTGRES_USER:-payment}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-payment} -d ${POSTGRES_DB:-paymentdb}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-payment} -d ${POSTGRES_DB:-platform}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -23,14 +24,17 @@ services:
       dockerfile: Dockerfile
     container_name: payment-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: ${PAYMENT_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8084
+      DB_URL: ${PAYMENT_DB_URL:-jdbc:postgresql://postgres:5432/paymentdb}
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-VGhpc0lzQVN0cm9uZ0Jhc2U2NEVuY29kZWRKU1dUU2VjcmV0S2V5Rm9yRmluVGVjaEFQSUM=}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in .env}
       JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
       DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-RAZORPAY_SIMULATOR}
-      CHECKOUT_BASE_URL: ${CHECKOUT_BASE_URL:-https://checkout.fintech.local}
+      CHECKOUT_BASE_URL: ${CHECKOUT_BASE_URL:-http://frontend}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     ports:
       - "8084:8084"
     depends_on:
@@ -45,7 +49,7 @@ services:
         SERVICE_PATH: services/api-gateway
     container_name: api-gateway
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: ${API_GATEWAY_PROFILE:-stage}
       SERVER_PORT: 8080
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -76,8 +80,9 @@ services:
         SERVICE_PATH: services/auth-service
     container_name: auth-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: ${AUTH_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8081
+      AUTH_DB_URL: ${AUTH_DB_URL:-jdbc:postgresql://postgres:5432/authdb}
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
@@ -95,8 +100,9 @@ services:
         SERVICE_PATH: services/ledger-service
     container_name: ledger-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: ${LEDGER_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8082
+      LEDGER_DB_URL: ${LEDGER_DB_URL:-jdbc:postgresql://postgres:5432/ledgerdb}
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
@@ -114,8 +120,9 @@ services:
         SERVICE_PATH: services/notification-service
     container_name: notification-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: ${NOTIFICATION_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8083
+      NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL:-jdbc:postgresql://postgres:5432/notificationdb}
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
@@ -133,8 +140,9 @@ services:
         SERVICE_PATH: services/risk-service
     container_name: risk-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: ${RISK_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8085
+      RISK_DB_URL: ${RISK_DB_URL:-jdbc:postgresql://postgres:5432/riskdb}
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
@@ -152,8 +160,9 @@ services:
         SERVICE_PATH: services/settlement-service
     container_name: settlement-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: ${SETTLEMENT_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8086
+      SETTLEMENT_DB_URL: ${SETTLEMENT_DB_URL:-jdbc:postgresql://postgres:5432/settlementdb}
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:

@@ -1,7 +1,0 @@
-gateway:
-  payment-service-url: ${PAYMENT_SERVICE_URL}
-  auth-service-url: ${AUTH_SERVICE_URL}
-  ledger-service-url: ${LEDGER_SERVICE_URL}
-  notification-service-url: ${NOTIFICATION_SERVICE_URL}
-  risk-service-url: ${RISK_SERVICE_URL}
-  settlement-service-url: ${SETTLEMENT_SERVICE_URL}

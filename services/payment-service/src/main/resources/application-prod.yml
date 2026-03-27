@@ -1,3 +1,12 @@
 spring:
   datasource:
     url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+application:
+  payment:
+    checkout-base-url: ${CHECKOUT_BASE_URL}

@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    url: ${SETTLEMENT_DB_URL:jdbc:postgresql://localhost:5433/settlementdb}
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD:paymentpass}
+  jpa:
+    hibernate:
+      ddl-auto: update
