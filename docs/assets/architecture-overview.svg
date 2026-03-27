@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Fintech Platform Architecture</title>
+  <desc id="desc">Gateway, payment core, supporting services, data stores, Kafka, Redis, and observability components.</desc>
+  <defs>
+    <style>
+      .bg { fill: #08111f; }
+      .panel { fill: #10233f; stroke: #5bc0be; stroke-width: 2; rx: 18; }
+      .edge { fill: #163152; stroke: #7dd3fc; stroke-width: 2; rx: 16; }
+      .store { fill: #172554; stroke: #93c5fd; stroke-width: 2; rx: 16; }
+      .obs { fill: #2a1a4b; stroke: #c084fc; stroke-width: 2; rx: 16; }
+      .label { fill: #e2e8f0; font: 600 24px 'Segoe UI', sans-serif; }
+      .small { fill: #cbd5e1; font: 500 18px 'Segoe UI', sans-serif; }
+      .line { stroke: #5bc0be; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5bc0be"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1280" height="720"/>
+  <text x="60" y="72" class="label" font-size="34">Enterprise Fintech Payment Platform</text>
+  <text x="60" y="108" class="small">Dockerized frontend edge, Redis-backed gateway controls, event-driven payment core, and isolated service databases.</text>
+
+  <rect x="58" y="160" width="180" height="92" class="edge"/>
+  <text x="105" y="214" class="label">Frontend</text>
+  <text x="91" y="240" class="small">Nginx + React SPA</text>
+
+  <rect x="292" y="145" width="220" height="122" class="edge"/>
+  <text x="339" y="203" class="label">API Gateway</text>
+  <text x="316" y="232" class="small">Routing, Redis limits, tracing</text>
+
+  <rect x="570" y="112" width="250" height="170" class="panel"/>
+  <text x="624" y="168" class="label">payment-service</text>
+  <text x="615" y="198" class="small">Auth, orders, payments</text>
+  <text x="637" y="226" class="small">Refunds, webhooks</text>
+  <text x="614" y="254" class="small">Kafka publisher, ledger calls</text>
+
+  <rect x="872" y="100" width="164" height="78" class="panel"/>
+  <text x="911" y="145" class="label">ledger</text>
+  <rect x="872" y="194" width="164" height="78" class="panel"/>
+  <text x="890" y="239" class="label">simulator</text>
+  <rect x="1060" y="100" width="164" height="78" class="panel"/>
+  <text x="1085" y="145" class="label">notification</text>
+  <rect x="1060" y="194" width="164" height="78" class="panel"/>
+  <text x="1110" y="239" class="label">risk</text>
+
+  <rect x="570" y="338" width="180" height="88" class="store"/>
+  <text x="621" y="390" class="label">Kafka</text>
+  <text x="596" y="416" class="small">events + DLT</text>
+
+  <rect x="294" y="348" width="180" height="88" class="store"/>
+  <text x="346" y="400" class="label">Redis</text>
+  <text x="319" y="426" class="small">gateway throttling</text>
+
+  <rect x="58" y="520" width="1162" height="130" class="panel"/>
+  <text x="90" y="566" class="label">Data Ownership</text>
+  <text x="90" y="601" class="small">paymentdb   authdb   ledgerdb   notificationdb   riskdb   settlementdb   simulatordb</text>
+
+  <rect x="872" y="338" width="352" height="166" class="obs"/>
+  <text x="920" y="388" class="label">Observability Stack</text>
+  <text x="910" y="422" class="small">Prometheus metrics</text>
+  <text x="910" y="452" class="small">Grafana dashboards</text>
+  <text x="910" y="482" class="small">Zipkin traces + correlation IDs</text>
+
+  <path class="line" d="M238 206 H292"/>
+  <path class="line" d="M512 206 H570"/>
+  <path class="line" d="M402 267 V348"/>
+  <path class="line" d="M820 196 H872"/>
+  <path class="line" d="M820 228 H1060"/>
+  <path class="line" d="M695 282 V338"/>
+  <path class="line" d="M1036 390 H872"/>
+</svg>

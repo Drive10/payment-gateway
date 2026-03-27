@@ -43,6 +43,12 @@ Payment integration with Testcontainers:
 mvn -pl services/payment-service -Ptestcontainers -Dtest=PaymentFlowContainersIntegrationTest test
 ```
 
+Notification retry / DLT smoke check:
+
+```bash
+docker compose --profile services logs -f notification-service
+```
+
 Frontend:
 
 ```bash
@@ -58,6 +64,7 @@ npm run check
 - Prefer explicit domain transitions over implicit side effects.
 - Do not reintroduce `ddl-auto:update` for non-test profiles.
 - Preserve structured logs and correlation headers.
+- Preserve Redis-backed rate limiting and Kafka DLT behavior when touching gateway or consumer code.
 - Add tests for webhook, refund, and event-driven flows when behavior changes.
 
 ## Pull Request Expectations
@@ -66,3 +73,4 @@ npm run check
 - Green frontend `npm run check`
 - Updated docs for any externally visible behavior
 - Clear commit messages
+- If you touch release behavior, validate `.github/workflows/release-images.yml`

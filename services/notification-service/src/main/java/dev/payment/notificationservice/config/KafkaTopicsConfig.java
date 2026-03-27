@@ -13,4 +13,9 @@ public class KafkaTopicsConfig {
     NewTopic paymentEventsTopic(@Value("${application.kafka.topic.payment-events}") String topicName) {
         return TopicBuilder.name(topicName).partitions(1).replicas(1).build();
     }
+
+    @Bean
+    NewTopic paymentEventsDltTopic(@Value("${application.kafka.topic.payment-events-dlt}") String topicName) {
+        return TopicBuilder.name(topicName).partitions(1).replicas(1).build();
+    }
 }

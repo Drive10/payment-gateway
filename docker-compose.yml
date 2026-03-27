@@ -1,4 +1,12 @@
 services:
+  redis:
+    profiles: ["services"]
+    image: redis:7.4-alpine
+    container_name: fintech-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
   kafka:
     profiles: ["services"]
     image: apache/kafka:3.8.0
@@ -81,10 +89,15 @@ services:
       SPRING_PROFILES_ACTIVE: ${API_GATEWAY_PROFILE:-stage}
       SERVER_PORT: 8080
       ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
       - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_started
 
   frontend:
     build:
@@ -155,6 +168,7 @@ services:
       NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL:-jdbc:postgresql://postgres:5432/notificationdb}
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
       PAYMENT_EVENTS_TOPIC: ${PAYMENT_EVENTS_TOPIC:-payment.events}
+      PAYMENT_EVENTS_DLT_TOPIC: ${PAYMENT_EVENTS_DLT_TOPIC:-payment.events.dlt}
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:

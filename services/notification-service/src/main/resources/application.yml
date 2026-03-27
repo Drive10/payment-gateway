@@ -21,6 +21,11 @@ spring:
       properties:
         spring.json.trusted.packages: dev.payment.common.events
         spring.json.value.default.type: dev.payment.common.events.PaymentEventMessage
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    listener:
+      ack-mode: record
 
 management:
   endpoints:
@@ -32,3 +37,7 @@ application:
   kafka:
     topic:
       payment-events: ${PAYMENT_EVENTS_TOPIC:payment.events}
+      payment-events-dlt: ${PAYMENT_EVENTS_DLT_TOPIC:payment.events.dlt}
+    consumer:
+      retry-attempts: ${KAFKA_CONSUMER_RETRY_ATTEMPTS:3}
+      retry-backoff-ms: ${KAFKA_CONSUMER_RETRY_BACKOFF_MS:1000}

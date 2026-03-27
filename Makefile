@@ -1,13 +1,13 @@
 .PHONY: up down test build
 
 up:
-	docker compose -f deploy/local/docker-compose.yml up -d
+	docker compose --profile services up -d --build
 
 down:
-	docker compose -f deploy/local/docker-compose.yml down -v
+	docker compose down -v
 
 test:
-	cd payment-gateway && mvn -B -q test
+	mvn -B -q test
 
 build:
-	cd payment-gateway && mvn -B -q -DskipTests package
+	mvn -B -q -DskipTests package

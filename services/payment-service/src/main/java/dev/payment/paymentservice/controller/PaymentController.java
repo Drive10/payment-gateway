@@ -12,6 +12,10 @@ import dev.payment.paymentservice.dto.response.RefundResponse;
 import dev.payment.paymentservice.exception.ApiException;
 import dev.payment.paymentservice.service.AuthService;
 import dev.payment.paymentservice.service.PaymentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -67,9 +71,28 @@ public class PaymentController {
     }
 
     @PostMapping("/{paymentId}/refunds")
+    @Operation(summary = "Create a refund", description = "Supports partial and multiple refunds, enforces idempotency, and blocks over-refunding.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Refund accepted"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Missing idempotency key or invalid payload"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Refund would exceed captured amount")
+    })
     public ApiResponse<RefundResponse> refundPayment(
             @PathVariable UUID paymentId,
-            @Valid @RequestBody CreateRefundRequest request,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    description = "Refund request",
+                    content = @io.swagger.v3.oas.annotations.media.Content(
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "amount": 499.00,
+                                      "reason": "customer_request"
+                                    }
+                                    """)
+                    )
+            )
+            @Valid @org.springframework.web.bind.annotation.RequestBody CreateRefundRequest request,
+            @Parameter(description = "Idempotency key required for safe retries", example = "refund-checkout-1001")
             @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication authentication
     ) {

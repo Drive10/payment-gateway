@@ -1,5 +1,7 @@
 # Architecture
 
+![Architecture overview](assets/architecture-overview.svg)
+
 ## Topology
 
 ```mermaid
@@ -16,6 +18,7 @@ flowchart LR
     Gateway --> Simulator["simulator-service"]
 
     Payment --> Kafka["Kafka"]
+    Gateway --> Redis["Redis"]
     Payment --> Ledger
     Payment --> Simulator
     Notify --> Kafka
@@ -31,7 +34,7 @@ flowchart LR
 
 ## Service Responsibilities
 
-- `api-gateway`: edge routing, retry policy, rate limiting, correlation header propagation
+- `api-gateway`: edge routing, Redis-backed rate limiting, retry policy, correlation header propagation
 - `payment-service`: JWT auth, orders, payments, refunds, webhook validation, Kafka publishing
 - `ledger-service`: double-entry journal writes and account views
 - `notification-service`: notification persistence and idempotent payment-event consumption
@@ -53,12 +56,13 @@ flowchart LR
 
 ## Reliability Guarantees
 
-- At-least-once Kafka consumption with idempotent consumers
+- At-least-once Kafka consumption with idempotent consumers and DLT fallback
 - Idempotent payment create and refund APIs
 - Replay-safe webhook processing
 - Double-entry journal records instead of direct balance mutation
 - Flyway-managed schema evolution
 - Retry and circuit-breaker protection on simulator and ledger calls
+- Redis-backed distributed throttling at the gateway edge
 
 ## Observability
 

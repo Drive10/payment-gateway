@@ -11,6 +11,8 @@ Production-grade fintech backend platform built with Java 21, Spring Boot 3.3, P
 
 ## Architecture
 
+![Architecture overview](docs/assets/architecture-overview.svg)
+
 ```mermaid
 flowchart LR
     Client["Client / Merchant / Frontend"] --> Nginx["Frontend (Nginx + SPA)"]
@@ -25,6 +27,7 @@ flowchart LR
     Gateway --> Simulator["simulator-service"]
 
     Payment --> Kafka["Kafka"]
+    Gateway --> Redis["Redis"]
     Payment --> Ledger
     Payment --> Simulator
     Notify --> Kafka
@@ -56,8 +59,8 @@ More design detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Refund correctness with partial refunds, multiple refunds, replay protection, and over-refund prevention.
 - Double-entry ledger posting for captures and refunds.
 - Flyway versioned schema migrations across services.
-- Kafka event flow for payment domain events and downstream notification processing.
-- Rate limiting on auth and payment-facing edge routes.
+- Kafka event flow for payment domain events, bounded retries, and dead-letter routing.
+- Redis-backed rate limiting on auth and payment-facing edge routes.
 - Tracing, correlation IDs, Prometheus metrics, Grafana dashboards, and Zipkin-ready tracing export.
 - Testcontainers-backed payment flow coverage with PostgreSQL and Kafka.
 
@@ -76,6 +79,8 @@ More design detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | `frontend` | Dockerized checkout served by Nginx |
 
 ## Core Business Flow
+
+![Payment flow](docs/assets/payment-flow.svg)
 
 1. User registers or logs in and receives a JWT.
 2. User creates an order through `/api/v1/orders`.
@@ -97,8 +102,9 @@ All public business APIs are versioned under `/api/v1`. The routing and controll
 - Replayed webhook events are deduplicated by stored `event_id`.
 - Refund APIs require `Idempotency-Key`.
 - Duplicate Kafka consumption is blocked by stored consumed event ids.
+- Kafka consumers retry with backoff, then route poison messages to `payment.events.dlt`.
 - Resilience4j retry and circuit breaker policies protect simulator and ledger calls.
-- Gateway rate limits are applied to auth, order, and payment endpoints.
+- Redis-backed gateway rate limits are applied to auth, order, and payment endpoints.
 
 ## Observability
 
@@ -106,6 +112,15 @@ All public business APIs are versioned under `/api/v1`. The routing and controll
 - Grafana dashboard provisioned under `ops/grafana`
 - Zipkin tracing endpoint support via `ZIPKIN_ENDPOINT`
 - Structured logs include `traceId`, `spanId`, and `correlationId`
+
+## Demo Proof
+
+![Swagger preview](docs/assets/swagger-preview.svg)
+
+- Frontend edge entrypoint: `http://localhost:3000`
+- Public API edge: `http://localhost:3000/api/v1/...`
+- Swagger UI through the gateway: `http://localhost:8080/swagger-ui.html`
+- Grafana dashboard: `http://localhost:3001`
 
 ## Quick Start
 
@@ -121,6 +136,7 @@ Open:
 - Frontend: `http://localhost:3000`
 - Gateway: `http://localhost:8080`
 - Payment Swagger UI: `http://localhost:8080/swagger-ui.html`
+- Redis: `localhost:6379`
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3001`
 - Zipkin: `http://localhost:9411`
@@ -131,7 +147,7 @@ Run everything except `payment-service` in Docker:
 
 ```bash
 cp .env.example .env
-docker compose --profile services up --build frontend postgres api-gateway auth-service ledger-service notification-service risk-service settlement-service simulator-service kafka prometheus grafana zipkin
+docker compose --profile services up --build frontend postgres redis api-gateway auth-service ledger-service notification-service risk-service settlement-service simulator-service kafka prometheus grafana zipkin
 ```
 
 Then run `payment-service` from the IDE with:
@@ -160,6 +176,12 @@ Frontend quality check:
 cd services/frontend
 npm ci
 npm run check
+```
+
+Notification retry / dead-letter verification:
+
+```bash
+docker compose --profile services logs -f notification-service
 ```
 
 ## Example API Flow
@@ -198,10 +220,11 @@ curl -X POST http://localhost:3000/api/v1/payments/<PAYMENT_ID>/refunds \
 - PostgreSQL per service for data ownership boundaries.
 - Kafka for event-driven domain propagation.
 - Flyway for explicit schema evolution.
-- Bucket4j for rate limiting at the gateway edge.
+- Spring Cloud Gateway with Redis-backed request limiting for distributed throttling.
 - Resilience4j for retry and circuit-breaker behavior.
 - Micrometer + Prometheus + Grafana + Zipkin for observability.
 - Docker Compose for repeatable local platform orchestration.
+- GHCR image publishing workflow for stage/prod release promotion.
 
 ## Production Readiness Checklist
 
@@ -214,6 +237,7 @@ curl -X POST http://localhost:3000/api/v1/payments/<PAYMENT_ID>/refunds \
 - Rate limiting
 - Prometheus and Grafana
 - CI for backend, frontend, and container builds
+- Release workflow for versioned container images
 
 ## Contributing
 
