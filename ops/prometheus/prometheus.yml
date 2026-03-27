@@ -1,0 +1,36 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: api-gateway
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["api-gateway:8080"]
+  - job_name: payment-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["payment-service:8084"]
+  - job_name: notification-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["notification-service:8083"]
+  - job_name: simulator-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["simulator-service:8087"]
+  - job_name: auth-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["auth-service:8081"]
+  - job_name: ledger-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["ledger-service:8082"]
+  - job_name: risk-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["risk-service:8085"]
+  - job_name: settlement-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["settlement-service:8086"]

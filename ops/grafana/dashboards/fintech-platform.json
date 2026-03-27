@@ -1,0 +1,31 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "targets": [
+        {"expr": "sum(rate(http_server_requests_seconds_count[5m])) by (application)", "legendFormat": "{{application}}"}
+      ],
+      "title": "HTTP Request Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "targets": [
+        {"expr": "sum(rate(http_server_requests_seconds_sum[5m])) by (application) / sum(rate(http_server_requests_seconds_count[5m])) by (application)", "legendFormat": "{{application}}"}
+      ],
+      "title": "Average Latency",
+      "type": "timeseries"
+    }
+  ],
+  "schemaVersion": 39,
+  "title": "Fintech Platform",
+  "version": 1
+}

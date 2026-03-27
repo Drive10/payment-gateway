@@ -83,6 +83,11 @@ public class OrderService {
         orderRepository.save(order);
     }
 
+    public void markRefunded(Order order) {
+        order.setStatus(OrderStatus.REFUNDED);
+        orderRepository.save(order);
+    }
+
     private String generateOrderReference() {
         return "ORD_" + Instant.now().toEpochMilli() + "_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }

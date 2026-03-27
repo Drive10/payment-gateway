@@ -21,12 +21,23 @@ spring:
   threads:
     virtual:
       enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: dev.payment.common.events
+        spring.json.value.default.type: dev.payment.common.events.PaymentEventMessage
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       probes:
@@ -51,6 +62,12 @@ application:
     checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}
   simulator:
     base-url: ${SIMULATOR_SERVICE_URL:}
+  kafka:
+    topic:
+      payment-events: ${PAYMENT_EVENTS_TOPIC:payment.events}
+  webhook:
+    razorpay:
+      secret: ${RAZORPAY_WEBHOOK_SECRET:}
 
 logging:
   pattern:

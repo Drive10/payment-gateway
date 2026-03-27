@@ -11,9 +11,24 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${NOTIFICATION_CONSUMER_GROUP:notification-service}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: dev.payment.common.events
+        spring.json.value.default.type: dev.payment.common.events.PaymentEventMessage
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
+
+application:
+  kafka:
+    topic:
+      payment-events: ${PAYMENT_EVENTS_TOPIC:payment.events}

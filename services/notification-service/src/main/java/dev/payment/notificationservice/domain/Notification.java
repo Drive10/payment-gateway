@@ -20,7 +20,7 @@ public class Notification extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private DeliveryStatus status;
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 2048)
     private String payload;
     public UUID getId() { return id; }
     public String getRecipientAddress() { return recipientAddress; }

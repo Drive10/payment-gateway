@@ -19,6 +19,10 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
             <groupId>dev.payment</groupId>
             <artifactId>common</artifactId>
             <version>1.0.0</version>

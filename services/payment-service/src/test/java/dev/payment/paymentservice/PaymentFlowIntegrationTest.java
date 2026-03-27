@@ -10,6 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(PaymentFlowIntegrationTest.NoOpEventPublisherConfig.class)
 class PaymentFlowIntegrationTest {
 
     @Autowired
@@ -180,5 +185,19 @@ class PaymentFlowIntegrationTest {
         JsonNode node = root.at(pointer);
         assertThat(node.isMissingNode()).isFalse();
         return node.asText();
+    }
+
+    @TestConfiguration
+    static class NoOpEventPublisherConfig {
+
+        @Bean
+        @Primary
+        dev.payment.paymentservice.service.PaymentEventPublisher paymentEventPublisher() {
+            return new dev.payment.paymentservice.service.PaymentEventPublisher(null, "test-topic") {
+                @Override
+                public void publish(String eventType, dev.payment.paymentservice.domain.Payment payment, java.util.Map<String, String> metadata) {
+                }
+            };
+        }
     }
 }

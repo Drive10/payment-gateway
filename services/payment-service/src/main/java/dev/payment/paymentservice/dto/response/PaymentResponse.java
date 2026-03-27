@@ -10,6 +10,7 @@ public record PaymentResponse(
         UUID orderId,
         String orderReference,
         BigDecimal amount,
+        BigDecimal refundedAmount,
         String currency,
         String provider,
         String providerOrderId,

@@ -1,4 +1,25 @@
 services:
+  kafka:
+    profiles: ["services"]
+    image: apache/kafka:3.8.0
+    container_name: fintech-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    ports:
+      - "9092:9092"
+
   postgres:
     image: postgres:16-alpine
     container_name: fintech-postgres
@@ -33,6 +54,9 @@ services:
       JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
       DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-RAZORPAY_SIMULATOR}
       CHECKOUT_BASE_URL: ${CHECKOUT_BASE_URL:-http://frontend}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      PAYMENT_EVENTS_TOPIC: ${PAYMENT_EVENTS_TOPIC:-payment.events}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-dev_webhook_secret}
       SIMULATOR_SERVICE_URL: ${SIMULATOR_SERVICE_URL:-http://simulator-service:8087}
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
@@ -41,6 +65,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
 
   api-gateway:
     build:
@@ -124,6 +150,8 @@ services:
       SPRING_PROFILES_ACTIVE: ${NOTIFICATION_SERVICE_PROFILE:-stage}
       SERVER_PORT: 8083
       NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL:-jdbc:postgresql://postgres:5432/notificationdb}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      PAYMENT_EVENTS_TOPIC: ${PAYMENT_EVENTS_TOPIC:-payment.events}
       DB_USERNAME: ${POSTGRES_USER:-payment}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
@@ -131,6 +159,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
 
   risk-service:
     profiles: ["services"]
@@ -191,6 +221,30 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  prometheus:
+    profiles: ["services"]
+    image: prom/prometheus:v2.54.1
+    container_name: fintech-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+  grafana:
+    profiles: ["services"]
+    image: grafana/grafana:11.1.4
+    container_name: fintech-grafana
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
 
 volumes:
   postgres_data:

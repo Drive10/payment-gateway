@@ -42,6 +42,9 @@ public class Payment extends BaseEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
+    @Column(name = "refunded_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal refundedAmount = BigDecimal.ZERO;
+
     @Column(nullable = false, length = 3)
     private String currency;
 
@@ -118,6 +121,14 @@ public class Payment extends BaseEntity {
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    public BigDecimal getRefundedAmount() {
+        return refundedAmount;
+    }
+
+    public void setRefundedAmount(BigDecimal refundedAmount) {
+        this.refundedAmount = refundedAmount;
     }
 
     public String getCurrency() {

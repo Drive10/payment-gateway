@@ -6,7 +6,9 @@ import dev.payment.paymentservice.domain.User;
 import dev.payment.paymentservice.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.dto.request.CapturePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreatePaymentRequest;
+import dev.payment.paymentservice.dto.request.CreateRefundRequest;
 import dev.payment.paymentservice.dto.response.PaymentResponse;
+import dev.payment.paymentservice.dto.response.RefundResponse;
 import dev.payment.paymentservice.exception.ApiException;
 import dev.payment.paymentservice.service.AuthService;
 import dev.payment.paymentservice.service.PaymentService;
@@ -62,6 +64,16 @@ public class PaymentController {
     ) {
         User actor = authService.getCurrentUser(authentication.getName());
         return ApiResponse.success(paymentService.capturePayment(paymentId, request, actor, false));
+    }
+
+    @PostMapping("/{paymentId}/refunds")
+    public ApiResponse<RefundResponse> refundPayment(
+            @PathVariable UUID paymentId,
+            @Valid @RequestBody CreateRefundRequest request,
+            Authentication authentication
+    ) {
+        User actor = authService.getCurrentUser(authentication.getName());
+        return ApiResponse.success(paymentService.refundPayment(paymentId, request, actor, false));
     }
 
     @GetMapping

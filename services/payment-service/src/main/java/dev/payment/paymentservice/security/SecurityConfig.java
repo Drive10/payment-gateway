@@ -35,10 +35,12 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/info",
+                                "/actuator/prometheus",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/api/v1/auth/**"
+                                "/api/v1/auth/**",
+                                "/api/v1/webhooks/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

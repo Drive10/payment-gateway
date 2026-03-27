@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+  - name: fintech-platform
+    orgId: 1
+    folder: Fintech Platform
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards
