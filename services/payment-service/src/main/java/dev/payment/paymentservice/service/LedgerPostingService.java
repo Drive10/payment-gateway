@@ -3,8 +3,11 @@ package dev.payment.paymentservice.service;
 import dev.payment.paymentservice.domain.Payment;
 import dev.payment.paymentservice.domain.PaymentRefund;
 import dev.payment.paymentservice.exception.ApiException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -21,13 +24,20 @@ public class LedgerPostingService {
             @Value("${application.ledger.accounts.cash}") String cashAccountCode,
             @Value("${application.ledger.accounts.customer-funds}") String customerFundsAccountCode
     ) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(3000);
+        requestFactory.setReadTimeout(5000);
+
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
+                .requestFactory(requestFactory)
                 .build();
         this.cashAccountCode = cashAccountCode;
         this.customerFundsAccountCode = customerFundsAccountCode;
     }
 
+    @Retry(name = "ledger")
+    @CircuitBreaker(name = "ledger")
     public void recordPaymentCapture(Payment payment) {
         postJournal(new LedgerJournalRequest(
                 "capture:" + payment.getId(),
@@ -38,6 +48,8 @@ public class LedgerPostingService {
         ));
     }
 
+    @Retry(name = "ledger")
+    @CircuitBreaker(name = "ledger")
     public void recordRefund(Payment payment, PaymentRefund refund) {
         postJournal(new LedgerJournalRequest(
                 "refund:" + refund.getRefundReference(),

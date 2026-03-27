@@ -15,6 +15,12 @@ spring:
           uri: ${gateway.payment-service-url}
           predicates:
             - Path=/api/v1/**,/swagger-ui.html,/swagger-ui/**,/v3/api-docs/**
+          filters:
+            - name: Retry
+              args:
+                retries: 2
+                methods: GET,POST
+                statuses: BAD_GATEWAY,GATEWAY_TIMEOUT,SERVICE_UNAVAILABLE
         - id: auth-service
           uri: ${gateway.auth-service-url}
           predicates:
@@ -57,3 +63,13 @@ management:
     web:
       exposure:
         include: health,info,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5level service=${spring.application.name} trace=%X{traceId:-na} span=%X{spanId:-na} correlation=%X{correlationId:-na} logger=%logger{36} msg=\"%msg\"%n"

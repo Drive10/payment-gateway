@@ -58,6 +58,8 @@ services:
       PAYMENT_EVENTS_TOPIC: ${PAYMENT_EVENTS_TOPIC:-payment.events}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-dev_webhook_secret}
       SIMULATOR_SERVICE_URL: ${SIMULATOR_SERVICE_URL:-http://simulator-service:8087}
+      LEDGER_SERVICE_URL: ${LEDGER_SERVICE_URL:-http://ledger-service:8082}
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     ports:
@@ -78,6 +80,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${API_GATEWAY_PROFILE:-stage}
       SERVER_PORT: 8080
+      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -245,6 +248,13 @@ services:
     volumes:
       - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+  zipkin:
+    profiles: ["services"]
+    image: openzipkin/zipkin:3.4
+    container_name: fintech-zipkin
+    ports:
+      - "${ZIPKIN_PORT:-9411}:9411"
 
 volumes:
   postgres_data:

@@ -1,66 +1,68 @@
-# Architecture Overview
+# Architecture
 
-## Intent
+## Topology
 
-This repository models a fintech payment platform with a gateway edge and domain-specific services. The current implementation fully hardens the payment core and gives the surrounding services explicit bounded-context contracts so the repo reads like a realistic internal platform rather than a single-service demo.
+```mermaid
+flowchart LR
+    Client["Client / Frontend"] --> Frontend["Nginx Frontend"]
+    Frontend --> Gateway["API Gateway"]
 
-## Services
+    Gateway --> Payment["payment-service"]
+    Gateway --> Auth["auth-service"]
+    Gateway --> Ledger["ledger-service"]
+    Gateway --> Notify["notification-service"]
+    Gateway --> Risk["risk-service"]
+    Gateway --> Settlement["settlement-service"]
+    Gateway --> Simulator["simulator-service"]
 
-- `api-gateway`
-  Routes public traffic to backend services and exposes internal platform status routes for supporting services.
-- `payment-service`
-  Owns authentication endpoints, JWT/RBAC enforcement, order creation, payment initiation, payment capture, idempotency, audit logging, and PostgreSQL persistence.
-- `auth-service`
-  Represents the identity boundary and future token/credential ownership surface.
-- `ledger-service`
-  Represents accounting, posting, and reconciliation responsibilities.
-- `notification-service`
-  Represents customer and merchant notification orchestration.
-- `risk-service`
-  Represents risk scoring and fraud decisioning.
-- `settlement-service`
-  Represents clearing, payouts, and settlement batching.
+    Payment --> Kafka["Kafka"]
+    Payment --> Ledger
+    Payment --> Simulator
+    Notify --> Kafka
 
-## Package Strategy
+    Payment --> PayDB[("paymentdb")]
+    Auth --> AuthDB[("authdb")]
+    Ledger --> LedgerDB[("ledgerdb")]
+    Notify --> NotifyDB[("notificationdb")]
+    Risk --> RiskDB[("riskdb")]
+    Settlement --> SettlementDB[("settlementdb")]
+    Simulator --> SimDB[("simulatordb")]
+```
 
-The payment core follows a strict package split:
+## Service Responsibilities
 
-- `controller`
-- `service`
-- `domain`
-- `repository`
-- `config`
-- `security`
-- `dto`
-- `exception`
+- `api-gateway`: edge routing, retry policy, rate limiting, correlation header propagation
+- `payment-service`: JWT auth, orders, payments, refunds, webhook validation, Kafka publishing
+- `ledger-service`: double-entry journal writes and account views
+- `notification-service`: notification persistence and idempotent payment-event consumption
+- `auth-service`: API client lifecycle and access audit
+- `risk-service`: risk scoring and decisioning
+- `settlement-service`: settlement batches and payout instructions
+- `simulator-service`: test and production-like provider simulation
 
-This keeps delivery concerns separate from domain modeling and persistence, while still remaining approachable in a GitHub portfolio context.
+## Payment and Refund Flow
 
-## Core Payment Flow
-
-1. User registers or logs in.
+1. User registers or logs in and receives a JWT.
 2. User creates an order.
-3. User initiates a payment with an `Idempotency-Key`.
-4. Service creates a provider-style order reference and a pending transaction.
-5. User captures the payment with provider metadata.
-6. Service marks the payment captured, updates the order lifecycle, and writes an audit log.
-7. Admin users inspect orders, payments, and audit history through protected endpoints.
+3. User creates a payment with `Idempotency-Key`.
+4. `payment-service` creates a provider intent and stores the payment record.
+5. On capture, payment status changes to `CAPTURED`, a ledger journal is posted, and a Kafka event is emitted.
+6. Refunds require their own `Idempotency-Key`, create refund records, and post reverse journal entries.
+7. Webhooks are HMAC-validated, deduped by `event_id`, and only applied once.
+8. Notification consumers persist each Kafka event once by event id.
 
-## Data Model
+## Reliability Guarantees
 
-- `users`
-- `roles`
-- `user_roles`
-- `orders`
-- `payments`
-- `transactions`
-- `audit_logs`
+- At-least-once Kafka consumption with idempotent consumers
+- Idempotent payment create and refund APIs
+- Replay-safe webhook processing
+- Double-entry journal records instead of direct balance mutation
+- Flyway-managed schema evolution
+- Retry and circuit-breaker protection on simulator and ledger calls
 
-The schema is managed directly by the application at startup for local development, with JPA mappings enforcing the core domain relationships and constraints.
+## Observability
 
-## Local Runtime
-
-- `docker-compose.yml` starts PostgreSQL plus all platform services.
-- `api-gateway` is available at `:8080`.
-- `payment-service` is available at `:8084`.
-- Supporting service status routes are exposed through the gateway at `/platform/*/status`.
+- Prometheus scraping for gateway and services
+- Grafana dashboards provisioned from `ops/grafana`
+- Zipkin-compatible tracing endpoint
+- Structured logs with `traceId`, `spanId`, and `correlationId`

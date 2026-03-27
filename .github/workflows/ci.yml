@@ -22,6 +22,11 @@ jobs:
       - name: Build
         run: mvn -q verify
 
+      - name: Package application images
+        run: |
+          docker build -f Dockerfile -t fintech/payment-service:ci .
+          docker build -f Dockerfile.build --build-arg SERVICE_PATH=services/api-gateway -t fintech/api-gateway:ci .
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -43,3 +48,6 @@ jobs:
 
       - name: Lint and build
         run: npm run check
+
+      - name: Build frontend image
+        run: docker build -t fintech/frontend:ci .
