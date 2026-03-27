@@ -23,6 +23,7 @@ import dev.payment.paymentservice.integration.processor.PaymentProcessorIntentRe
 import dev.payment.paymentservice.repository.PaymentRefundRepository;
 import dev.payment.paymentservice.repository.PaymentRepository;
 import dev.payment.paymentservice.repository.PaymentTransactionRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -49,6 +50,8 @@ public class PaymentService {
     private final PaymentProcessorClient paymentProcessorClient;
     private final PaymentEventPublisher paymentEventPublisher;
     private final LedgerPostingService ledgerPostingService;
+    private final IdempotencyService idempotencyService;
+    private final PaymentStateMachine paymentStateMachine;
 
     public PaymentService(
             PaymentRepository paymentRepository,
@@ -58,7 +61,9 @@ public class PaymentService {
             AuditService auditService,
             PaymentProcessorClient paymentProcessorClient,
             PaymentEventPublisher paymentEventPublisher,
-            LedgerPostingService ledgerPostingService
+            LedgerPostingService ledgerPostingService,
+            IdempotencyService idempotencyService,
+            PaymentStateMachine paymentStateMachine
     ) {
         this.paymentRepository = paymentRepository;
         this.paymentRefundRepository = paymentRefundRepository;
@@ -68,13 +73,19 @@ public class PaymentService {
         this.paymentProcessorClient = paymentProcessorClient;
         this.paymentEventPublisher = paymentEventPublisher;
         this.ledgerPostingService = ledgerPostingService;
+        this.idempotencyService = idempotencyService;
+        this.paymentStateMachine = paymentStateMachine;
     }
 
     @Transactional
     public PaymentResponse createPayment(CreatePaymentRequest request, String idempotencyKey, User actor, boolean adminView) {
-        Payment existing = paymentRepository.findByIdempotencyKey(idempotencyKey).orElse(null);
-        if (existing != null) {
-            return toResponse(existing);
+        IdempotencyService.IdempotencyResult<PaymentResponse> idempotency =
+                idempotencyService.begin("PAYMENT_CREATE", idempotencyKey, Map.of(
+                        "actor", actor.getEmail(),
+                        "request", request
+                ), PaymentResponse.class);
+        if (idempotency.replayed()) {
+            return idempotency.cachedResponse();
         }
 
         Order order = orderService.getOwnedOrder(request.orderId(), actor, adminView);
@@ -93,7 +104,13 @@ public class PaymentService {
         payment.setProviderOrderId(processorIntent.providerOrderId());
         payment.setCheckoutUrl(processorIntent.checkoutUrl());
         payment.setSimulated(processorIntent.simulated());
-        paymentRepository.save(payment);
+        try {
+            paymentRepository.save(payment);
+        } catch (DataIntegrityViolationException exception) {
+            Payment existing = paymentRepository.findByIdempotencyKey(idempotencyKey)
+                    .orElseThrow(() -> exception);
+            return toResponse(existing);
+        }
 
         createTransaction(
                 payment,
@@ -107,7 +124,9 @@ public class PaymentService {
         paymentEventPublisher.publish("payment.created", payment, Map.of("actor", actor.getEmail()));
         log.info("event=payment_created paymentId={} orderId={} actor={} provider={} mode={} simulated={}",
                 payment.getId(), order.getId(), actor.getEmail(), payment.getProvider(), payment.getTransactionMode(), payment.isSimulated());
-        return toResponse(payment);
+        PaymentResponse response = toResponse(payment);
+        idempotencyService.complete(idempotency.record(), response, payment.getId().toString());
+        return response;
     }
 
     @Transactional
@@ -117,33 +136,55 @@ public class PaymentService {
             return toResponse(payment);
         }
 
-        PaymentProcessorCaptureResponse processorCapture = paymentProcessorClient.capture(payment, request, payment.getTransactionMode());
-        payment.setProviderPaymentId(processorCapture.providerPaymentId());
-        payment.setProviderSignature(processorCapture.providerSignature());
-        payment.setSimulated(processorCapture.simulated());
-        payment.setStatus(PaymentStatus.CAPTURED);
+        paymentStateMachine.transition(payment, PaymentStatus.PROCESSING);
         paymentRepository.save(payment);
 
-        createTransaction(
-                payment,
-                TransactionType.PAYMENT_CAPTURED,
-                TransactionStatus.SUCCESS,
-                payment.getTransactionMode() == TransactionMode.TEST ? "Test payment captured" : "Production payment captured",
-                processorCapture.providerReference()
-        );
-        orderService.markPaid(payment.getOrder());
-        ledgerPostingService.recordPaymentCapture(payment);
-        auditService.record("PAYMENT_CAPTURED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Payment captured successfully");
-        paymentEventPublisher.publish("payment.captured", payment, Map.of("actor", actor.getEmail()));
-        log.info("event=payment_captured paymentId={} actor={} mode={} simulated={}", payment.getId(), actor.getEmail(), payment.getTransactionMode(), payment.isSimulated());
-        return toResponse(payment);
+        try {
+            PaymentProcessorCaptureResponse processorCapture = paymentProcessorClient.capture(payment, request, payment.getTransactionMode());
+            payment.setProviderPaymentId(processorCapture.providerPaymentId());
+            payment.setProviderSignature(processorCapture.providerSignature());
+            payment.setSimulated(processorCapture.simulated());
+            paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
+            paymentRepository.save(payment);
+
+            createTransaction(
+                    payment,
+                    TransactionType.PAYMENT_CAPTURED,
+                    TransactionStatus.SUCCESS,
+                    payment.getTransactionMode() == TransactionMode.TEST ? "Test payment captured" : "Production payment captured",
+                    processorCapture.providerReference()
+            );
+            orderService.markPaid(payment.getOrder());
+            ledgerPostingService.recordPaymentCapture(payment);
+            auditService.record("PAYMENT_CAPTURED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Payment captured successfully");
+            paymentEventPublisher.publish("payment.captured", payment, Map.of("actor", actor.getEmail()));
+            log.info("event=payment_captured paymentId={} actor={} mode={} simulated={}", payment.getId(), actor.getEmail(), payment.getTransactionMode(), payment.isSimulated());
+            return toResponse(payment);
+        } catch (RuntimeException exception) {
+            paymentStateMachine.transition(payment, PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+            orderService.markFailed(payment.getOrder());
+            createTransaction(
+                    payment,
+                    TransactionType.PAYMENT_CAPTURED,
+                    TransactionStatus.FAILED,
+                    "Payment capture failed",
+                    payment.getProviderOrderId()
+            );
+            throw exception;
+        }
     }
 
     @Transactional
     public RefundResponse refundPayment(UUID paymentId, CreateRefundRequest request, String idempotencyKey, User actor, boolean adminView) {
-        PaymentRefund existingRefund = paymentRefundRepository.findByIdempotencyKey(idempotencyKey).orElse(null);
-        if (existingRefund != null) {
-            return toRefundResponse(existingRefund);
+        IdempotencyService.IdempotencyResult<RefundResponse> idempotency =
+                idempotencyService.begin("PAYMENT_REFUND", idempotencyKey, Map.of(
+                        "actor", actor.getEmail(),
+                        "paymentId", paymentId,
+                        "request", request
+                ), RefundResponse.class);
+        if (idempotency.replayed()) {
+            return idempotency.cachedResponse();
         }
 
         Payment payment = getOwnedPayment(paymentId, actor, adminView);
@@ -179,7 +220,7 @@ public class PaymentService {
         paymentRefundRepository.save(refund);
 
         payment.setRefundedAmount(alreadyRefunded.add(request.amount()));
-        payment.setStatus(payment.getRefundedAmount().compareTo(payment.getAmount()) >= 0
+        paymentStateMachine.transition(payment, payment.getRefundedAmount().compareTo(payment.getAmount()) >= 0
                 ? PaymentStatus.REFUNDED
                 : PaymentStatus.PARTIALLY_REFUNDED);
         paymentRepository.save(payment);
@@ -207,7 +248,9 @@ public class PaymentService {
                 "reason", request.reason() == null ? "" : request.reason()
         ));
 
-        return toRefundResponse(refund);
+        RefundResponse response = toRefundResponse(refund);
+        idempotencyService.complete(idempotency.record(), response, refund.getId().toString());
+        return response;
     }
 
     public Page<PaymentResponse> getPayments(User actor, PaymentStatus status, Pageable pageable, boolean adminView) {

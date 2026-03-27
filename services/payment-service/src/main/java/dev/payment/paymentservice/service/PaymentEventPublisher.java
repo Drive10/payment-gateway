@@ -3,7 +3,6 @@ package dev.payment.paymentservice.service;
 import dev.payment.common.events.PaymentEventMessage;
 import dev.payment.paymentservice.domain.Payment;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -16,14 +15,14 @@ public class PaymentEventPublisher {
 
     private static final String EVENT_SCHEMA_VERSION = "v1";
 
-    private final KafkaTemplate<String, PaymentEventMessage> kafkaTemplate;
+    private final PaymentOutboxService paymentOutboxService;
     private final String topicName;
 
     public PaymentEventPublisher(
-            KafkaTemplate<String, PaymentEventMessage> kafkaTemplate,
+            PaymentOutboxService paymentOutboxService,
             @Value("${application.kafka.topic.payment-events}") String topicName
     ) {
-        this.kafkaTemplate = kafkaTemplate;
+        this.paymentOutboxService = paymentOutboxService;
         this.topicName = topicName;
     }
 
@@ -52,6 +51,13 @@ public class PaymentEventPublisher {
                 org.slf4j.MDC.get("correlationId")
         );
 
-        kafkaTemplate.send(topicName, payment.getId().toString(), message);
+        paymentOutboxService.enqueue(
+                "PAYMENT",
+                payment.getId().toString(),
+                eventType,
+                payment.getId().toString(),
+                topicName,
+                message
+        );
     }
 }

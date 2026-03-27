@@ -36,6 +36,7 @@ public class RazorpayWebhookService {
     private final PaymentEventPublisher paymentEventPublisher;
     private final PaymentService paymentService;
     private final LedgerPostingService ledgerPostingService;
+    private final PaymentStateMachine paymentStateMachine;
     private final ObjectMapper objectMapper;
     private final String webhookSecret;
 
@@ -48,6 +49,7 @@ public class RazorpayWebhookService {
             PaymentEventPublisher paymentEventPublisher,
             PaymentService paymentService,
             LedgerPostingService ledgerPostingService,
+            PaymentStateMachine paymentStateMachine,
             ObjectMapper objectMapper,
             @Value("${application.webhook.razorpay.secret:}") String webhookSecret
     ) {
@@ -59,6 +61,7 @@ public class RazorpayWebhookService {
         this.paymentEventPublisher = paymentEventPublisher;
         this.paymentService = paymentService;
         this.ledgerPostingService = ledgerPostingService;
+        this.paymentStateMachine = paymentStateMachine;
         this.objectMapper = objectMapper;
         this.webhookSecret = webhookSecret;
     }
@@ -104,7 +107,7 @@ public class RazorpayWebhookService {
         }
 
         payment.setProviderPaymentId(entity.id());
-        payment.setStatus(PaymentStatus.CAPTURED);
+        paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
         paymentRepository.save(payment);
         paymentService.createSystemTransaction(payment, dev.payment.paymentservice.domain.enums.TransactionType.WEBHOOK_PROCESSED,
                 dev.payment.paymentservice.domain.enums.TransactionStatus.SUCCESS,
@@ -140,7 +143,9 @@ public class RazorpayWebhookService {
         paymentRefundRepository.save(refund);
 
         payment.setRefundedAmount(payment.getRefundedAmount().add(refundAmount));
-        payment.setStatus(payment.getRefundedAmount().compareTo(payment.getAmount()) >= 0 ? PaymentStatus.REFUNDED : PaymentStatus.PARTIALLY_REFUNDED);
+        paymentStateMachine.transition(payment, payment.getRefundedAmount().compareTo(payment.getAmount()) >= 0
+                ? PaymentStatus.REFUNDED
+                : PaymentStatus.PARTIALLY_REFUNDED);
         paymentRepository.save(payment);
         paymentService.createSystemTransaction(payment, dev.payment.paymentservice.domain.enums.TransactionType.WEBHOOK_PROCESSED,
                 dev.payment.paymentservice.domain.enums.TransactionStatus.SUCCESS,

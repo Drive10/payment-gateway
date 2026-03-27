@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.payment.paymentservice.domain.Role;
 import dev.payment.paymentservice.domain.enums.RoleName;
+import dev.payment.paymentservice.repository.PaymentOutboxEventRepository;
 import dev.payment.paymentservice.repository.RoleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,9 @@ class PaymentFlowIntegrationTest {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private PaymentOutboxEventRepository paymentOutboxEventRepository;
 
     @BeforeEach
     void ensureRoles() {
@@ -220,6 +224,95 @@ class PaymentFlowIntegrationTest {
 
         assertThat(readField(secondRefund, "/data/refundReference"))
                 .isEqualTo(readField(firstRefund, "/data/refundReference"));
+    }
+
+    @Test
+    void paymentCreateShouldReplayStoredResponseForDuplicateIdempotencyKey() throws Exception {
+        String email = "idempotent+" + System.currentTimeMillis() + "@example.com";
+        String password = "User12345";
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fullName": "Idempotent User",
+                                  "email": "%s",
+                                  "password": "%s"
+                                }
+                                """.formatted(email, password)))
+                .andExpect(status().isOk());
+
+        String loginResponse = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s",
+                                  "password": "%s"
+                                }
+                                """.formatted(email, password)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String token = readField(loginResponse, "/data/accessToken");
+
+        String orderResponse = mockMvc.perform(post("/api/v1/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "externalReference": "idem-order-%d",
+                                  "amount": 1499.00,
+                                  "currency": "INR",
+                                  "description": "Idempotent payment"
+                                }
+                                """.formatted(System.currentTimeMillis())))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String orderId = readField(orderResponse, "/data/id");
+        long outboxBefore = paymentOutboxEventRepository.count();
+
+        String firstPayment = mockMvc.perform(post("/api/v1/payments")
+                        .header("Authorization", "Bearer " + token)
+                        .header("Idempotency-Key", "idem-payment-1001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orderId": "%s",
+                                  "method": "UPI",
+                                  "provider": "razorpay_simulator",
+                                  "transactionMode": "TEST",
+                                  "notes": "first attempt"
+                                }
+                                """.formatted(orderId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String duplicatePayment = mockMvc.perform(post("/api/v1/payments")
+                        .header("Authorization", "Bearer " + token)
+                        .header("Idempotency-Key", "idem-payment-1001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orderId": "%s",
+                                  "method": "UPI",
+                                  "provider": "razorpay_simulator",
+                                  "transactionMode": "TEST",
+                                  "notes": "first attempt"
+                                }
+                                """.formatted(orderId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(readField(duplicatePayment, "/data/id")).isEqualTo(readField(firstPayment, "/data/id"));
+        assertThat(paymentOutboxEventRepository.count()).isEqualTo(outboxBefore + 1);
     }
 
     @Test
