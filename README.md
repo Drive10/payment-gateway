@@ -143,18 +143,37 @@ Open:
 
 ### Hybrid Development
 
-Run everything except `payment-service` in Docker:
+Run infrastructure and all services EXCEPT `payment-service` in Docker. This allows you to work on the payment microservice locally while the rest of the ecosystem runs seamlessly via Docker.
+
+**1. Point the API Gateway to your local machine**  
+Edit your `.env` file and uncomment the `PAYMENT_SERVICE_URL`:
+```env
+PAYMENT_SERVICE_URL=http://host.docker.internal:8084
+```
+
+**2. Start Docker (scaling payment-service to 0)**
+```bash
+cp .env.example .env
+docker compose --profile services up --build -d --scale payment-service=0
+```
+
+**3. Run `payment-service` from IDE**
+```bash
+SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run -pl services/payment-service -am
+```
+
+### Full Local (Dev) Development
+
+If you want to run ALL Java microservices locally through your IDE, just spin up the infrastructure (DBs, Kafka, Redis, Observability):
 
 ```bash
 cp .env.example .env
-docker compose --profile services up --build frontend postgres redis api-gateway auth-service ledger-service notification-service risk-service settlement-service simulator-service kafka prometheus grafana zipkin
+docker compose --profile infra up -d
 ```
 
-Then run `payment-service` from the IDE with:
+Then run each service locally with `SPRING_PROFILES_ACTIVE=dev`. Local services will automatically connect to `localhost:9092` for Kafka and `localhost:5433` for PostgreSQL.
 
-```text
-SPRING_PROFILES_ACTIVE=dev
-```
+
 
 ## Testing
 
