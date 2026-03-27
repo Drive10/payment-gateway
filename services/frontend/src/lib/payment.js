@@ -2,6 +2,10 @@ export const PAYMENT_AMOUNT = 500;
 export const PAYMENT_NOTE = "Integrated demo flow backed by the fintech backend.";
 export const UPI_ID = "nova-demo@upi";
 export const STORAGE_KEY = "nova-checkout-transaction";
+export const TRANSACTION_MODES = {
+  PRODUCTION: "PRODUCTION",
+  TEST: "TEST",
+};
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm Docker services are up and try again.";
@@ -91,9 +95,13 @@ async function ensureAccessToken() {
   };
 }
 
-export async function startCheckout({ amount, method, cardholder }) {
+export async function startCheckout({ amount, method, cardholder, transactionMode }) {
   const { token, customer } = await ensureAccessToken();
   const externalReference = `checkout-${Date.now()}`;
+  const provider =
+    transactionMode === TRANSACTION_MODES.TEST
+      ? "RAZORPAY_SIMULATOR"
+      : "RAZORPAY_PRIMARY";
 
   const order = await apiRequest("/v1/orders", {
     method: "POST",
@@ -117,7 +125,8 @@ export async function startCheckout({ amount, method, cardholder }) {
     body: JSON.stringify({
       orderId: order.id,
       method: method === "upi" ? "UPI" : "CARD",
-      provider: "razorpay_simulator",
+      provider,
+      transactionMode,
       notes: method === "upi" ? "Customer selected UPI" : `Cardholder: ${cardholder.trim() || customer.fullName}`,
     }),
   });
@@ -142,10 +151,7 @@ export async function captureCheckout(checkout) {
     headers: {
       Authorization: `Bearer ${checkout.token}`,
     },
-    body: JSON.stringify({
-      providerPaymentId: `pay_sim_${checkout.payment.id.slice(0, 8)}`,
-      providerSignature: `sig_${checkout.order.orderReference}`,
-    }),
+    body: JSON.stringify({}),
   });
 
   const createdAt = payment.createdAt ? new Date(payment.createdAt) : new Date();
@@ -157,12 +163,18 @@ export async function captureCheckout(checkout) {
     orderReference: payment.orderReference,
     providerOrderId: payment.providerOrderId,
     providerPaymentId: payment.providerPaymentId,
+    transactionMode: payment.transactionMode,
+    simulated: payment.simulated,
     amount: checkout.amount,
     amountLabel: `₹${checkout.amount}`,
     method: checkout.method,
     methodLabel,
     status: payment.status,
     customerLabel: checkout.method === "upi" ? checkout.customer.fullName : checkout.cardholder.trim() || checkout.customer.fullName,
+    environmentLabel:
+      payment.transactionMode === TRANSACTION_MODES.TEST
+        ? "Test simulator"
+        : "Production-like",
     createdAt: createdAt.toISOString(),
     dateLabel: createdAt.toLocaleString("en-IN", {
       dateStyle: "medium",

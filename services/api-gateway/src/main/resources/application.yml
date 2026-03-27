@@ -45,6 +45,12 @@ spring:
             - Path=/platform/settlement/**
           filters:
             - RewritePath=/platform/settlement/(?<segment>.*), /internal/platform/${segment}
+        - id: simulator-service
+          uri: ${gateway.simulator-service-url}
+          predicates:
+            - Path=/platform/simulator/**
+          filters:
+            - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
 
 management:
   endpoints:

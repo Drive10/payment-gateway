@@ -1,0 +1,24 @@
+server:
+  port: ${SERVER_PORT:8087}
+
+spring:
+  application:
+    name: simulator-service
+  profiles:
+    default: dev
+  datasource:
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

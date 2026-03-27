@@ -10,6 +10,8 @@ spring:
 application:
   payment:
     checkout-base-url: ${CHECKOUT_BASE_URL:http://frontend}
+  simulator:
+    base-url: ${SIMULATOR_SERVICE_URL:http://simulator-service:8087}
   bootstrap:
     admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}

@@ -2,6 +2,7 @@ package dev.payment.paymentservice.domain;
 
 import dev.payment.paymentservice.domain.enums.PaymentMethod;
 import dev.payment.paymentservice.domain.enums.PaymentStatus;
+import dev.payment.paymentservice.domain.enums.TransactionMode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -55,8 +56,18 @@ public class Payment extends BaseEntity {
     @Column(nullable = false, length = 32)
     private PaymentStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transaction_mode", nullable = false, length = 16)
+    private TransactionMode transactionMode;
+
+    @Column(name = "simulated", nullable = false)
+    private boolean simulated;
+
     @Column(name = "provider_signature", length = 255)
     private String providerSignature;
+
+    @Column(name = "checkout_url", nullable = false, length = 255)
+    private String checkoutUrl;
 
     @Column(length = 255)
     private String notes;
@@ -141,12 +152,36 @@ public class Payment extends BaseEntity {
         this.status = status;
     }
 
+    public TransactionMode getTransactionMode() {
+        return transactionMode;
+    }
+
+    public void setTransactionMode(TransactionMode transactionMode) {
+        this.transactionMode = transactionMode;
+    }
+
+    public boolean isSimulated() {
+        return simulated;
+    }
+
+    public void setSimulated(boolean simulated) {
+        this.simulated = simulated;
+    }
+
     public String getProviderSignature() {
         return providerSignature;
     }
 
     public void setProviderSignature(String providerSignature) {
         this.providerSignature = providerSignature;
+    }
+
+    public String getCheckoutUrl() {
+        return checkoutUrl;
+    }
+
+    public void setCheckoutUrl(String checkoutUrl) {
+        this.checkoutUrl = checkoutUrl;
     }
 
     public String getNotes() {

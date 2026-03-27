@@ -5,3 +5,4 @@ gateway:
   notification-service-url: ${NOTIFICATION_SERVICE_URL}
   risk-service-url: ${RISK_SERVICE_URL}
   settlement-service-url: ${SETTLEMENT_SERVICE_URL}
+  simulator-service-url: ${SIMULATOR_SERVICE_URL}

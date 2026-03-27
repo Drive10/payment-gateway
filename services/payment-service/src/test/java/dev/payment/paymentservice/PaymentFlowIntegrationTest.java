@@ -102,11 +102,14 @@ class PaymentFlowIntegrationTest {
                                   "orderId": "%s",
                                   "method": "UPI",
                                   "provider": "razorpay_simulator",
+                                  "transactionMode": "TEST",
                                   "notes": "integration test"
                                 }
                                 """.formatted(orderId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CREATED"))
+                .andExpect(jsonPath("$.data.transactionMode").value("TEST"))
+                .andExpect(jsonPath("$.data.simulated").value(true))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -123,7 +126,9 @@ class PaymentFlowIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("CAPTURED"));
+                .andExpect(jsonPath("$.data.status").value("CAPTURED"))
+                .andExpect(jsonPath("$.data.transactionMode").value("TEST"))
+                .andExpect(jsonPath("$.data.simulated").value(true));
     }
 
     @Test

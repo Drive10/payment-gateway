@@ -5,3 +5,4 @@ gateway:
   notification-service-url: http://localhost:8083
   risk-service-url: http://localhost:8085
   settlement-service-url: http://localhost:8086
+  simulator-service-url: http://localhost:8087

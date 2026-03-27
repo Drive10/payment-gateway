@@ -70,6 +70,7 @@ export default function Receipt() {
             ["Order Ref", receipt.orderReference],
             ["Amount", receipt.amountLabel],
             ["Method", receipt.methodLabel],
+            ["Mode", receipt.environmentLabel ?? receipt.transactionMode],
             ["Customer", receipt.customerLabel],
             ["Date", receipt.dateLabel],
           ].map(([label, value]) => (

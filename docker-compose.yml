@@ -33,6 +33,7 @@ services:
       JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
       DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-RAZORPAY_SIMULATOR}
       CHECKOUT_BASE_URL: ${CHECKOUT_BASE_URL:-http://frontend}
+      SIMULATOR_SERVICE_URL: ${SIMULATOR_SERVICE_URL:-http://simulator-service:8087}
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     ports:
@@ -167,6 +168,26 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
     ports:
       - "8086:8086"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  simulator-service:
+    profiles: ["services"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/simulator-service
+    container_name: simulator-service
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SIMULATOR_SERVICE_PROFILE:-stage}
+      SERVER_PORT: 8087
+      SIMULATOR_DB_URL: ${SIMULATOR_DB_URL:-jdbc:postgresql://postgres:5432/simulatordb}
+      DB_USERNAME: ${POSTGRES_USER:-payment}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
+    ports:
+      - "8087:8087"
     depends_on:
       postgres:
         condition: service_healthy

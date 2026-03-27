@@ -7,6 +7,7 @@ import {
   PAYMENT_AMOUNT,
   PAYMENT_NOTE,
   startCheckout,
+  TRANSACTION_MODES,
   validateCardForm,
 } from "../lib/payment";
 
@@ -20,6 +21,9 @@ const initialForm = {
 export default function Checkout() {
   const [method, setMethod] = useState("card");
   const [values, setValues] = useState(initialForm);
+  const [transactionMode, setTransactionMode] = useState(
+    TRANSACTION_MODES.PRODUCTION,
+  );
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -46,6 +50,7 @@ export default function Checkout() {
         amount: PAYMENT_AMOUNT,
         method,
         cardholder: values.cardholder,
+        transactionMode,
       });
       navigate("/processing", { state: { checkout } });
     } catch (error) {
@@ -151,6 +156,35 @@ export default function Checkout() {
           </div>
 
           <div className="mt-6">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-700">
+              Transaction Mode
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3 rounded-3xl bg-slate-100 p-2">
+              {[TRANSACTION_MODES.PRODUCTION, TRANSACTION_MODES.TEST].map(
+                (option) => {
+                  const active = transactionMode === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setTransactionMode(option)}
+                      className={`rounded-[1.2rem] px-4 py-3 text-sm font-semibold transition ${
+                        active
+                          ? "bg-white text-slate-950 shadow-sm"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      {option === TRANSACTION_MODES.TEST
+                        ? "Test / Fake"
+                        : "Production-like"}
+                    </button>
+                  );
+                },
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6">
             {method === "card" ? (
               <CardForm
                 values={values}
@@ -163,7 +197,10 @@ export default function Checkout() {
           </div>
 
           <div className="mt-6 rounded-3xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Demo note: {PAYMENT_NOTE}
+            Demo note: {PAYMENT_NOTE} Current mode:{" "}
+            {transactionMode === TRANSACTION_MODES.TEST
+              ? "Test simulator"
+              : "Production-like transaction"}.
           </div>
 
           {submitError ? (

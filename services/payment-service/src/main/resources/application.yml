@@ -49,6 +49,8 @@ application:
   payment:
     default-provider: ${DEFAULT_PROVIDER:RAZORPAY_SIMULATOR}
     checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}
+  simulator:
+    base-url: ${SIMULATOR_SERVICE_URL:}
 
 logging:
   pattern:

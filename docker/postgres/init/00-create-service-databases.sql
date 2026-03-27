@@ -15,3 +15,6 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'riskdb')\gexec
 
 SELECT 'CREATE DATABASE settlementdb'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'settlementdb')\gexec
+
+SELECT 'CREATE DATABASE simulatordb'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'simulatordb')\gexec

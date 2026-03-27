@@ -23,6 +23,11 @@ export default function Success() {
           Your transaction was completed successfully
           {transaction ? ` for ${transaction.amountLabel}. Order ${transaction.orderReference} is now paid.` : "."}
         </p>
+        {transaction?.environmentLabel ? (
+          <div className="mt-4 inline-flex rounded-full bg-cyan-100 px-4 py-2 text-sm font-semibold text-cyan-800">
+            {transaction.environmentLabel}
+          </div>
+        ) : null}
 
         <Link
           to="/receipt"

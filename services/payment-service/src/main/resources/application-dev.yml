@@ -13,6 +13,8 @@ application:
       secret-key: ${JWT_SECRET_KEY:VGhpc0lzQVN0cm9uZ0Jhc2U2NEVuY29kZWRKU1dUU2VjcmV0S2V5Rm9yRmluVGVjaERldg==}
   payment:
     checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}
+  simulator:
+    base-url: ${SIMULATOR_SERVICE_URL:http://localhost:8087}
   bootstrap:
     admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
