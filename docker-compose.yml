@@ -94,6 +94,7 @@ services:
       SPRING_PROFILES_ACTIVE: ${API_GATEWAY_PROFILE:-docker}
       SERVER_PORT: 8080
       SPRING_CONFIG_IMPORT: "optional:file:/config/"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in .env}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8084}

@@ -79,6 +79,7 @@ Commands:
   payment-local   Run payment-service locally with the local profile
   frontend-check  Run frontend install + quality checks
   smoke           Run fast local smoke checks
+  test-all        Run the full project test matrix
   verify          Run backend verification
   compose-check   Validate Compose rendering for hybrid and full modes
   help            Show this help
@@ -232,6 +233,20 @@ function Invoke-ComposeCheck {
     }
 }
 
+function Test-DockerDaemon {
+    if (-not (Test-CommandExists "docker")) {
+        return $false
+    }
+
+    Push-Location $RepoRoot
+    try {
+        docker info *> $null
+        return $LASTEXITCODE -eq 0
+    } finally {
+        Pop-Location
+    }
+}
+
 function Invoke-Smoke {
     Write-Step "Running fast smoke checks"
     Invoke-ComposeCheck
@@ -255,6 +270,35 @@ function Invoke-Smoke {
     }
 }
 
+function Invoke-TestAll {
+    Write-Step "Running the full project test matrix"
+    Invoke-ComposeCheck
+    Invoke-Verify
+
+    if (Test-DockerDaemon) {
+        Write-Step "Running Docker-backed payment Testcontainers tests"
+        Push-Location $RepoRoot
+        try {
+            & ".\mvnw.cmd" "-q" "-pl" "services/payment-service" "-am" "-Ptestcontainers" "test"
+            if ($LASTEXITCODE -ne 0) {
+                throw "mvnw.cmd failed with exit code $LASTEXITCODE."
+            }
+        } finally {
+            Pop-Location
+        }
+    } else {
+        Write-Host "Skipping Docker-backed Testcontainers tests because Docker is unavailable." -ForegroundColor Yellow
+    }
+
+    if ((Test-CommandExists "node") -and (Test-CommandExists "npm")) {
+        Invoke-FrontendCheck
+    } else {
+        Write-Host "Skipping frontend checks because node/npm are not available." -ForegroundColor Yellow
+    }
+
+    Write-Host "Coverage report: target\\site\\jacoco-aggregate\\index.html"
+}
+
 switch ($Command.ToLowerInvariant()) {
     "bootstrap" { Invoke-Bootstrap }
     "doctor" { Invoke-Doctor }
@@ -264,6 +308,7 @@ switch ($Command.ToLowerInvariant()) {
     "payment-local" { Start-PaymentLocal }
     "frontend-check" { Invoke-FrontendCheck }
     "smoke" { Invoke-Smoke }
+    "test-all" { Invoke-TestAll }
     "verify" { Invoke-Verify }
     "compose-check" { Invoke-ComposeCheck }
     "help" { Show-Help }
