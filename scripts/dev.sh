@@ -129,7 +129,9 @@ frontend_check() {
   require_cmd npm "Install Node.js and npm before working on the frontend."
   step "Running frontend quality checks"
   cd "$FRONTEND_DIR"
-  npm ci
+  if [[ ! -x "$FRONTEND_DIR/node_modules/.bin/eslint" ]]; then
+    npm ci
+  fi
   npm run check
 }
 
@@ -155,6 +157,9 @@ smoke() {
   if has_cmd node && has_cmd npm; then
     step "Running frontend lint"
     cd "$FRONTEND_DIR"
+    if [[ ! -x "$FRONTEND_DIR/node_modules/.bin/eslint" ]]; then
+      npm ci
+    fi
     npm run lint
   else
     echo "Skipping frontend lint because node/npm are not available."

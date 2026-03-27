@@ -34,6 +34,9 @@ function Invoke-RepoCommand {
     Push-Location $RepoRoot
     try {
         & $FilePath @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "$FilePath failed with exit code $LASTEXITCODE."
+        }
     } finally {
         Pop-Location
     }
@@ -48,8 +51,18 @@ function Invoke-FrontendCommand {
     Push-Location $FrontendDir
     try {
         & $FilePath @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "$FilePath failed with exit code $LASTEXITCODE."
+        }
     } finally {
         Pop-Location
+    }
+}
+
+function Ensure-FrontendDependencies {
+    if (-not (Test-Path (Join-Path $FrontendDir "node_modules\.bin\eslint.cmd"))) {
+        Write-Step "Installing frontend dependencies"
+        Invoke-FrontendCommand "npm" @("ci")
     }
 }
 
@@ -86,8 +99,7 @@ function Invoke-Bootstrap {
     }
 
     if ((Test-CommandExists "node") -and (Test-CommandExists "npm")) {
-        Write-Step "Installing frontend dependencies"
-        Invoke-FrontendCommand "npm" @("ci")
+        Ensure-FrontendDependencies
     } else {
         Write-Host "Skipping frontend install because node/npm are not available." -ForegroundColor Yellow
     }
@@ -173,6 +185,9 @@ function Start-PaymentLocal {
     try {
         $env:SPRING_PROFILES_ACTIVE = "local"
         & ".\mvnw.cmd" "-pl" "services/payment-service" "-am" "spring-boot:run"
+        if ($LASTEXITCODE -ne 0) {
+            throw "mvnw.cmd failed with exit code $LASTEXITCODE."
+        }
     } finally {
         Pop-Location
     }
@@ -182,7 +197,7 @@ function Invoke-FrontendCheck {
     Require-Command node "Install Node.js $(Get-Content (Join-Path $RepoRoot '.nvmrc')) and add it to PATH."
     Require-Command npm "Install Node.js and npm before working on the frontend."
     Write-Step "Running frontend quality checks"
-    Invoke-FrontendCommand "npm" @("ci")
+    Ensure-FrontendDependencies
     Invoke-FrontendCommand "npm" @("run", "check")
 }
 
@@ -191,6 +206,9 @@ function Invoke-Verify {
     Push-Location $RepoRoot
     try {
         & ".\mvnw.cmd" "-q" "verify"
+        if ($LASTEXITCODE -ne 0) {
+            throw "mvnw.cmd failed with exit code $LASTEXITCODE."
+        }
     } finally {
         Pop-Location
     }
@@ -202,7 +220,13 @@ function Invoke-ComposeCheck {
     Push-Location $RepoRoot
     try {
         docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services config | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "docker compose hybrid config failed with exit code $LASTEXITCODE."
+        }
         docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services --profile full --profile optional config | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "docker compose full config failed with exit code $LASTEXITCODE."
+        }
     } finally {
         Pop-Location
     }
@@ -215,11 +239,15 @@ function Invoke-Smoke {
     Push-Location $RepoRoot
     try {
         & ".\mvnw.cmd" "-q" "-pl" "services/payment-service,services/ledger-service,services/api-gateway" "-am" "test"
+        if ($LASTEXITCODE -ne 0) {
+            throw "mvnw.cmd failed with exit code $LASTEXITCODE."
+        }
     } finally {
         Pop-Location
     }
 
     if ((Test-CommandExists "node") -and (Test-CommandExists "npm")) {
+        Ensure-FrontendDependencies
         Write-Step "Running frontend lint"
         Invoke-FrontendCommand "npm" @("run", "lint")
     } else {
