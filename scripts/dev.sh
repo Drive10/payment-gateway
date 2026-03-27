@@ -27,16 +27,41 @@ show_help() {
 Usage: ./scripts/dev.sh <command>
 
 Commands:
+  bootstrap       Prepare local repo defaults and optional frontend deps
   doctor          Validate Java, Maven, Docker, and optional Node/npm
   hybrid          Start Docker services for hybrid mode
   full            Start the full Docker stack
   down            Stop the active Docker stack
   payment-local   Run payment-service locally with the local profile
   frontend-check  Run frontend install + quality checks
+  smoke           Run fast local smoke checks
   verify          Run backend verification
   compose-check   Validate Compose rendering for hybrid and full modes
   help            Show this help
 EOF
+}
+
+bootstrap() {
+  step "Preparing local workspace"
+  if [[ ! -f "$REPO_ROOT/.env" && -f "$REPO_ROOT/.env.example" ]]; then
+    cp "$REPO_ROOT/.env.example" "$REPO_ROOT/.env"
+    echo "Created .env from .env.example"
+  elif [[ -f "$REPO_ROOT/.env" ]]; then
+    echo ".env already exists"
+  fi
+
+  if has_cmd node && has_cmd npm; then
+    step "Installing frontend dependencies"
+    cd "$FRONTEND_DIR"
+    npm ci
+  else
+    echo "Skipping frontend install because node/npm are not available."
+  fi
+
+  echo "Next steps:"
+  echo "  1. ./scripts/dev.sh doctor"
+  echo "  2. ./scripts/dev.sh hybrid"
+  echo "  3. ./scripts/dev.sh payment-local"
 }
 
 doctor() {
@@ -122,13 +147,29 @@ compose_check() {
   docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services --profile full --profile optional config >/dev/null
 }
 
+smoke() {
+  step "Running fast smoke checks"
+  compose_check
+  cd "$REPO_ROOT"
+  ./mvnw -q -pl services/payment-service,services/ledger-service,services/api-gateway -am test
+  if has_cmd node && has_cmd npm; then
+    step "Running frontend lint"
+    cd "$FRONTEND_DIR"
+    npm run lint
+  else
+    echo "Skipping frontend lint because node/npm are not available."
+  fi
+}
+
 case "$COMMAND" in
+  bootstrap) bootstrap ;;
   doctor) doctor ;;
   hybrid) hybrid ;;
   full) full ;;
   down) down ;;
   payment-local) payment_local ;;
   frontend-check) frontend_check ;;
+  smoke) smoke ;;
   verify) verify_repo ;;
   compose-check) compose_check ;;
   help) show_help ;;

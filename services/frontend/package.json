@@ -4,7 +4,12 @@
   "private": true,
   "description": "A polished fintech checkout experience built with React, Vite, Tailwind CSS, and Framer Motion.",
   "license": "MIT",
+  "packageManager": "npm@10.9.0",
   "type": "module",
+  "engines": {
+    "node": ">=22 <23",
+    "npm": ">=10 <11"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

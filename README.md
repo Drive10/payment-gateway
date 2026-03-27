@@ -146,11 +146,13 @@ macOS / Linux:
 
 Useful commands:
 
+- `bootstrap`: creates `.env` from `.env.example` and installs frontend deps when Node/npm are available
 - `doctor`: checks Java, Docker, optional Node/npm, and `.env`
 - `hybrid`: starts Docker for everything except local `payment-service`
 - `full`: starts the full Docker platform
 - `payment-local`: runs `payment-service` with `SPRING_PROFILES_ACTIVE=local`
 - `frontend-check`: runs `npm ci && npm run check` in `services/frontend`
+- `smoke`: runs compose validation, core backend tests, and frontend lint when Node/npm are available
 - `verify`: runs backend Maven verification
 - `compose-check`: validates Compose rendering for hybrid and full modes
 
@@ -158,13 +160,39 @@ Useful commands:
 
 | Task | Windows PowerShell | Windows cmd | macOS / Linux |
 | --- | --- | --- | --- |
+| Bootstrap | `./scripts/dev.ps1 bootstrap` | `scripts\\dev.cmd bootstrap` | `./scripts/dev.sh bootstrap` |
 | Doctor | `./scripts/dev.ps1 doctor` | `scripts\\dev.cmd doctor` | `./scripts/dev.sh doctor` |
 | Hybrid stack | `./scripts/dev.ps1 hybrid` | `scripts\\dev.cmd hybrid` | `./scripts/dev.sh hybrid` |
 | Full stack | `./scripts/dev.ps1 full` | `scripts\\dev.cmd full` | `./scripts/dev.sh full` |
 | Local payment-service | `./scripts/dev.ps1 payment-local` | `scripts\\dev.cmd payment-local` | `./scripts/dev.sh payment-local` |
 | Frontend check | `./scripts/dev.ps1 frontend-check` | `scripts\\dev.cmd frontend-check` | `./scripts/dev.sh frontend-check` |
+| Smoke checks | `./scripts/dev.ps1 smoke` | `scripts\\dev.cmd smoke` | `./scripts/dev.sh smoke` |
 | Backend verify | `./scripts/dev.ps1 verify` | `scripts\\dev.cmd verify` | `./scripts/dev.sh verify` |
 | Compose validation | `./scripts/dev.ps1 compose-check` | `scripts\\dev.cmd compose-check` | `./scripts/dev.sh compose-check` |
+
+### Recommended Onboarding Flow
+
+```bash
+./scripts/dev.sh bootstrap
+./scripts/dev.sh doctor
+./scripts/dev.sh smoke
+./scripts/dev.sh hybrid
+./scripts/dev.sh payment-local
+```
+
+On Windows PowerShell:
+
+```powershell
+./scripts/dev.ps1 bootstrap
+./scripts/dev.ps1 doctor
+./scripts/dev.ps1 smoke
+./scripts/dev.ps1 hybrid
+./scripts/dev.ps1 payment-local
+```
+
+### Dev Container
+
+If you want a near-zero-setup environment, open the repo in VS Code and choose **Reopen in Container**. The Dev Container installs Java 21, Node 22, Maven, and Docker CLI support so the repo behaves the same way across machines.
 
 ### Full Docker
 
