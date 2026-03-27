@@ -35,7 +35,6 @@ public class RazorpayWebhookService {
     private final OrderService orderService;
     private final PaymentEventPublisher paymentEventPublisher;
     private final PaymentService paymentService;
-    private final LedgerPostingService ledgerPostingService;
     private final PaymentStateMachine paymentStateMachine;
     private final ObjectMapper objectMapper;
     private final String webhookSecret;
@@ -48,7 +47,6 @@ public class RazorpayWebhookService {
             OrderService orderService,
             PaymentEventPublisher paymentEventPublisher,
             PaymentService paymentService,
-            LedgerPostingService ledgerPostingService,
             PaymentStateMachine paymentStateMachine,
             ObjectMapper objectMapper,
             @Value("${application.webhook.razorpay.secret:}") String webhookSecret
@@ -60,7 +58,6 @@ public class RazorpayWebhookService {
         this.orderService = orderService;
         this.paymentEventPublisher = paymentEventPublisher;
         this.paymentService = paymentService;
-        this.ledgerPostingService = ledgerPostingService;
         this.paymentStateMachine = paymentStateMachine;
         this.objectMapper = objectMapper;
         this.webhookSecret = webhookSecret;
@@ -113,7 +110,6 @@ public class RazorpayWebhookService {
                 dev.payment.paymentservice.domain.enums.TransactionStatus.SUCCESS,
                 "Webhook marked payment captured", entity.id(), payment.getAmount());
         orderService.markPaid(payment.getOrder());
-        ledgerPostingService.recordPaymentCapture(payment);
         auditService.record("RAZORPAY_WEBHOOK_CAPTURED", "system", "PAYMENT", payment.getId().toString(), "Webhook marked payment captured");
         paymentEventPublisher.publish("payment.webhook.captured", payment, Map.of("providerPaymentId", entity.id()));
     }
@@ -153,7 +149,6 @@ public class RazorpayWebhookService {
         if (payment.getStatus() == PaymentStatus.REFUNDED) {
             orderService.markRefunded(payment.getOrder());
         }
-        ledgerPostingService.recordRefund(payment, refund);
         auditService.record("RAZORPAY_WEBHOOK_REFUND", "system", "PAYMENT", payment.getId().toString(), "Webhook processed refund");
         paymentEventPublisher.publish("payment.webhook.refund_processed", payment, Map.of(
                 "refundAmount", refundAmount.toPlainString(),

@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import({TestSupportConfig.class, TestLedgerSupportConfig.class})
+@Import(TestSupportConfig.class)
 class PaymentFlowIntegrationTest {
 
     @Autowired

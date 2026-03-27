@@ -7,7 +7,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Import({TestSupportConfig.class, TestLedgerSupportConfig.class})
+@Import(TestSupportConfig.class)
 class ApplicationContextTest {
 
     @Test

@@ -53,6 +53,12 @@ public class SimulatorService {
         return toResponse(transaction);
     }
 
+    public SimulationResponse getTransaction(String providerOrderId) {
+        SimulationTransaction transaction = simulationTransactionRepository.findByProviderOrderId(providerOrderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Simulation transaction not found"));
+        return toResponse(transaction);
+    }
+
     public List<SimulationResponse> getTransactions(SimulationMode mode, SimulationStatus status) {
         List<SimulationTransaction> transactions;
         if (mode != null && status != null) {

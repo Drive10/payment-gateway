@@ -49,7 +49,6 @@ public class PaymentService {
     private final AuditService auditService;
     private final PaymentProcessorClient paymentProcessorClient;
     private final PaymentEventPublisher paymentEventPublisher;
-    private final LedgerPostingService ledgerPostingService;
     private final IdempotencyService idempotencyService;
     private final PaymentStateMachine paymentStateMachine;
 
@@ -61,7 +60,6 @@ public class PaymentService {
             AuditService auditService,
             PaymentProcessorClient paymentProcessorClient,
             PaymentEventPublisher paymentEventPublisher,
-            LedgerPostingService ledgerPostingService,
             IdempotencyService idempotencyService,
             PaymentStateMachine paymentStateMachine
     ) {
@@ -72,7 +70,6 @@ public class PaymentService {
         this.auditService = auditService;
         this.paymentProcessorClient = paymentProcessorClient;
         this.paymentEventPublisher = paymentEventPublisher;
-        this.ledgerPostingService = ledgerPostingService;
         this.idempotencyService = idempotencyService;
         this.paymentStateMachine = paymentStateMachine;
     }
@@ -155,7 +152,6 @@ public class PaymentService {
                     processorCapture.providerReference()
             );
             orderService.markPaid(payment.getOrder());
-            ledgerPostingService.recordPaymentCapture(payment);
             auditService.record("PAYMENT_CAPTURED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Payment captured successfully");
             paymentEventPublisher.publish("payment.captured", payment, Map.of("actor", actor.getEmail()));
             log.info("event=payment_captured paymentId={} actor={} mode={} simulated={}", payment.getId(), actor.getEmail(), payment.getTransactionMode(), payment.isSimulated());
@@ -238,7 +234,6 @@ public class PaymentService {
             orderService.markRefunded(payment.getOrder());
         }
 
-        ledgerPostingService.recordRefund(payment, refund);
         auditService.record("PAYMENT_REFUNDED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Refund processed");
         paymentEventPublisher.publish("payment.refunded", payment, Map.of(
                 "actor", actor.getEmail(),

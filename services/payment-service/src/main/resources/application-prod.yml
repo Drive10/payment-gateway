@@ -10,7 +10,5 @@ spring:
 application:
   simulator:
     base-url: ${SIMULATOR_SERVICE_URL}
-  ledger:
-    base-url: ${LEDGER_SERVICE_URL}
   payment:
     checkout-base-url: ${CHECKOUT_BASE_URL}

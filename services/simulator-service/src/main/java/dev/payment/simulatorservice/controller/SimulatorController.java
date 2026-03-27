@@ -6,6 +6,7 @@ import dev.payment.simulatorservice.dto.request.CreateSimulationRequest;
 import dev.payment.simulatorservice.dto.response.SimulationResponse;
 import dev.payment.simulatorservice.service.SimulatorService;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,5 +34,10 @@ public class SimulatorController {
             @Valid @RequestBody CaptureSimulationRequest request
     ) {
         return ApiResponse.success(simulatorService.capture(providerOrderId, request));
+    }
+
+    @GetMapping("/{providerOrderId}")
+    public ApiResponse<SimulationResponse> getTransaction(@PathVariable String providerOrderId) {
+        return ApiResponse.success(simulatorService.getTransaction(providerOrderId));
     }
 }

@@ -75,14 +75,15 @@ application:
     checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}
   simulator:
     base-url: ${SIMULATOR_SERVICE_URL:}
-  ledger:
-    base-url: ${LEDGER_SERVICE_URL:}
-    accounts:
-      cash: ${LEDGER_CASH_ACCOUNT_CODE:CASH_ASSET}
-      customer-funds: ${LEDGER_CUSTOMER_FUNDS_ACCOUNT_CODE:CUSTOMER_FUNDS_LIABILITY}
   kafka:
     topic:
       payment-events: ${PAYMENT_EVENTS_TOPIC:payment.events}
+  reconciliation:
+    enabled: ${PAYMENT_RECONCILIATION_ENABLED:true}
+    fixed-delay: ${PAYMENT_RECONCILIATION_FIXED_DELAY:PT5M}
+    initial-delay: ${PAYMENT_RECONCILIATION_INITIAL_DELAY:PT1M}
+    lookback: ${PAYMENT_RECONCILIATION_LOOKBACK:PT6H}
+    batch-size: ${PAYMENT_RECONCILIATION_BATCH_SIZE:50}
   webhook:
     razorpay:
       secret: ${RAZORPAY_WEBHOOK_SECRET:}
@@ -97,18 +98,9 @@ resilience4j:
       simulator:
         max-attempts: 3
         wait-duration: 300ms
-      ledger:
-        max-attempts: 3
-        wait-duration: 300ms
   circuitbreaker:
     instances:
       simulator:
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        permitted-number-of-calls-in-half-open-state: 2
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
-      ledger:
         sliding-window-size: 10
         minimum-number-of-calls: 5
         permitted-number-of-calls-in-half-open-state: 2
