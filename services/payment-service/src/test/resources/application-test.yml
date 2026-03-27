@@ -14,6 +14,8 @@ spring:
     enabled: false
 
 application:
+  gateway-trust:
+    enabled: false
   security:
     jwt:
       secret-key: VGhpc0lzQVN0cm9uZ0Jhc2U2NEVuY29kZWRKU1dUU2VjcmV0S2V5Rm9yRmluVGVjaEFQSUM=

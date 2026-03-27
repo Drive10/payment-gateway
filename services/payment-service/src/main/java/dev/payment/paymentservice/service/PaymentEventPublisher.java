@@ -16,13 +16,16 @@ public class PaymentEventPublisher {
     private static final String EVENT_SCHEMA_VERSION = "v1";
 
     private final PaymentOutboxService paymentOutboxService;
+    private final KafkaTraceHeaderFactory kafkaTraceHeaderFactory;
     private final String topicName;
 
     public PaymentEventPublisher(
             PaymentOutboxService paymentOutboxService,
+            KafkaTraceHeaderFactory kafkaTraceHeaderFactory,
             @Value("${application.kafka.topic.payment-events}") String topicName
     ) {
         this.paymentOutboxService = paymentOutboxService;
+        this.kafkaTraceHeaderFactory = kafkaTraceHeaderFactory;
         this.topicName = topicName;
     }
 
@@ -57,7 +60,8 @@ public class PaymentEventPublisher {
                 eventType,
                 payment.getId().toString(),
                 topicName,
-                message
+                message,
+                kafkaTraceHeaderFactory.currentHeaders()
         );
     }
 }

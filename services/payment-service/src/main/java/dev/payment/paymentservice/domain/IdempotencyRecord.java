@@ -16,7 +16,7 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "payment_idempotency_records",
-        uniqueConstraints = @UniqueConstraint(name = "uk_payment_idempotency_operation_key", columnNames = {"operation", "idempotency_key"})
+        uniqueConstraints = @UniqueConstraint(name = "uk_payment_idempotency_operation_actor_key", columnNames = {"operation", "actor_id", "idempotency_key"})
 )
 public class IdempotencyRecord extends BaseEntity {
 
@@ -26,6 +26,9 @@ public class IdempotencyRecord extends BaseEntity {
 
     @Column(nullable = false, length = 40)
     private String operation;
+
+    @Column(name = "actor_id", nullable = false)
+    private Long actorId;
 
     @Column(name = "idempotency_key", nullable = false, length = 120)
     private String idempotencyKey;
@@ -53,6 +56,14 @@ public class IdempotencyRecord extends BaseEntity {
 
     public void setOperation(String operation) {
         this.operation = operation;
+    }
+
+    public Long getActorId() {
+        return actorId;
+    }
+
+    public void setActorId(Long actorId) {
+        this.actorId = actorId;
     }
 
     public String getIdempotencyKey() {

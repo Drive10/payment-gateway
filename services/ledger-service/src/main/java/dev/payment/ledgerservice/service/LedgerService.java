@@ -48,6 +48,10 @@ public class LedgerService {
             return toJournal(existing);
         }
 
+        if (request.debitAccountCode().equalsIgnoreCase(request.creditAccountCode())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_LEDGER_PAIR", "Debit and credit accounts must be different");
+        }
+
         LedgerAccount debit = ledgerAccountRepository.findByAccountCode(request.debitAccountCode().toUpperCase())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "DEBIT_ACCOUNT_NOT_FOUND", "Debit account not found"));
         LedgerAccount credit = ledgerAccountRepository.findByAccountCode(request.creditAccountCode().toUpperCase())

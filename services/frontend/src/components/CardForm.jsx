@@ -5,30 +5,72 @@ import {
   isValidCardNumber,
 } from "../lib/payment";
 
+function Field({ label, hint, error, children }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-200">
+        {label}
+      </span>
+      {children}
+      <p className={`mt-2 text-xs ${error ? "text-rose-300" : "text-slate-400"}`}>
+        {error || hint}
+      </p>
+    </label>
+  );
+}
+
 export default function CardForm({ values, errors, onChange }) {
   const cardBrand = detectCardBrand(values.cardNumber);
   const isCardComplete = isValidCardNumber(values.cardNumber);
 
   return (
-    <div className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-slate-900">Card details</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Test-friendly flow with live formatting and inline validation.
-          </p>
+    <div className="space-y-5 rounded-[1.75rem] border border-white/10 bg-slate-950/70 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="rounded-[1.5rem] border border-cyan-400/20 bg-[linear-gradient(135deg,rgba(14,116,144,0.8),rgba(15,23,42,0.92))] p-5 text-white">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.32em] text-cyan-200">
+              Saved card lane
+            </p>
+            <p className="mt-3 text-xl font-semibold tracking-tight">
+              Merchant tokenized checkout
+            </p>
+          </div>
+          <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100">
+            {cardBrand}
+          </span>
         </div>
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 shadow-sm">
-          {cardBrand}
-        </span>
+        <div className="mt-8 font-mono text-2xl tracking-[0.28em] text-white/90">
+          {values.cardNumber || "**** **** **** ****"}
+        </div>
+        <div className="mt-5 flex items-end justify-between gap-4 text-sm text-cyan-100/90">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-200/70">
+              Cardholder
+            </p>
+            <p className="mt-1 font-semibold">
+              {values.cardholder || "Your name"}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-200/70">
+              Expires
+            </p>
+            <p className="mt-1 font-semibold">{values.expiry || "MM/YY"}</p>
+          </div>
+        </div>
       </div>
 
-      <label className="block">
-        <span className="mb-2 block text-sm font-medium text-slate-700">
-          Card number
-        </span>
+      <Field
+        label="Card number"
+        error={errors.cardNumber}
+        hint={
+          isCardComplete
+            ? "Card number looks valid."
+            : "Use a 16-digit test number like 4242 4242 4242 4242."
+        }
+      >
         <input
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+          className="w-full rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-3 text-slate-50 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10"
           inputMode="numeric"
           placeholder="4242 4242 4242 4242"
           value={values.cardNumber}
@@ -38,24 +80,12 @@ export default function CardForm({ values, errors, onChange }) {
           maxLength={19}
           aria-invalid={Boolean(errors.cardNumber)}
         />
-        {errors.cardNumber ? (
-          <p className="mt-2 text-sm text-rose-600">{errors.cardNumber}</p>
-        ) : (
-          <p className="mt-2 text-xs text-slate-500">
-            {isCardComplete
-              ? "Card number looks good."
-              : "Use any 16-digit test card number."}
-          </p>
-        )}
-      </label>
+      </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">
-            Expiry
-          </span>
+        <Field label="Expiry" error={errors.expiry} hint="Enter expiry as MM/YY.">
           <input
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+            className="w-full rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-3 text-slate-50 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10"
             inputMode="numeric"
             placeholder="MM/YY"
             value={values.expiry}
@@ -65,17 +95,15 @@ export default function CardForm({ values, errors, onChange }) {
             maxLength={5}
             aria-invalid={Boolean(errors.expiry)}
           />
-          {errors.expiry && (
-            <p className="mt-2 text-sm text-rose-600">{errors.expiry}</p>
-          )}
-        </label>
+        </Field>
 
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">
-            CVV
-          </span>
+        <Field
+          label="CVV"
+          error={errors.cvv}
+          hint="Three digits on the back of the card."
+        >
           <input
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+            className="w-full rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-3 text-slate-50 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10"
             inputMode="numeric"
             placeholder="123"
             value={values.cvv}
@@ -85,27 +113,22 @@ export default function CardForm({ values, errors, onChange }) {
             maxLength={3}
             aria-invalid={Boolean(errors.cvv)}
           />
-          {errors.cvv && (
-            <p className="mt-2 text-sm text-rose-600">{errors.cvv}</p>
-          )}
-        </label>
+        </Field>
       </div>
 
-      <label className="block">
-        <span className="mb-2 block text-sm font-medium text-slate-700">
-          Cardholder name
-        </span>
+      <Field
+        label="Cardholder name"
+        error={errors.cardholder}
+        hint="This is used for the receipt and risk checks."
+      >
         <input
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+          className="w-full rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-3 text-slate-50 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10"
           placeholder="Jordan Lee"
           value={values.cardholder}
           onChange={(event) => onChange("cardholder", event.target.value)}
           aria-invalid={Boolean(errors.cardholder)}
         />
-        {errors.cardholder && (
-          <p className="mt-2 text-sm text-rose-600">{errors.cardholder}</p>
-        )}
-      </label>
+      </Field>
     </div>
   );
 }

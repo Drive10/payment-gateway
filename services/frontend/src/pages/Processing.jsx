@@ -1,7 +1,11 @@
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { captureCheckout, getStoredTransaction } from "../lib/payment";
+import {
+  captureCheckout,
+  formatCurrency,
+  getStoredTransaction,
+} from "../lib/payment";
 
 export default function Processing() {
   const location = useLocation();
@@ -27,19 +31,53 @@ export default function Processing() {
   }, [checkout, navigate]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <motion.section
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md rounded-[2rem] border border-white/50 bg-white/85 p-10 text-center shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur"
+        initial={{ opacity: 0, scale: 0.97, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="w-full max-w-2xl overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 text-white shadow-[0_30px_120px_rgba(2,6,23,0.48)]"
       >
-        <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent" />
-        <h1 className="mt-6 text-2xl font-semibold text-slate-950">
-          Processing payment
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500">
-          Finalizing your secure transaction and preparing your receipt.
-        </p>
+        <div className="grid gap-8 p-8 md:grid-cols-[0.9fr_1.1fr] md:p-10">
+          <div className="rounded-[1.75rem] border border-cyan-400/15 bg-[linear-gradient(180deg,rgba(14,116,144,0.3),rgba(15,23,42,0.92))] p-6">
+            <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-cyan-300 border-t-transparent" />
+            <h1 className="mt-6 text-2xl font-semibold tracking-tight">
+              Processing payment
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Confirming provider authorization, publishing the payment event,
+              and waiting for ledger-safe completion.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                Order reference
+              </p>
+              <p className="mt-2 text-lg font-semibold text-white">
+                {checkout?.order?.externalReference ??
+                  checkout?.order?.id ??
+                  "Pending"}
+              </p>
+            </div>
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                Amount
+              </p>
+              <p className="mt-2 text-lg font-semibold text-white">
+                {formatCurrency(checkout?.amount ?? 0)}
+              </p>
+            </div>
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                Correlation ID
+              </p>
+              <p className="mt-2 break-all text-sm font-medium text-cyan-200">
+                {checkout?.correlationId ?? "Assigned by backend"}
+              </p>
+            </div>
+          </div>
+        </div>
       </motion.section>
     </main>
   );

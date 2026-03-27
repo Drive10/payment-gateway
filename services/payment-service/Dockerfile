@@ -4,6 +4,6 @@ COPY . /app
 RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /app/target/*.jar /app/service.jar
+COPY --from=build /app/target/*-exec.jar /app/service.jar
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app/service.jar"]

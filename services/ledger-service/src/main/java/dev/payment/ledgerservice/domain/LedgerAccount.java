@@ -9,7 +9,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -29,9 +28,6 @@ public class LedgerAccount extends BaseEntity {
     @Column(nullable = false, length = 32)
     private AccountType type;
 
-    @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal balance = BigDecimal.ZERO;
-
     public UUID getId() { return id; }
     public String getAccountCode() { return accountCode; }
     public void setAccountCode(String accountCode) { this.accountCode = accountCode; }
@@ -39,6 +35,4 @@ public class LedgerAccount extends BaseEntity {
     public void setAccountName(String accountName) { this.accountName = accountName; }
     public AccountType getType() { return type; }
     public void setType(AccountType type) { this.type = type; }
-    public BigDecimal getBalance() { return balance; }
-    public void setBalance(BigDecimal balance) { this.balance = balance; }
 }

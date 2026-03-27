@@ -65,6 +65,9 @@ springdoc:
     tags-sorter: alpha
 
 application:
+  gateway-trust:
+    enabled: ${GATEWAY_TRUST_ENABLED:true}
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-gateway-internal-secret}
   security:
     jwt:
       secret-key: ${JWT_SECRET_KEY}
@@ -87,6 +90,11 @@ application:
   webhook:
     razorpay:
       secret: ${RAZORPAY_WEBHOOK_SECRET:}
+  providers:
+    razorpay:
+      base-url: ${RAZORPAY_API_BASE_URL:}
+      key-id: ${RAZORPAY_KEY_ID:}
+      key-secret: ${RAZORPAY_KEY_SECRET:}
 
 logging:
   pattern:

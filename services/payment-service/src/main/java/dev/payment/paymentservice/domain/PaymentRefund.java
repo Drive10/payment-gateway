@@ -28,7 +28,7 @@ public class PaymentRefund extends BaseEntity {
     @JoinColumn(name = "payment_id", nullable = false)
     private Payment payment;
 
-    @Column(name = "idempotency_key", nullable = false, unique = true, length = 120)
+    @Column(name = "idempotency_key", nullable = false, length = 120)
     private String idempotencyKey;
 
     @Column(name = "refund_reference", nullable = false, unique = true, length = 80)

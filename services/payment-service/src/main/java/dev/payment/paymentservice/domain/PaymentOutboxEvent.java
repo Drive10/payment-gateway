@@ -42,6 +42,9 @@ public class PaymentOutboxEvent extends BaseEntity {
     @Column(name = "correlation_id", length = 80)
     private String correlationId;
 
+    @Column(name = "message_headers", columnDefinition = "text")
+    private String messageHeaders;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private OutboxEventStatus status;
@@ -116,6 +119,14 @@ public class PaymentOutboxEvent extends BaseEntity {
 
     public void setCorrelationId(String correlationId) {
         this.correlationId = correlationId;
+    }
+
+    public String getMessageHeaders() {
+        return messageHeaders;
+    }
+
+    public void setMessageHeaders(String messageHeaders) {
+        this.messageHeaders = messageHeaders;
     }
 
     public OutboxEventStatus getStatus() {

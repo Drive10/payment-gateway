@@ -26,15 +26,16 @@ public class IdempotencyService {
     }
 
     @Transactional
-    public <T> IdempotencyResult<T> begin(String operation, String idempotencyKey, Object requestFingerprint, Class<T> responseType) {
+    public <T> IdempotencyResult<T> begin(String operation, String idempotencyKey, Long actorId, Object requestFingerprint, Class<T> responseType) {
         String requestHash = hash(requestFingerprint);
-        Optional<IdempotencyRecord> existing = repository.findByOperationAndIdempotencyKey(operation, idempotencyKey);
+        Optional<IdempotencyRecord> existing = repository.findByOperationAndActorIdAndIdempotencyKey(operation, actorId, idempotencyKey);
         if (existing.isPresent()) {
             return resolveExisting(existing.get(), requestHash, responseType);
         }
 
         IdempotencyRecord record = new IdempotencyRecord();
         record.setOperation(operation);
+        record.setActorId(actorId);
         record.setIdempotencyKey(idempotencyKey);
         record.setRequestHash(requestHash);
         record.setStatus(IdempotencyRecordStatus.IN_PROGRESS);
@@ -42,7 +43,7 @@ public class IdempotencyService {
         try {
             return IdempotencyResult.started(repository.save(record), null);
         } catch (DataIntegrityViolationException exception) {
-            IdempotencyRecord concurrent = repository.findByOperationAndIdempotencyKey(operation, idempotencyKey)
+            IdempotencyRecord concurrent = repository.findByOperationAndActorIdAndIdempotencyKey(operation, actorId, idempotencyKey)
                     .orElseThrow(() -> exception);
             return resolveExisting(concurrent, requestHash, responseType);
         }

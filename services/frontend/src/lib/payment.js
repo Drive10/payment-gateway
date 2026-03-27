@@ -1,27 +1,50 @@
 export const PAYMENT_AMOUNT = 500;
-export const PAYMENT_NOTE = "Integrated demo flow backed by the fintech backend.";
+export const PAYMENT_NOTE =
+  "Secure checkout for a production-style fintech payment flow.";
 export const UPI_ID = "nova-demo@upi";
 export const STORAGE_KEY = "nova-checkout-transaction";
 export const TRANSACTION_MODES = {
   PRODUCTION: "PRODUCTION",
   TEST: "TEST",
 };
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
 const DEFAULT_ERROR_MESSAGE =
-  "Unable to reach the payment backend. Confirm Docker services are up and try again.";
+  "Unable to reach the payment backend. Confirm the platform is running and try again.";
+const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+});
 
-function getSessionKey() {
+function randomToken(length = 12) {
+  return Math.random().toString(36).slice(2, 2 + length);
+}
+
+function getSessionValue(key, fallbackFactory) {
   try {
-    const existing = sessionStorage.getItem("nova-checkout-session-key");
+    const existing = sessionStorage.getItem(key);
     if (existing) {
       return existing;
     }
-    const created = Math.random().toString(36).slice(2, 10);
-    sessionStorage.setItem("nova-checkout-session-key", created);
+    const created = fallbackFactory();
+    sessionStorage.setItem(key, created);
     return created;
   } catch {
-    return Math.random().toString(36).slice(2, 10);
+    return fallbackFactory();
   }
+}
+
+function getSessionKey() {
+  return getSessionValue("nova-checkout-session-key", () => randomToken(10));
+}
+
+function getRequestSeed() {
+  return getSessionValue("nova-checkout-request-seed", () => randomToken(8));
+}
+
+function createCorrelationId(prefix) {
+  return `${prefix}-${getRequestSeed()}-${Date.now().toString(36)}`;
 }
 
 function buildCustomerIdentity() {
@@ -37,14 +60,21 @@ function persistCheckoutState(value) {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value));
 }
 
+export function formatCurrency(amount) {
+  return CURRENCY_FORMATTER.format(amount);
+}
+
 async function apiRequest(path, options = {}) {
   let response;
   const { headers: customHeaders = {}, ...restOptions } = options;
+  const requestId =
+    customHeaders["X-Request-Id"] ?? createCorrelationId("checkout");
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {
         "Content-Type": "application/json",
+        "X-Request-Id": requestId,
         ...customHeaders,
       },
       ...restOptions,
@@ -95,24 +125,31 @@ async function ensureAccessToken() {
   };
 }
 
-export async function startCheckout({ amount, method, cardholder, transactionMode }) {
+export async function startCheckout({
+  amount,
+  method,
+  cardholder,
+  transactionMode,
+}) {
   const { token, customer } = await ensureAccessToken();
   const externalReference = `checkout-${Date.now()}`;
   const provider =
     transactionMode === TRANSACTION_MODES.TEST
       ? "RAZORPAY_SIMULATOR"
       : "RAZORPAY_PRIMARY";
+  const correlationId = createCorrelationId("payment");
 
   const order = await apiRequest("/v1/orders", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
+      "X-Request-Id": correlationId,
     },
     body: JSON.stringify({
       externalReference,
       amount,
       currency: "INR",
-      description: "Nova premium checkout purchase",
+      description: "Nova commerce checkout purchase",
     }),
   });
 
@@ -120,14 +157,18 @@ export async function startCheckout({ amount, method, cardholder, transactionMod
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      "Idempotency-Key": `pay-${externalReference}`,
+      "Idempotency-Key": `pay-${customer.email}-${externalReference}`,
+      "X-Request-Id": correlationId,
     },
     body: JSON.stringify({
       orderId: order.id,
       method: method === "upi" ? "UPI" : "CARD",
       provider,
       transactionMode,
-      notes: method === "upi" ? "Customer selected UPI" : `Cardholder: ${cardholder.trim() || customer.fullName}`,
+      notes:
+        method === "upi"
+          ? "Customer selected UPI"
+          : `Cardholder: ${cardholder.trim() || customer.fullName}`,
     }),
   });
 
@@ -139,6 +180,7 @@ export async function startCheckout({ amount, method, cardholder, transactionMod
     amount,
     method,
     cardholder,
+    correlationId,
   };
 
   persistCheckoutState(checkout);
@@ -150,6 +192,7 @@ export async function captureCheckout(checkout) {
     method: "POST",
     headers: {
       Authorization: `Bearer ${checkout.token}`,
+      "X-Request-Id": checkout.correlationId ?? createCorrelationId("capture"),
     },
     body: JSON.stringify({}),
   });
@@ -166,20 +209,24 @@ export async function captureCheckout(checkout) {
     transactionMode: payment.transactionMode,
     simulated: payment.simulated,
     amount: checkout.amount,
-    amountLabel: `₹${checkout.amount}`,
+    amountLabel: formatCurrency(checkout.amount),
     method: checkout.method,
     methodLabel,
     status: payment.status,
-    customerLabel: checkout.method === "upi" ? checkout.customer.fullName : checkout.cardholder.trim() || checkout.customer.fullName,
+    customerLabel:
+      checkout.method === "upi"
+        ? checkout.customer.fullName
+        : checkout.cardholder.trim() || checkout.customer.fullName,
     environmentLabel:
       payment.transactionMode === TRANSACTION_MODES.TEST
-        ? "Test simulator"
-        : "Production-like",
+        ? "Sandbox lane"
+        : "Primary processor",
     createdAt: createdAt.toISOString(),
     dateLabel: createdAt.toLocaleString("en-IN", {
       dateStyle: "medium",
       timeStyle: "short",
     }),
+    correlationId: checkout.correlationId,
   };
 
   persistCheckoutState(transaction);
@@ -217,6 +264,10 @@ export function detectCardBrand(value) {
 
   if (/^3[47]/.test(digits)) {
     return "Amex";
+  }
+
+  if (/^6/.test(digits)) {
+    return "RuPay";
   }
 
   return "Card";
@@ -269,26 +320,6 @@ export function validateCardForm(values) {
   }
 
   return errors;
-}
-
-export function buildTransaction({ amount, method, cardholder }) {
-  const createdAt = new Date();
-  const methodLabel = method === "upi" ? "UPI" : "Card";
-
-  return {
-    id: `txn_${Math.random().toString(36).slice(2, 10)}`,
-    amount,
-    amountLabel: `₹${amount}`,
-    method,
-    methodLabel,
-    status: "SUCCESS",
-    customerLabel: method === "upi" ? "UPI Customer" : cardholder.trim(),
-    createdAt: createdAt.toISOString(),
-    dateLabel: createdAt.toLocaleString("en-IN", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }),
-  };
 }
 
 export function getStoredTransaction() {

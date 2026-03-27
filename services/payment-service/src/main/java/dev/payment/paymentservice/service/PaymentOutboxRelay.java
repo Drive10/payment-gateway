@@ -5,6 +5,7 @@ import dev.payment.common.events.PaymentEventMessage;
 import dev.payment.paymentservice.domain.PaymentOutboxEvent;
 import dev.payment.paymentservice.domain.enums.OutboxEventStatus;
 import dev.payment.paymentservice.repository.PaymentOutboxEventRepository;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -14,7 +15,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @Profile("!test")
@@ -53,7 +56,12 @@ public class PaymentOutboxRelay {
     private void relay(PaymentOutboxEvent event) {
         try {
             PaymentEventMessage message = objectMapper.readValue(event.getPayload(), PaymentEventMessage.class);
-            kafkaTemplate.send(event.getTopicName(), event.getEventKey(), message).get();
+            ProducerRecord<String, PaymentEventMessage> record = new ProducerRecord<>(event.getTopicName(), event.getEventKey(), message);
+            Map<String, String> headers = event.getMessageHeaders() == null || event.getMessageHeaders().isBlank()
+                    ? java.util.Collections.emptyMap()
+                    : objectMapper.readValue(event.getMessageHeaders(), objectMapper.getTypeFactory().constructMapType(Map.class, String.class, String.class));
+            headers.forEach((key, value) -> record.headers().add(key, value.getBytes(StandardCharsets.UTF_8)));
+            kafkaTemplate.send(record).get();
             event.setStatus(OutboxEventStatus.PUBLISHED);
             event.setPublishedAt(Instant.now());
             event.setLastError(null);

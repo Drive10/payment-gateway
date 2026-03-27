@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,32 +6,58 @@
 
 :root {
   color-scheme: light;
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
   background:
     radial-gradient(
       circle at top left,
-      rgba(103, 232, 249, 0.35),
-      transparent 28%
+      rgba(34, 211, 238, 0.14),
+      transparent 26%
     ),
     radial-gradient(
-      circle at bottom right,
-      rgba(251, 191, 36, 0.18),
-      transparent 24%
+      circle at 85% 12%,
+      rgba(16, 185, 129, 0.12),
+      transparent 18%
     ),
-    linear-gradient(180deg, #eef6ff 0%, #f8fafc 55%, #fefce8 100%);
+    radial-gradient(
+      circle at bottom center,
+      rgba(249, 115, 22, 0.08),
+      transparent 28%
+    ),
+    linear-gradient(180deg, #eef4ff 0%, #f8fafc 46%, #fffdf7 100%);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
   color: #0f172a;
   background: transparent;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+    to right,
+    rgba(148, 163, 184, 0.05) 1px,
+    transparent 1px
+  );
+  background-size: 72px 72px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.32), transparent 85%);
 }
 
 #root {
@@ -41,4 +67,9 @@ body {
 button,
 input {
   font: inherit;
+}
+
+::selection {
+  background: rgba(8, 145, 178, 0.18);
+  color: #082f49;
 }

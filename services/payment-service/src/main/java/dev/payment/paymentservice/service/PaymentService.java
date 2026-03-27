@@ -77,7 +77,7 @@ public class PaymentService {
     @Transactional
     public PaymentResponse createPayment(CreatePaymentRequest request, String idempotencyKey, User actor, boolean adminView) {
         IdempotencyService.IdempotencyResult<PaymentResponse> idempotency =
-                idempotencyService.begin("PAYMENT_CREATE", idempotencyKey, Map.of(
+                idempotencyService.begin("PAYMENT_CREATE", idempotencyKey, actor.getId(), Map.of(
                         "actor", actor.getEmail(),
                         "request", request
                 ), PaymentResponse.class);
@@ -174,7 +174,7 @@ public class PaymentService {
     @Transactional
     public RefundResponse refundPayment(UUID paymentId, CreateRefundRequest request, String idempotencyKey, User actor, boolean adminView) {
         IdempotencyService.IdempotencyResult<RefundResponse> idempotency =
-                idempotencyService.begin("PAYMENT_REFUND", idempotencyKey, Map.of(
+                idempotencyService.begin("PAYMENT_REFUND", idempotencyKey, actor.getId(), Map.of(
                         "actor", actor.getEmail(),
                         "paymentId", paymentId,
                         "request", request

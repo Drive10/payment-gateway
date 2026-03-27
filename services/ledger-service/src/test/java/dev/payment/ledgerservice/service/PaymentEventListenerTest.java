@@ -1,6 +1,9 @@
 package dev.payment.ledgerservice.service;
 
 import dev.payment.common.events.PaymentEventMessage;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -18,9 +21,9 @@ class PaymentEventListenerTest {
     @Test
     void shouldRouteCaptureEventsToLedgerPostingService() {
         LedgerEventPostingService ledgerEventPostingService = mock(LedgerEventPostingService.class);
-        PaymentEventListener listener = new PaymentEventListener(ledgerEventPostingService);
+        PaymentEventListener listener = new PaymentEventListener(ledgerEventPostingService, Tracer.NOOP, Propagator.NOOP);
 
-        listener.onPaymentEvent(message("payment.captured", Map.of()));
+        listener.onPaymentEvent(new ConsumerRecord<>("payment.events", 0, 0L, "key", message("payment.captured", Map.of())));
 
         verify(ledgerEventPostingService, times(1)).postCapture(org.mockito.ArgumentMatchers.any());
     }
@@ -28,9 +31,9 @@ class PaymentEventListenerTest {
     @Test
     void shouldIgnoreNonLedgerEvents() {
         LedgerEventPostingService ledgerEventPostingService = mock(LedgerEventPostingService.class);
-        PaymentEventListener listener = new PaymentEventListener(ledgerEventPostingService);
+        PaymentEventListener listener = new PaymentEventListener(ledgerEventPostingService, Tracer.NOOP, Propagator.NOOP);
 
-        listener.onPaymentEvent(message("payment.created", Map.of("actor", "system")));
+        listener.onPaymentEvent(new ConsumerRecord<>("payment.events", 0, 0L, "key", message("payment.created", Map.of("actor", "system"))));
 
         verifyNoInteractions(ledgerEventPostingService);
     }
