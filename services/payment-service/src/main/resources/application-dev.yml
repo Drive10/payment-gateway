@@ -5,7 +5,7 @@ spring:
     password: ${DB_PASSWORD:paymentpass}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
 
 application:
   security:
@@ -15,6 +15,8 @@ application:
     checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}
   simulator:
     base-url: ${SIMULATOR_SERVICE_URL:http://localhost:8087}
+  ledger:
+    base-url: ${LEDGER_SERVICE_URL:http://localhost:8082}
   bootstrap:
     admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}

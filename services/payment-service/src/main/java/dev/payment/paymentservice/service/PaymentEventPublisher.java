@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class PaymentEventPublisher {
@@ -31,6 +32,7 @@ public class PaymentEventPublisher {
         }
 
         PaymentEventMessage message = new PaymentEventMessage(
+                UUID.randomUUID(),
                 eventType,
                 payment.getId(),
                 payment.getOrder().getId(),

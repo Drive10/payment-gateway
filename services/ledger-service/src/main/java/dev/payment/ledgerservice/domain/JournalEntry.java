@@ -17,7 +17,7 @@ public class JournalEntry extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, length = 64)
+    @Column(nullable = false, unique = true, length = 64)
     private String reference;
 
     @Column(name = "debit_account_code", nullable = false, length = 64)

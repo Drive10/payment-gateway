@@ -17,6 +17,7 @@ public record RazorpayWebhookRequest(
     public record EntityWrapper(
             String id,
             @JsonProperty("order_id") String orderId,
+            @JsonProperty("payment_id") String paymentId,
             BigDecimal amount,
             String notes
     ) {}

@@ -10,10 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(PaymentFlowIntegrationTest.NoOpEventPublisherConfig.class)
+@Import({TestSupportConfig.class, TestLedgerSupportConfig.class})
 class PaymentFlowIntegrationTest {
 
     @Autowired
@@ -172,6 +169,97 @@ class PaymentFlowIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void refundApiShouldBeIdempotentAndPreventDuplicateFinancialImpact() throws Exception {
+        Session session = createCapturedPaymentSession();
+
+        String firstRefund = mockMvc.perform(post("/api/v1/payments/{paymentId}/refunds", session.paymentId())
+                        .header("Authorization", "Bearer " + session.token())
+                        .header("Idempotency-Key", "refund-key-1001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "amount": 499.00,
+                                  "reason": "customer_request"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.amount").value(499.00))
+                .andExpect(jsonPath("$.data.refundedAmount").value(499.00))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String secondRefund = mockMvc.perform(post("/api/v1/payments/{paymentId}/refunds", session.paymentId())
+                        .header("Authorization", "Bearer " + session.token())
+                        .header("Idempotency-Key", "refund-key-1001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "amount": 499.00,
+                                  "reason": "customer_request"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.refundedAmount").value(499.00))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(readField(secondRefund, "/data/refundReference"))
+                .isEqualTo(readField(firstRefund, "/data/refundReference"));
+    }
+
+    @Test
+    void webhookShouldRejectInvalidSignatureAndIgnoreReplay() throws Exception {
+        Session session = createCapturedPaymentSession();
+
+        String payload = """
+                {
+                  "event": "refund.processed",
+                  "payload": {
+                    "refund": {
+                      "entity": {
+                        "id": "rfnd_test_001",
+                        "payment_id": "%s",
+                        "amount": 250.00,
+                        "notes": "webhook_refund"
+                      }
+                    }
+                  }
+                }
+                """.formatted(session.providerPaymentId());
+
+        mockMvc.perform(post("/api/v1/webhooks/razorpay")
+                        .header("X-Razorpay-Event-Id", "evt_bad_sig_001")
+                        .header("X-Razorpay-Signature", "bad-signature")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnauthorized());
+
+        String signature = sign(payload, "test_webhook_secret");
+
+        mockMvc.perform(post("/api/v1/webhooks/razorpay")
+                        .header("X-Razorpay-Event-Id", "evt_good_sig_001")
+                        .header("X-Razorpay-Signature", signature)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/webhooks/razorpay")
+                        .header("X-Razorpay-Event-Id", "evt_good_sig_001")
+                        .header("X-Razorpay-Signature", signature)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/payments/{paymentId}", session.paymentId())
+                        .header("Authorization", "Bearer " + session.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.refundedAmount").value(250.00))
+                .andExpect(jsonPath("$.data.status").value("PARTIALLY_REFUNDED"));
+    }
+
     private void createRoleIfMissing(RoleName roleName) {
         roleRepository.findByName(roleName).orElseGet(() -> {
             Role role = new Role();
@@ -187,17 +275,93 @@ class PaymentFlowIntegrationTest {
         return node.asText();
     }
 
-    @TestConfiguration
-    static class NoOpEventPublisherConfig {
+    private Session createCapturedPaymentSession() throws Exception {
+        String email = "session+" + System.currentTimeMillis() + "@example.com";
+        String password = "User12345";
 
-        @Bean
-        @Primary
-        dev.payment.paymentservice.service.PaymentEventPublisher paymentEventPublisher() {
-            return new dev.payment.paymentservice.service.PaymentEventPublisher(null, "test-topic") {
-                @Override
-                public void publish(String eventType, dev.payment.paymentservice.domain.Payment payment, java.util.Map<String, String> metadata) {
-                }
-            };
-        }
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fullName": "Session User",
+                                  "email": "%s",
+                                  "password": "%s"
+                                }
+                                """.formatted(email, password)))
+                .andExpect(status().isOk());
+
+        String loginResponse = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s",
+                                  "password": "%s"
+                                }
+                                """.formatted(email, password)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String token = readField(loginResponse, "/data/accessToken");
+
+        String orderResponse = mockMvc.perform(post("/api/v1/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "externalReference": "session-order-%d",
+                                  "amount": 2499.00,
+                                  "currency": "INR",
+                                  "description": "Session payment"
+                                }
+                                """.formatted(System.currentTimeMillis())))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String orderId = readField(orderResponse, "/data/id");
+
+        String paymentResponse = mockMvc.perform(post("/api/v1/payments")
+                        .header("Authorization", "Bearer " + token)
+                        .header("Idempotency-Key", "session-payment-" + System.currentTimeMillis())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orderId": "%s",
+                                  "method": "UPI",
+                                  "provider": "razorpay_simulator",
+                                  "transactionMode": "TEST",
+                                  "notes": "session test"
+                                }
+                                """.formatted(orderId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String paymentId = readField(paymentResponse, "/data/id");
+
+        String providerPaymentId = "pay_sim_test_" + System.currentTimeMillis();
+
+        mockMvc.perform(post("/api/v1/payments/{paymentId}/capture", paymentId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "providerPaymentId": "%s",
+                                  "providerSignature": "simulated_signature_hash"
+                                }
+                                """.formatted(providerPaymentId)))
+                .andExpect(status().isOk());
+
+        return new Session(token, paymentId, providerPaymentId);
+    }
+
+    private String sign(String payload, String secret) throws Exception {
+        javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new javax.crypto.spec.SecretKeySpec(secret.getBytes(java.nio.charset.StandardCharsets.UTF_8), "HmacSHA256"));
+        return java.util.HexFormat.of().formatHex(mac.doFinal(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    }
+
+    private record Session(String token, String paymentId, String providerPaymentId) {
     }
 }

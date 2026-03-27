@@ -3,26 +3,40 @@ package dev.payment.notificationservice.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.payment.common.events.PaymentEventMessage;
 import dev.payment.notificationservice.domain.Channel;
+import dev.payment.notificationservice.domain.ConsumedEvent;
 import dev.payment.notificationservice.domain.DeliveryStatus;
 import dev.payment.notificationservice.domain.Notification;
+import dev.payment.notificationservice.repository.ConsumedEventRepository;
 import dev.payment.notificationservice.repository.NotificationRepository;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class PaymentEventListener {
 
     private final NotificationRepository notificationRepository;
+    private final ConsumedEventRepository consumedEventRepository;
     private final ObjectMapper objectMapper;
 
-    public PaymentEventListener(NotificationRepository notificationRepository, ObjectMapper objectMapper) {
+    public PaymentEventListener(
+            NotificationRepository notificationRepository,
+            ConsumedEventRepository consumedEventRepository,
+            ObjectMapper objectMapper
+    ) {
         this.notificationRepository = notificationRepository;
+        this.consumedEventRepository = consumedEventRepository;
         this.objectMapper = objectMapper;
     }
 
+    @Transactional
     @KafkaListener(topics = "${application.kafka.topic.payment-events}", groupId = "${spring.kafka.consumer.group-id}")
     public void onPaymentEvent(PaymentEventMessage message) {
         try {
+            if (consumedEventRepository.existsByEventId(message.eventId().toString())) {
+                return;
+            }
+
             Notification notification = new Notification();
             notification.setRecipientAddress("ops@nova.local");
             notification.setTemplateCode(message.eventType().toUpperCase().replace('.', '_'));
@@ -30,6 +44,11 @@ public class PaymentEventListener {
             notification.setStatus(DeliveryStatus.DELIVERED);
             notification.setPayload(objectMapper.writeValueAsString(message));
             notificationRepository.save(notification);
+
+            ConsumedEvent consumedEvent = new ConsumedEvent();
+            consumedEvent.setConsumerName("notification-service");
+            consumedEvent.setEventId(message.eventId().toString());
+            consumedEventRepository.save(consumedEvent);
         } catch (Exception exception) {
             throw new IllegalStateException("Unable to persist payment event notification", exception);
         }

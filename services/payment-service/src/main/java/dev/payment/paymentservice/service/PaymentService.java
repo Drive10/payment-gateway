@@ -2,9 +2,11 @@ package dev.payment.paymentservice.service;
 
 import dev.payment.paymentservice.domain.Order;
 import dev.payment.paymentservice.domain.Payment;
+import dev.payment.paymentservice.domain.PaymentRefund;
 import dev.payment.paymentservice.domain.PaymentTransaction;
 import dev.payment.paymentservice.domain.User;
 import dev.payment.paymentservice.domain.enums.PaymentStatus;
+import dev.payment.paymentservice.domain.enums.RefundStatus;
 import dev.payment.paymentservice.domain.enums.TransactionMode;
 import dev.payment.paymentservice.domain.enums.TransactionStatus;
 import dev.payment.paymentservice.domain.enums.TransactionType;
@@ -18,6 +20,7 @@ import dev.payment.paymentservice.exception.ApiException;
 import dev.payment.paymentservice.integration.processor.PaymentProcessorCaptureResponse;
 import dev.payment.paymentservice.integration.processor.PaymentProcessorClient;
 import dev.payment.paymentservice.integration.processor.PaymentProcessorIntentResponse;
+import dev.payment.paymentservice.repository.PaymentRefundRepository;
 import dev.payment.paymentservice.repository.PaymentRepository;
 import dev.payment.paymentservice.repository.PaymentTransactionRepository;
 import org.slf4j.Logger;
@@ -39,26 +42,32 @@ public class PaymentService {
     private static final String SIMULATED_PROVIDER = "RAZORPAY_SIMULATOR";
 
     private final PaymentRepository paymentRepository;
+    private final PaymentRefundRepository paymentRefundRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final OrderService orderService;
     private final AuditService auditService;
     private final PaymentProcessorClient paymentProcessorClient;
     private final PaymentEventPublisher paymentEventPublisher;
+    private final LedgerPostingService ledgerPostingService;
 
     public PaymentService(
             PaymentRepository paymentRepository,
+            PaymentRefundRepository paymentRefundRepository,
             PaymentTransactionRepository paymentTransactionRepository,
             OrderService orderService,
             AuditService auditService,
             PaymentProcessorClient paymentProcessorClient,
-            PaymentEventPublisher paymentEventPublisher
+            PaymentEventPublisher paymentEventPublisher,
+            LedgerPostingService ledgerPostingService
     ) {
         this.paymentRepository = paymentRepository;
+        this.paymentRefundRepository = paymentRefundRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.orderService = orderService;
         this.auditService = auditService;
         this.paymentProcessorClient = paymentProcessorClient;
         this.paymentEventPublisher = paymentEventPublisher;
+        this.ledgerPostingService = ledgerPostingService;
     }
 
     @Transactional
@@ -123,6 +132,7 @@ public class PaymentService {
                 processorCapture.providerReference()
         );
         orderService.markPaid(payment.getOrder());
+        ledgerPostingService.recordPaymentCapture(payment);
         auditService.record("PAYMENT_CAPTURED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Payment captured successfully");
         paymentEventPublisher.publish("payment.captured", payment, Map.of("actor", actor.getEmail()));
         log.info("event=payment_captured paymentId={} actor={} mode={} simulated={}", payment.getId(), actor.getEmail(), payment.getTransactionMode(), payment.isSimulated());
@@ -130,26 +140,45 @@ public class PaymentService {
     }
 
     @Transactional
-    public RefundResponse refundPayment(UUID paymentId, CreateRefundRequest request, User actor, boolean adminView) {
+    public RefundResponse refundPayment(UUID paymentId, CreateRefundRequest request, String idempotencyKey, User actor, boolean adminView) {
+        PaymentRefund existingRefund = paymentRefundRepository.findByIdempotencyKey(idempotencyKey).orElse(null);
+        if (existingRefund != null) {
+            return toRefundResponse(existingRefund);
+        }
+
         Payment payment = getOwnedPayment(paymentId, actor, adminView);
         if (payment.getStatus() != PaymentStatus.CAPTURED && payment.getStatus() != PaymentStatus.PARTIALLY_REFUNDED) {
             throw new ApiException(HttpStatus.CONFLICT, "PAYMENT_NOT_REFUNDABLE", "Only captured payments can be refunded");
         }
 
-        if (payment.getRefundedAmount().add(request.amount()).compareTo(payment.getAmount()) > 0) {
+        java.math.BigDecimal alreadyRefunded = paymentRefundRepository.sumRefundedAmountByPaymentId(payment.getId());
+        if (alreadyRefunded.add(request.amount()).compareTo(payment.getAmount()) > 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "REFUND_EXCEEDS_PAYMENT", "Refund amount exceeds captured payment amount");
         }
+
+        PaymentRefund refund = new PaymentRefund();
+        refund.setPayment(payment);
+        refund.setIdempotencyKey(idempotencyKey);
+        refund.setRefundReference("refund_" + UUID.randomUUID().toString().replace("-", ""));
+        refund.setProviderRefundId(refund.getRefundReference());
+        refund.setAmount(request.amount());
+        refund.setReason(request.reason());
+        refund.setStatus(RefundStatus.REQUESTED);
+        paymentRefundRepository.save(refund);
 
         createTransaction(
                 payment,
                 TransactionType.REFUND_REQUESTED,
                 TransactionStatus.PENDING,
                 request.reason() == null || request.reason().isBlank() ? "Refund requested" : request.reason(),
-                "refund_req_" + UUID.randomUUID().toString().replace("-", ""),
+                refund.getRefundReference(),
                 request.amount()
         );
 
-        payment.setRefundedAmount(payment.getRefundedAmount().add(request.amount()));
+        refund.setStatus(RefundStatus.PROCESSED);
+        paymentRefundRepository.save(refund);
+
+        payment.setRefundedAmount(alreadyRefunded.add(request.amount()));
         payment.setStatus(payment.getRefundedAmount().compareTo(payment.getAmount()) >= 0
                 ? PaymentStatus.REFUNDED
                 : PaymentStatus.PARTIALLY_REFUNDED);
@@ -160,7 +189,7 @@ public class PaymentService {
                 TransactionType.REFUND_COMPLETED,
                 TransactionStatus.SUCCESS,
                 request.reason() == null || request.reason().isBlank() ? "Refund completed" : request.reason(),
-                "refund_" + UUID.randomUUID().toString().replace("-", ""),
+                refund.getRefundReference(),
                 request.amount()
         );
 
@@ -168,21 +197,17 @@ public class PaymentService {
             orderService.markRefunded(payment.getOrder());
         }
 
+        ledgerPostingService.recordRefund(payment, refund);
         auditService.record("PAYMENT_REFUNDED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Refund processed");
         paymentEventPublisher.publish("payment.refunded", payment, Map.of(
                 "actor", actor.getEmail(),
+                "refundId", refund.getId().toString(),
+                "refundReference", refund.getRefundReference(),
                 "refundAmount", request.amount().toPlainString(),
                 "reason", request.reason() == null ? "" : request.reason()
         ));
 
-        return new RefundResponse(
-                payment.getId(),
-                payment.getOrder().getOrderReference(),
-                payment.getRefundedAmount(),
-                payment.getStatus().name(),
-                request.reason(),
-                java.time.Instant.now()
-        );
+        return toRefundResponse(refund);
     }
 
     public Page<PaymentResponse> getPayments(User actor, PaymentStatus status, Pageable pageable, boolean adminView) {
@@ -268,6 +293,21 @@ public class PaymentService {
                 payment.getNotes(),
                 payment.getCreatedAt(),
                 transactions
+        );
+    }
+
+    RefundResponse toRefundResponse(PaymentRefund refund) {
+        Payment payment = refund.getPayment();
+        return new RefundResponse(
+                refund.getId(),
+                refund.getRefundReference(),
+                payment.getId(),
+                payment.getOrder().getOrderReference(),
+                refund.getAmount(),
+                payment.getRefundedAmount(),
+                payment.getStatus().name(),
+                refund.getReason(),
+                refund.getCreatedAt()
         );
     }
 }

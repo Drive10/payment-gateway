@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public record PaymentEventMessage(
+        UUID eventId,
         String eventType,
         UUID paymentId,
         UUID orderId,

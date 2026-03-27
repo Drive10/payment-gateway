@@ -14,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -74,6 +75,10 @@ public class Payment extends BaseEntity {
 
     @Column(length = 255)
     private String notes;
+
+    @Version
+    @Column(nullable = false)
+    private long version;
 
     public UUID getId() {
         return id;
@@ -201,5 +206,9 @@ public class Payment extends BaseEntity {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public long getVersion() {
+        return version;
     }
 }

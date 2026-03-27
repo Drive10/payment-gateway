@@ -70,10 +70,14 @@ public class PaymentController {
     public ApiResponse<RefundResponse> refundPayment(
             @PathVariable UUID paymentId,
             @Valid @RequestBody CreateRefundRequest request,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication authentication
     ) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "MISSING_IDEMPOTENCY_KEY", "Idempotency-Key header is required");
+        }
         User actor = authService.getCurrentUser(authentication.getName());
-        return ApiResponse.success(paymentService.refundPayment(paymentId, request, actor, false));
+        return ApiResponse.success(paymentService.refundPayment(paymentId, request, idempotencyKey, actor, false));
     }
 
     @GetMapping

@@ -23,10 +23,11 @@ public class WebhookController {
 
     @PostMapping("/razorpay")
     public ResponseEntity<ApiResponse<Map<String, String>>> handleRazorpayWebhook(
+            @RequestHeader(name = "X-Razorpay-Event-Id", required = false) String eventId,
             @RequestHeader(name = "X-Razorpay-Signature", required = false) String signature,
             @RequestBody String payload
     ) {
-        razorpayWebhookService.processWebhook(signature, payload);
+        razorpayWebhookService.processWebhook(eventId, signature, payload);
         return ResponseEntity.ok(ApiResponse.success(Map.of("status", "processed")));
     }
 }

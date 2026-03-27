@@ -5,4 +5,4 @@ spring:
     password: ${DB_PASSWORD:paymentpass}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate

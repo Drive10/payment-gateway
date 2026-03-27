@@ -23,6 +23,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.context.annotation.Import;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -47,6 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
+@Import(TestLedgerSupportConfig.class)
 class PaymentFlowContainersIntegrationTest {
 
     @Container
@@ -176,6 +178,7 @@ class PaymentFlowContainersIntegrationTest {
 
         mockMvc.perform(post("/api/v1/payments/{paymentId}/refunds", paymentId)
                         .header("Authorization", "Bearer " + token)
+                        .header("Idempotency-Key", "tc-refund-1001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"amount":1499.00,"reason":"container refund"}

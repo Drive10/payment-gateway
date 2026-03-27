@@ -28,6 +28,11 @@ public class LedgerService {
 
     @Transactional
     public AccountResponse createAccount(CreateAccountRequest request) {
+        LedgerAccount existing = ledgerAccountRepository.findByAccountCode(request.accountCode().toUpperCase()).orElse(null);
+        if (existing != null) {
+            return toAccount(existing);
+        }
+
         LedgerAccount account = new LedgerAccount();
         account.setAccountCode(request.accountCode().toUpperCase());
         account.setAccountName(request.accountName());
@@ -38,12 +43,15 @@ public class LedgerService {
 
     @Transactional
     public JournalResponse postJournal(PostJournalRequest request) {
+        JournalEntry existing = journalEntryRepository.findByReference(request.reference()).orElse(null);
+        if (existing != null) {
+            return toJournal(existing);
+        }
+
         LedgerAccount debit = ledgerAccountRepository.findByAccountCode(request.debitAccountCode().toUpperCase())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "DEBIT_ACCOUNT_NOT_FOUND", "Debit account not found"));
         LedgerAccount credit = ledgerAccountRepository.findByAccountCode(request.creditAccountCode().toUpperCase())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CREDIT_ACCOUNT_NOT_FOUND", "Credit account not found"));
-        debit.setBalance(debit.getBalance().add(request.amount()));
-        credit.setBalance(credit.getBalance().subtract(request.amount()));
         JournalEntry entry = new JournalEntry();
         entry.setReference(request.reference());
         entry.setDebitAccountCode(debit.getAccountCode());
@@ -51,7 +59,7 @@ public class LedgerService {
         entry.setAmount(request.amount());
         entry.setNarration(request.narration());
         journalEntryRepository.save(entry);
-        return new JournalResponse(entry.getId(), entry.getReference(), entry.getDebitAccountCode(), entry.getCreditAccountCode(), entry.getAmount(), entry.getNarration(), entry.getCreatedAt());
+        return toJournal(entry);
     }
 
     public List<AccountResponse> getAccounts() {
@@ -59,6 +67,12 @@ public class LedgerService {
     }
 
     private AccountResponse toAccount(LedgerAccount account) {
-        return new AccountResponse(account.getId(), account.getAccountCode(), account.getAccountName(), account.getType().name(), account.getBalance(), account.getCreatedAt());
+        BigDecimal balance = journalEntryRepository.sumDebits(account.getAccountCode())
+                .subtract(journalEntryRepository.sumCredits(account.getAccountCode()));
+        return new AccountResponse(account.getId(), account.getAccountCode(), account.getAccountName(), account.getType().name(), balance, account.getCreatedAt());
+    }
+
+    private JournalResponse toJournal(JournalEntry entry) {
+        return new JournalResponse(entry.getId(), entry.getReference(), entry.getDebitAccountCode(), entry.getCreditAccountCode(), entry.getAmount(), entry.getNarration(), entry.getCreatedAt());
     }
 }

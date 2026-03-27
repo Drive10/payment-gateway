@@ -10,9 +10,14 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  flyway:
+    enabled: false
 
 application:
   security:
     jwt:
       secret-key: VGhpc0lzQVN0cm9uZ0Jhc2U2NEVuY29kZWRKU1dUU2VjcmV0S2V5Rm9yRmluVGVjaEFQSUM=
       expiration-seconds: 3600
+  webhook:
+    razorpay:
+      secret: test_webhook_secret
