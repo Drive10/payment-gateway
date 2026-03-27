@@ -14,6 +14,8 @@ import java.util.UUID;
 @Service
 public class PaymentEventPublisher {
 
+    private static final String EVENT_SCHEMA_VERSION = "v1";
+
     private final KafkaTemplate<String, PaymentEventMessage> kafkaTemplate;
     private final String topicName;
 
@@ -33,6 +35,7 @@ public class PaymentEventPublisher {
 
         PaymentEventMessage message = new PaymentEventMessage(
                 UUID.randomUUID(),
+                EVENT_SCHEMA_VERSION,
                 eventType,
                 payment.getId(),
                 payment.getOrder().getId(),
@@ -45,7 +48,8 @@ public class PaymentEventPublisher {
                 payment.getRefundedAmount(),
                 payment.getCurrency(),
                 Instant.now(),
-                eventMetadata
+                eventMetadata,
+                org.slf4j.MDC.get("correlationId")
         );
 
         kafkaTemplate.send(topicName, payment.getId().toString(), message);

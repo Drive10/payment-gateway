@@ -69,6 +69,7 @@ class PaymentEventListenerTest {
     private PaymentEventMessage sampleEvent() {
         return new PaymentEventMessage(
                 UUID.randomUUID(),
+                "v1",
                 "payment.captured",
                 UUID.randomUUID(),
                 UUID.randomUUID(),
@@ -81,7 +82,8 @@ class PaymentEventListenerTest {
                 BigDecimal.ZERO,
                 "INR",
                 Instant.parse("2026-03-27T10:15:30Z"),
-                Map.of("source", "unit-test")
+                Map.of("source", "unit-test"),
+                "corr-unit-1001"
         );
     }
 }

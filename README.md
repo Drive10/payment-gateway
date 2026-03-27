@@ -93,11 +93,13 @@ More design detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## API Versioning
 
-All public business APIs are versioned under `/api/v1`. The routing and controller layout are intentionally structured so `/api/v2` can be introduced without breaking existing clients.
+All public business APIs are versioned under `/api/v1`. The gateway now explicitly rejects unsupported `/api/v2` calls so version rollout stays intentional instead of accidental. Contract notes live in [docs/CONTRACTS.md](docs/CONTRACTS.md).
 
 ## Security and Reliability
 
-- JWT signing secret is required through environment variables.
+- JWT signing secret is required through environment variables or mounted secret stores.
+- Gateway validates JWTs before traffic reaches protected downstream routes.
+- Auth APIs now issue both short-lived access tokens and long-lived refresh tokens.
 - Razorpay webhook signatures are validated with HMAC SHA-256.
 - Replayed webhook events are deduplicated by stored `event_id`.
 - Refund APIs require `Idempotency-Key`.
@@ -145,21 +147,14 @@ Open:
 
 Run infrastructure and all services EXCEPT `payment-service` in Docker. This allows you to work on the payment microservice locally while the rest of the ecosystem runs seamlessly via Docker.
 
-**1. Point the API Gateway to your local machine**  
-Edit your `.env` file and uncomment the `PAYMENT_SERVICE_URL`:
-```env
-PAYMENT_SERVICE_URL=http://host.docker.internal:8084
+**1. Start the hybrid Docker stack**
+```bash
+docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services up --build -d
 ```
 
-**2. Start Docker (scaling payment-service to 0)**
+**2. Run `payment-service` locally**
 ```bash
-cp .env.example .env
-docker compose --profile services up --build -d --scale payment-service=0
-```
-
-**3. Run `payment-service` from IDE**
-```bash
-SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run -pl services/payment-service -am
+SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run -pl services/payment-service -am
 ```
 
 ### Full Local (Dev) Development
@@ -171,7 +166,7 @@ cp .env.example .env
 docker compose --profile infra up -d
 ```
 
-Then run each service locally with `SPRING_PROFILES_ACTIVE=dev`. Local services will automatically connect to `localhost:9092` for Kafka and `localhost:5433` for PostgreSQL.
+Then run each service locally with `SPRING_PROFILES_ACTIVE=local`. Local services will automatically connect to `localhost:9092` for Kafka and `localhost:5433` for PostgreSQL.
 
 
 
@@ -244,6 +239,11 @@ curl -X POST http://localhost:3000/api/v1/payments/<PAYMENT_ID>/refunds \
 - Micrometer + Prometheus + Grafana + Zipkin for observability.
 - Docker Compose for repeatable local platform orchestration.
 - GHCR image publishing workflow for stage/prod release promotion.
+
+## Production Operations
+
+- Contract guidance: [docs/CONTRACTS.md](docs/CONTRACTS.md)
+- Operational guidance: [docs/OPERATIONS.md](docs/OPERATIONS.md)
 
 ## Production Readiness Checklist
 

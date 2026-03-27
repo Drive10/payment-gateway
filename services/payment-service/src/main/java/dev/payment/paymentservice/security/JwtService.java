@@ -20,26 +20,40 @@ import java.util.function.Function;
 public class JwtService {
 
     private final SecretKey secretKey;
-    private final long expirationSeconds;
+    private final long accessExpirationSeconds;
+    private final long refreshExpirationSeconds;
 
     public JwtService(
             @Value("${application.security.jwt.secret-key}") String secretKey,
-            @Value("${application.security.jwt.expiration-seconds}") long expirationSeconds
+            @Value("${application.security.jwt.expiration-seconds}") long accessExpirationSeconds,
+            @Value("${application.security.jwt.refresh-expiration-seconds:2592000}") long refreshExpirationSeconds
     ) {
         this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
-        this.expirationSeconds = expirationSeconds;
+        this.accessExpirationSeconds = accessExpirationSeconds;
+        this.refreshExpirationSeconds = refreshExpirationSeconds;
     }
 
-    public String generateToken(UserDetails userDetails) {
+    public String generateAccessToken(UserDetails userDetails) {
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(userDetails.getUsername())
-                .claims(Map.of("roles", roles))
+                .claims(Map.of("roles", roles, "token_type", "access"))
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(expirationSeconds)))
+                .expiration(Date.from(now.plusSeconds(accessExpirationSeconds)))
+                .signWith(secretKey)
+                .compact();
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject(userDetails.getUsername())
+                .claims(Map.of("token_type", "refresh"))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(refreshExpirationSeconds)))
                 .signWith(secretKey)
                 .compact();
     }
@@ -53,7 +67,16 @@ public class JwtService {
     }
 
     public long getExpirationSeconds() {
-        return expirationSeconds;
+        return accessExpirationSeconds;
+    }
+
+    public long getRefreshExpirationSeconds() {
+        return refreshExpirationSeconds;
+    }
+
+    public boolean isRefreshToken(String token) {
+        String tokenType = extractClaim(token, claims -> claims.get("token_type", String.class));
+        return "refresh".equals(tokenType);
     }
 
     private boolean isExpired(String token) {

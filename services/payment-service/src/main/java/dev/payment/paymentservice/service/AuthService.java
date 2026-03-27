@@ -4,6 +4,7 @@ import dev.payment.paymentservice.domain.Role;
 import dev.payment.paymentservice.domain.User;
 import dev.payment.paymentservice.domain.enums.RoleName;
 import dev.payment.paymentservice.dto.request.LoginRequest;
+import dev.payment.paymentservice.dto.request.RefreshTokenRequest;
 import dev.payment.paymentservice.dto.request.RegisterRequest;
 import dev.payment.paymentservice.dto.response.AuthResponse;
 import dev.payment.paymentservice.dto.response.UserResponse;
@@ -82,12 +83,48 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.email());
-        String token = jwtService.generateToken(userDetails);
+        String accessToken = jwtService.generateAccessToken(userDetails);
+        String refreshToken = jwtService.generateRefreshToken(userDetails);
         Set<String> roles = userDetails.getAuthorities().stream()
                 .map(authority -> authority.getAuthority().replace("ROLE_", ""))
                 .collect(Collectors.toSet());
         log.info("event=user_authenticated email={}", request.email());
-        return new AuthResponse(token, "Bearer", jwtService.getExpirationSeconds(), request.email(), roles);
+        return new AuthResponse(
+                accessToken,
+                refreshToken,
+                "Bearer",
+                jwtService.getExpirationSeconds(),
+                jwtService.getRefreshExpirationSeconds(),
+                request.email(),
+                roles
+        );
+    }
+
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        String refreshToken = request.refreshToken();
+        if (!jwtService.isRefreshToken(refreshToken)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", "Refresh token is invalid");
+        }
+
+        String email = jwtService.extractUsername(refreshToken);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        if (!jwtService.isTokenValid(refreshToken, userDetails)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "EXPIRED_REFRESH_TOKEN", "Refresh token is expired");
+        }
+
+        Set<String> roles = userDetails.getAuthorities().stream()
+                .map(authority -> authority.getAuthority().replace("ROLE_", ""))
+                .collect(Collectors.toSet());
+
+        return new AuthResponse(
+                jwtService.generateAccessToken(userDetails),
+                jwtService.generateRefreshToken(userDetails),
+                "Bearer",
+                jwtService.getExpirationSeconds(),
+                jwtService.getRefreshExpirationSeconds(),
+                email,
+                roles
+        );
     }
 
     public User getCurrentUser(String email) {

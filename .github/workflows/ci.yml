@@ -22,6 +22,11 @@ jobs:
       - name: Build
         run: mvn -q verify
 
+      - name: Validate compose configurations
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services config > /dev/null
+          docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services --profile full --profile optional config > /dev/null
+
       - name: Package application images
         run: |
           docker build -f Dockerfile -t fintech/payment-service:ci .

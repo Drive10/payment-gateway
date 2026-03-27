@@ -69,6 +69,7 @@ application:
     jwt:
       secret-key: ${JWT_SECRET_KEY}
       expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+      refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:2592000}
   payment:
     default-provider: ${DEFAULT_PROVIDER:RAZORPAY_SIMULATOR}
     checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}

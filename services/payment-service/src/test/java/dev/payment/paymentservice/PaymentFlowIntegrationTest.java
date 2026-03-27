@@ -75,6 +75,18 @@ class PaymentFlowIntegrationTest {
                 .getContentAsString();
 
         String token = readField(loginResponse, "/data/accessToken");
+        String refreshToken = readField(loginResponse, "/data/refreshToken");
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(refreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.data.refreshToken").isNotEmpty());
 
         String orderResponse = mockMvc.perform(post("/api/v1/orders")
                         .header("Authorization", "Bearer " + token)

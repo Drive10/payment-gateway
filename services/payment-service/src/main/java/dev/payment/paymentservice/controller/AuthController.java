@@ -2,6 +2,7 @@ package dev.payment.paymentservice.controller;
 
 import dev.payment.common.api.ApiResponse;
 import dev.payment.paymentservice.dto.request.LoginRequest;
+import dev.payment.paymentservice.dto.request.RefreshTokenRequest;
 import dev.payment.paymentservice.dto.request.RegisterRequest;
 import dev.payment.paymentservice.dto.response.AuthResponse;
 import dev.payment.paymentservice.dto.response.UserResponse;
@@ -32,5 +33,10 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ApiResponse.success(authService.refresh(request));
     }
 }

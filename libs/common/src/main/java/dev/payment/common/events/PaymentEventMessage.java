@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record PaymentEventMessage(
         UUID eventId,
+        String eventVersion,
         String eventType,
         UUID paymentId,
         UUID orderId,
@@ -19,6 +20,7 @@ public record PaymentEventMessage(
         BigDecimal refundedAmount,
         String currency,
         Instant occurredAt,
-        Map<String, String> metadata
+        Map<String, String> metadata,
+        String correlationId
 ) {
 }

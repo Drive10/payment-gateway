@@ -20,6 +20,10 @@ spring:
           predicates:
             - Path=/api/v1/auth/**
           filters:
+            - name: CircuitBreaker
+              args:
+                name: paymentRoutes
+                fallbackUri: forward:/fallback/payment
             - name: Retry
               args:
                 retries: 2
@@ -35,6 +39,10 @@ spring:
           predicates:
             - Path=/api/v1/orders/**
           filters:
+            - name: CircuitBreaker
+              args:
+                name: paymentRoutes
+                fallbackUri: forward:/fallback/payment
             - name: Retry
               args:
                 retries: 2
@@ -50,6 +58,10 @@ spring:
           predicates:
             - Path=/api/v1/payments/**,/api/v1/admin/**
           filters:
+            - name: CircuitBreaker
+              args:
+                name: paymentRoutes
+                fallbackUri: forward:/fallback/payment
             - name: Retry
               args:
                 retries: 2
@@ -65,6 +77,10 @@ spring:
           predicates:
             - Path=/api/v1/webhooks/**
           filters:
+            - name: CircuitBreaker
+              args:
+                name: paymentRoutes
+                fallbackUri: forward:/fallback/payment
             - name: Retry
               args:
                 retries: 2
@@ -85,36 +101,60 @@ spring:
           predicates:
             - Path=/platform/auth/**
           filters:
+            - name: CircuitBreaker
+              args:
+                name: platformRoutes
+                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
         - id: ledger-service
           uri: ${services.ledger.url}
           predicates:
             - Path=/platform/ledger/**
           filters:
+            - name: CircuitBreaker
+              args:
+                name: platformRoutes
+                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/ledger/(?<segment>.*), /internal/platform/${segment}
         - id: notification-service
           uri: ${services.notification.url}
           predicates:
             - Path=/platform/notification/**
           filters:
+            - name: CircuitBreaker
+              args:
+                name: platformRoutes
+                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
         - id: risk-service
           uri: ${services.risk.url}
           predicates:
             - Path=/platform/risk/**
           filters:
+            - name: CircuitBreaker
+              args:
+                name: platformRoutes
+                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/risk/(?<segment>.*), /internal/platform/${segment}
         - id: settlement-service
           uri: ${services.settlement.url}
           predicates:
             - Path=/platform/settlement/**
           filters:
+            - name: CircuitBreaker
+              args:
+                name: platformRoutes
+                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/settlement/(?<segment>.*), /internal/platform/${segment}
         - id: simulator-service
           uri: ${services.simulator.url}
           predicates:
             - Path=/platform/simulator/**
           filters:
+            - name: CircuitBreaker
+              args:
+                name: platformRoutes
+                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
 
 management:
@@ -160,3 +200,25 @@ services:
     url: ${SETTLEMENT_SERVICE_URL:http://localhost:8086}
   simulator:
     url: ${SIMULATOR_SERVICE_URL:http://localhost:8087}
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      paymentRoutes:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        permitted-number-of-calls-in-half-open-state: 2
+        wait-duration-in-open-state: 10s
+      platformRoutes:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        permitted-number-of-calls-in-half-open-state: 2
+        wait-duration-in-open-state: 10s
