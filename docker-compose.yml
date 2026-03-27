@@ -52,6 +52,21 @@ services:
     ports:
       - "8080:8080"
 
+  frontend:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    depends_on:
+      - api-gateway
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   auth-service:
     profiles: ["services"]
     build:
