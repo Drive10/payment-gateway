@@ -1,4 +1,4 @@
-.PHONY: bootstrap doctor smoke up up-full up-hybrid down test build verify compose-check frontend-check payment-local
+.PHONY: bootstrap doctor smoke test-all up up-full up-hybrid down test build verify compose-check frontend-check payment-local
 
 bootstrap:
 	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 bootstrap
@@ -8,6 +8,9 @@ doctor:
 
 smoke:
 	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 smoke
+
+test-all:
+	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 test-all
 
 up:
 	powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1 hybrid

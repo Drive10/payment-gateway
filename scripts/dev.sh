@@ -35,6 +35,7 @@ Commands:
   payment-local   Run payment-service locally with the local profile
   frontend-check  Run frontend install + quality checks
   smoke           Run fast local smoke checks
+  test-all        Run the full project test matrix
   verify          Run backend verification
   compose-check   Validate Compose rendering for hybrid and full modes
   help            Show this help
@@ -129,7 +130,9 @@ frontend_check() {
   require_cmd npm "Install Node.js and npm before working on the frontend."
   step "Running frontend quality checks"
   cd "$FRONTEND_DIR"
-  npm ci
+  if [[ ! -x "$FRONTEND_DIR/node_modules/.bin/eslint" ]]; then
+    npm ci
+  fi
   npm run check
 }
 
@@ -147,6 +150,10 @@ compose_check() {
   docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services --profile full --profile optional config >/dev/null
 }
 
+docker_daemon_ready() {
+  has_cmd docker && docker info >/dev/null 2>&1
+}
+
 smoke() {
   step "Running fast smoke checks"
   compose_check
@@ -155,10 +162,35 @@ smoke() {
   if has_cmd node && has_cmd npm; then
     step "Running frontend lint"
     cd "$FRONTEND_DIR"
+    if [[ ! -x "$FRONTEND_DIR/node_modules/.bin/eslint" ]]; then
+      npm ci
+    fi
     npm run lint
   else
     echo "Skipping frontend lint because node/npm are not available."
   fi
+}
+
+test_all() {
+  step "Running the full project test matrix"
+  compose_check
+  verify_repo
+
+  if docker_daemon_ready; then
+    step "Running Docker-backed payment Testcontainers tests"
+    cd "$REPO_ROOT"
+    ./mvnw -q -pl services/payment-service -am -Ptestcontainers test
+  else
+    echo "Skipping Docker-backed Testcontainers tests because Docker is unavailable."
+  fi
+
+  if has_cmd node && has_cmd npm; then
+    frontend_check
+  else
+    echo "Skipping frontend checks because node/npm are not available."
+  fi
+
+  echo "Coverage report: target/site/jacoco-aggregate/index.html"
 }
 
 case "$COMMAND" in
@@ -170,6 +202,7 @@ case "$COMMAND" in
   payment-local) payment_local ;;
   frontend-check) frontend_check ;;
   smoke) smoke ;;
+  test-all) test_all ;;
   verify) verify_repo ;;
   compose-check) compose_check ;;
   help) show_help ;;

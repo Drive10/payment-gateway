@@ -5,6 +5,6 @@ RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests -pl services/payment-
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /workspace/services/payment-service/target/payment-service-1.0.0.jar /app/app.jar
+COPY --from=build /workspace/services/payment-service/target/*-exec.jar /app/app.jar
 EXPOSE 8084
 ENTRYPOINT ["java","-jar","/app/app.jar"]
