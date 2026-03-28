@@ -1,226 +1,102 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: 8080
 
 spring:
   application:
     name: api-gateway
-  profiles:
-    default: local
+
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: redis
+      port: 6379
+
   cloud:
     gateway:
       default-filters:
         - PreserveHostHeader
+
       routes:
         - id: payment-auth
-          uri: ${services.payment.url}
+          uri: http://payment-service:8084
           predicates:
             - Path=/api/v1/auth/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: paymentRoutes
-                fallbackUri: forward:/fallback/payment
-            - name: Retry
-              args:
-                retries: 2
-                methods: GET,POST
-                statuses: BAD_GATEWAY,GATEWAY_TIMEOUT,SERVICE_UNAVAILABLE
-            - name: RequestRateLimiter
-              args:
-                key-resolver: "#{@clientIpKeyResolver}"
-                redis-rate-limiter.replenishRate: ${application.rate-limit.auth.replenish-rate:20}
-                redis-rate-limiter.burstCapacity: ${application.rate-limit.auth.burst-capacity:20}
+
         - id: payment-orders
-          uri: ${services.payment.url}
+          uri: http://payment-service:8084
           predicates:
             - Path=/api/v1/orders/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: paymentRoutes
-                fallbackUri: forward:/fallback/payment
-            - name: Retry
-              args:
-                retries: 2
-                methods: GET,POST
-                statuses: BAD_GATEWAY,GATEWAY_TIMEOUT,SERVICE_UNAVAILABLE
-            - name: RequestRateLimiter
-              args:
-                key-resolver: "#{@clientIpKeyResolver}"
-                redis-rate-limiter.replenishRate: ${application.rate-limit.orders.replenish-rate:40}
-                redis-rate-limiter.burstCapacity: ${application.rate-limit.orders.burst-capacity:40}
+
         - id: payment-transactions
-          uri: ${services.payment.url}
+          uri: http://payment-service:8084
           predicates:
             - Path=/api/v1/payments/**,/api/v1/admin/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: paymentRoutes
-                fallbackUri: forward:/fallback/payment
-            - name: Retry
-              args:
-                retries: 2
-                methods: GET,POST
-                statuses: BAD_GATEWAY,GATEWAY_TIMEOUT,SERVICE_UNAVAILABLE
-            - name: RequestRateLimiter
-              args:
-                key-resolver: "#{@clientIpKeyResolver}"
-                redis-rate-limiter.replenishRate: ${application.rate-limit.payments.replenish-rate:60}
-                redis-rate-limiter.burstCapacity: ${application.rate-limit.payments.burst-capacity:60}
+
         - id: payment-webhooks
-          uri: ${services.payment.url}
+          uri: http://payment-service:8084
           predicates:
             - Path=/api/v1/webhooks/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: paymentRoutes
-                fallbackUri: forward:/fallback/payment
-            - name: Retry
-              args:
-                retries: 2
-                methods: POST
-                statuses: BAD_GATEWAY,GATEWAY_TIMEOUT,SERVICE_UNAVAILABLE
+
         - id: payment-docs
-          uri: ${services.payment.url}
+          uri: http://payment-service:8084
           predicates:
             - Path=/swagger-ui.html,/swagger-ui/**,/v3/api-docs/**
-          filters:
-            - name: Retry
-              args:
-                retries: 2
-                methods: GET
-                statuses: BAD_GATEWAY,GATEWAY_TIMEOUT,SERVICE_UNAVAILABLE
+
         - id: auth-service
-          uri: ${services.auth.url}
+          uri: http://auth-service:8081
           predicates:
             - Path=/platform/auth/**
           filters:
-            - name: CircuitBreaker
-              args:
-                name: platformRoutes
-                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
+
         - id: ledger-service
-          uri: ${services.ledger.url}
+          uri: http://ledger-service:8082
           predicates:
             - Path=/platform/ledger/**
           filters:
-            - name: CircuitBreaker
-              args:
-                name: platformRoutes
-                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/ledger/(?<segment>.*), /internal/platform/${segment}
+
         - id: notification-service
-          uri: ${services.notification.url}
+          uri: http://notification-service:8083
           predicates:
             - Path=/platform/notification/**
           filters:
-            - name: CircuitBreaker
-              args:
-                name: platformRoutes
-                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
+
         - id: risk-service
-          uri: ${services.risk.url}
+          uri: http://risk-service:8085
           predicates:
             - Path=/platform/risk/**
           filters:
-            - name: CircuitBreaker
-              args:
-                name: platformRoutes
-                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/risk/(?<segment>.*), /internal/platform/${segment}
+
         - id: settlement-service
-          uri: ${services.settlement.url}
+          uri: http://settlement-service:8086
           predicates:
             - Path=/platform/settlement/**
           filters:
-            - name: CircuitBreaker
-              args:
-                name: platformRoutes
-                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/settlement/(?<segment>.*), /internal/platform/${segment}
+
         - id: simulator-service
-          uri: ${services.simulator.url}
+          uri: http://simulator-service:8087
           predicates:
             - Path=/platform/simulator/**
           filters:
-            - name: CircuitBreaker
-              args:
-                name: platformRoutes
-                fallbackUri: forward:/fallback/platform
             - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+        include: health,info
 
 logging:
-  pattern:
-    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5level service=${spring.application.name} trace=%X{traceId:-na} span=%X{spanId:-na} correlation=%X{correlationId:-na} logger=%logger{36} msg=\"%msg\"%n"
+  level:
+    root: INFO
 
 application:
   gateway:
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-gateway-internal-secret}
-  rate-limit:
-    auth:
-      replenish-rate: ${RATE_LIMIT_AUTH_REPLENISH_RATE:20}
-      burst-capacity: ${RATE_LIMIT_AUTH_BURST_CAPACITY:20}
-    orders:
-      replenish-rate: ${RATE_LIMIT_ORDER_REPLENISH_RATE:40}
-      burst-capacity: ${RATE_LIMIT_ORDER_BURST_CAPACITY:40}
-    payments:
-      replenish-rate: ${RATE_LIMIT_PAYMENT_REPLENISH_RATE:60}
-      burst-capacity: ${RATE_LIMIT_PAYMENT_BURST_CAPACITY:60}
-
-services:
-  payment:
-    url: ${PAYMENT_SERVICE_URL:http://localhost:8084}
-  auth:
-    url: ${AUTH_SERVICE_URL:http://localhost:8081}
-  ledger:
-    url: ${LEDGER_SERVICE_URL:http://localhost:8082}
-  notification:
-    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
-  risk:
-    url: ${RISK_SERVICE_URL:http://localhost:8085}
-  settlement:
-    url: ${SETTLEMENT_SERVICE_URL:http://localhost:8086}
-  simulator:
-    url: ${SIMULATOR_SERVICE_URL:http://localhost:8087}
+    internal-secret: q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET_KEY}
-
-resilience4j:
-  circuitbreaker:
-    instances:
-      paymentRoutes:
-        sliding-window-type: COUNT_BASED
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        failure-rate-threshold: 50
-        permitted-number-of-calls-in-half-open-state: 2
-        wait-duration-in-open-state: 10s
-      platformRoutes:
-        sliding-window-type: COUNT_BASED
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        failure-rate-threshold: 50
-        permitted-number-of-calls-in-half-open-state: 2
-        wait-duration-in-open-state: 10s
+    secret-key: q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=

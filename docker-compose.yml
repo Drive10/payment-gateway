@@ -1,16 +1,16 @@
 services:
   redis:
-    profiles: ["services", "infra"]
+    profiles: [ "services", "infra" ]
     image: redis:7.4-alpine
-    container_name: fintech-redis
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    command: [ "redis-server", "--save", "", "--appendonly", "no" ]
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "6379:6379"
+    networks:
+      - fintech-network
 
   kafka:
-    profiles: ["services", "infra"]
+    profiles: [ "services", "infra" ]
     image: apache/kafka:3.8.0
-    container_name: fintech-kafka
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -27,298 +27,119 @@ services:
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
     ports:
       - "9092:9092"
+    networks:
+      - fintech-network
 
   postgres:
-    profiles: ["services", "infra"]
+    profiles: [ "services", "infra" ]
     image: postgres:16-alpine
-    container_name: fintech-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-platform}
-      POSTGRES_USER: ${POSTGRES_USER:-payment}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paymentpass}
-    ports:
-      - "5433:5432"
+      POSTGRES_DB: platform
+      POSTGRES_USER: payment
+      POSTGRES_PASSWORD: paymentpass
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-payment} -d ${POSTGRES_DB:-platform}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  payment-service:
-    profiles: ["full"]
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: payment-service
-    environment:
-      SPRING_PROFILES_ACTIVE: ${PAYMENT_SERVICE_PROFILE:-docker}
-      SERVER_PORT: 8084
-      SPRING_CONFIG_IMPORT: "optional:file:/config/"
-      DB_URL: ${PAYMENT_DB_URL:-jdbc:postgresql://postgres:5432/paymentdb}
-      DB_USERNAME: ${DB_USERNAME:-payment}
-      DB_PASSWORD: ${DB_PASSWORD:-paymentpass}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in .env}
-      JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
-      DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-RAZORPAY_SIMULATOR}
-      CHECKOUT_BASE_URL: ${CHECKOUT_BASE_URL:-http://frontend}
-      PAYMENT_EVENTS_TOPIC: ${PAYMENT_EVENTS_TOPIC:-payment.events}
-      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-dev_webhook_secret}
-      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
-      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
-      SIMULATOR_SERVICE_URL: ${SIMULATOR_SERVICE_URL:-http://simulator-service:8087}
-      LEDGER_SERVICE_URL: ${LEDGER_SERVICE_URL:-http://ledger-service:8082}
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
-    volumes:
-      - ./config:/config:ro
     ports:
-      - "8084:8084"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8084/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 40s
+      - "5433:5432"
+    networks:
+      - fintech-network
+
 
   api-gateway:
+    profiles: [ "services" ]
     build:
       context: .
       dockerfile: Dockerfile.build
       args:
         SERVICE_PATH: services/api-gateway
-    container_name: api-gateway
     environment:
-      SPRING_PROFILES_ACTIVE: ${API_GATEWAY_PROFILE:-docker}
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8080
-      SPRING_CONFIG_IMPORT: "optional:file:/config/"
-      REDIS_HOST: ${REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8084}
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:8081}
-      LEDGER_SERVICE_URL: ${LEDGER_SERVICE_URL:-http://ledger-service:8082}
-      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL:-http://notification-service:8083}
-      RISK_SERVICE_URL: ${RISK_SERVICE_URL:-http://risk-service:8085}
-      SETTLEMENT_SERVICE_URL: ${SETTLEMENT_SERVICE_URL:-http://settlement-service:8086}
-      SIMULATOR_SERVICE_URL: ${SIMULATOR_SERVICE_URL:-http://simulator-service:8087}
-      ZIPKIN_ENDPOINT: ${ZIPKIN_ENDPOINT:-http://zipkin:9411/api/v2/spans}
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      AUTH_SERVICE_URL: http://auth-service:8081
+      LEDGER_SERVICE_URL: http://ledger-service:8082
+
+      PAYMENT_SERVICE_URL: http://host.docker.internal:8084
+
+    ports:
+      - "8080:8080"
     volumes:
       - ./config:/config:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    ports:
-      - "8080:8080"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1"]
+      test: [ "CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 6
       start_period: 40s
-
-  frontend:
-    build:
-      context: ./services/frontend
-      dockerfile: Dockerfile
-    container_name: frontend
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
+    networks:
+      - fintech-network
 
   auth-service:
-    profiles: ["services"]
+    profiles: [ "services" ]
     build:
       context: .
       dockerfile: Dockerfile.build
       args:
         SERVICE_PATH: services/auth-service
-    container_name: auth-service
     environment:
-      SPRING_PROFILES_ACTIVE: ${AUTH_SERVICE_PROFILE:-docker}
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8081
-      SPRING_CONFIG_IMPORT: "optional:file:/config/"
-      AUTH_DB_URL: ${AUTH_DB_URL:-jdbc:postgresql://postgres:5432/authdb}
-      DB_USERNAME: ${DB_USERNAME:-payment}
-      DB_PASSWORD: ${DB_PASSWORD:-paymentpass}
-    volumes:
-      - ./config:/config:ro
-    ports:
-      - "8081:8081"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 40s
+      AUTH_DB_URL: jdbc:postgresql://postgres:5432/authdb
+      DB_USERNAME: payment
+      DB_PASSWORD: paymentpass
+    networks:
+      - fintech-network
 
   ledger-service:
-    profiles: ["services"]
+    profiles: [ "services" ]
     build:
       context: .
       dockerfile: Dockerfile.build
       args:
         SERVICE_PATH: services/ledger-service
-    container_name: ledger-service
     environment:
-      SPRING_PROFILES_ACTIVE: ${LEDGER_SERVICE_PROFILE:-docker}
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8082
-      SPRING_CONFIG_IMPORT: "optional:file:/config/"
-      LEDGER_DB_URL: ${LEDGER_DB_URL:-jdbc:postgresql://postgres:5432/ledgerdb}
-      DB_USERNAME: ${DB_USERNAME:-payment}
-      DB_PASSWORD: ${DB_PASSWORD:-paymentpass}
-    volumes:
-      - ./config:/config:ro
-    ports:
-      - "8082:8082"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8082/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 40s
+      LEDGER_DB_URL: jdbc:postgresql://postgres:5432/ledgerdb
+      DB_USERNAME: payment
+      DB_PASSWORD: paymentpass
+    networks:
+      - fintech-network
 
-  notification-service:
-    profiles: ["optional"]
+  payment-service:
+    profiles: [ "full" ]
     build:
       context: .
       dockerfile: Dockerfile.build
       args:
-        SERVICE_PATH: services/notification-service
-    container_name: notification-service
+        SERVICE_PATH: services/payment-service
     environment:
-      SPRING_PROFILES_ACTIVE: ${NOTIFICATION_SERVICE_PROFILE:-docker}
-      SERVER_PORT: 8083
-      SPRING_CONFIG_IMPORT: "optional:file:/config/"
-      NOTIFICATION_DB_URL: ${NOTIFICATION_DB_URL:-jdbc:postgresql://postgres:5432/notificationdb}
-      DB_USERNAME: ${DB_USERNAME:-payment}
-      DB_PASSWORD: ${DB_PASSWORD:-paymentpass}
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
-      PAYMENT_EVENTS_TOPIC: ${PAYMENT_EVENTS_TOPIC:-payment.events}
-      PAYMENT_EVENTS_DLT_TOPIC: ${PAYMENT_EVENTS_DLT_TOPIC:-payment.events.dlt}
-    volumes:
-      - ./config:/config:ro
-    ports:
-      - "8083:8083"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8083/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 40s
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8084
+      DB_URL: jdbc:postgresql://postgres:5432/paymentdb
+      DB_USERNAME: payment
+      DB_PASSWORD: paymentpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    networks:
+      - fintech-network
 
-  risk-service:
-    profiles: ["optional"]
+  frontend:
+    profiles: [ "services" ]
     build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/risk-service
-    container_name: risk-service
-    environment:
-      SPRING_PROFILES_ACTIVE: ${RISK_SERVICE_PROFILE:-docker}
-      SERVER_PORT: 8085
-      SPRING_CONFIG_IMPORT: "optional:file:/config/"
-      RISK_DB_URL: ${RISK_DB_URL:-jdbc:postgresql://postgres:5432/riskdb}
-      DB_USERNAME: ${DB_USERNAME:-payment}
-      DB_PASSWORD: ${DB_PASSWORD:-paymentpass}
-    volumes:
-      - ./config:/config:ro
+      context: ./services/frontend
     ports:
-      - "8085:8085"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8085/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 40s
-
-  settlement-service:
-    profiles: ["optional"]
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/settlement-service
-    container_name: settlement-service
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SETTLEMENT_SERVICE_PROFILE:-docker}
-      SERVER_PORT: 8086
-      SPRING_CONFIG_IMPORT: "optional:file:/config/"
-      SETTLEMENT_DB_URL: ${SETTLEMENT_DB_URL:-jdbc:postgresql://postgres:5432/settlementdb}
-      DB_USERNAME: ${DB_USERNAME:-payment}
-      DB_PASSWORD: ${DB_PASSWORD:-paymentpass}
-    volumes:
-      - ./config:/config:ro
-    ports:
-      - "8086:8086"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8086/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 40s
-
-  simulator-service:
-    profiles: ["optional"]
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/simulator-service
-    container_name: simulator-service
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SIMULATOR_SERVICE_PROFILE:-docker}
-      SERVER_PORT: 8087
-      SPRING_CONFIG_IMPORT: "optional:file:/config/"
-      SIMULATOR_DB_URL: ${SIMULATOR_DB_URL:-jdbc:postgresql://postgres:5432/simulatordb}
-      DB_USERNAME: ${DB_USERNAME:-payment}
-      DB_PASSWORD: ${DB_PASSWORD:-paymentpass}
-    volumes:
-      - ./config:/config:ro
-    ports:
-      - "8087:8087"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8087/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 40s
-
-  prometheus:
-    profiles: ["services"]
-    image: prom/prometheus:v2.54.1
-    container_name: fintech-prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-    volumes:
-      - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
-
-  grafana:
-    profiles: ["services"]
-    image: grafana/grafana:11.1.4
-    container_name: fintech-grafana
-    ports:
-      - "${GRAFANA_PORT:-3001}:3000"
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-    volumes:
-      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
-
-  zipkin:
-    profiles: ["services"]
-    image: openzipkin/zipkin:3.4
-    container_name: fintech-zipkin
-    ports:
-      - "${ZIPKIN_PORT:-9411}:9411"
+      - "3000:80"
+    networks:
+      - fintech-network
 
 volumes:
   postgres_data:
+
+networks:
+  fintech-network:
+    name: fintech-network

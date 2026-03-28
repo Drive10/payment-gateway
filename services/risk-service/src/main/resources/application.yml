@@ -1,19 +1,27 @@
 server:
-  port: ${SERVER_PORT:8085}
+  port: 8085
+
 spring:
   application:
     name: risk-service
-  profiles:
-    default: local
+
   datasource:
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://postgres:5432/riskdb
+    username: payment
+    password: paymentpass
     driver-class-name: org.postgresql.Driver
+
   jpa:
     open-in-view: false
+    hibernate:
+      ddl-auto: validate
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+
+logging:
+  level:
+    root: INFO

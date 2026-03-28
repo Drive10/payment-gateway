@@ -1,104 +1,65 @@
 server:
-  port: ${SERVER_PORT:8084}
+  port: 8084
   shutdown: graceful
 
 spring:
   application:
     name: payment-service
-  profiles:
-    default: local
+
   datasource:
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://postgres:5432/paymentdb
+    username: payment
+    password: paymentpass
     driver-class-name: org.postgresql.Driver
+
   jpa:
     open-in-view: false
     properties:
       hibernate:
         format_sql: false
-  jackson:
-    default-property-inclusion: non_null
-  threads:
-    virtual:
-      enabled: true
+
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: kafka:29092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       acks: all
       retries: 10
-      properties:
-        enable.idempotence: true
-        max.in.flight.requests.per.connection: 5
-        delivery.timeout.ms: 120000
     consumer:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: dev.payment.common.events
-        spring.json.value.default.type: dev.payment.common.events.PaymentEventMessage
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
-  endpoint:
-    health:
-      probes:
-        enabled: true
-  info:
-    env:
-      enabled: true
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-    operations-sorter: alpha
-    tags-sorter: alpha
 
 application:
   gateway-trust:
-    enabled: ${GATEWAY_TRUST_ENABLED:true}
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-gateway-internal-secret}
+    enabled: true
+    internal-secret: q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=
+
   security:
     jwt:
-      secret-key: ${JWT_SECRET_KEY}
-      expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
-      refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:2592000}
+      secret-key: q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=
+      expiration-seconds: 3600
+      refresh-expiration-seconds: 2592000
+
   payment:
-    default-provider: ${DEFAULT_PROVIDER:RAZORPAY_SIMULATOR}
-    checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}
+    default-provider: RAZORPAY_SIMULATOR
+    checkout-base-url: http://frontend
+
   simulator:
-    base-url: ${SIMULATOR_SERVICE_URL:}
+    base-url: http://simulator-service:8087
+
   kafka:
     topic:
-      payment-events: ${PAYMENT_EVENTS_TOPIC:payment.events}
-  reconciliation:
-    enabled: ${PAYMENT_RECONCILIATION_ENABLED:true}
-    fixed-delay: ${PAYMENT_RECONCILIATION_FIXED_DELAY:PT5M}
-    initial-delay: ${PAYMENT_RECONCILIATION_INITIAL_DELAY:PT1M}
-    lookback: ${PAYMENT_RECONCILIATION_LOOKBACK:PT6H}
-    batch-size: ${PAYMENT_RECONCILIATION_BATCH_SIZE:50}
-  webhook:
-    razorpay:
-      secret: ${RAZORPAY_WEBHOOK_SECRET:}
-  providers:
-    razorpay:
-      base-url: ${RAZORPAY_API_BASE_URL:}
-      key-id: ${RAZORPAY_KEY_ID:}
-      key-secret: ${RAZORPAY_KEY_SECRET:}
+      payment-events: payment.events
 
 logging:
-  pattern:
-    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5level service=${spring.application.name} trace=%X{traceId:-na} span=%X{spanId:-na} correlation=%X{correlationId:-na} logger=%logger{36} msg=\"%msg\"%n"
+  level:
+    root: INFO
 
 resilience4j:
   retry:
@@ -106,17 +67,3 @@ resilience4j:
       simulator:
         max-attempts: 3
         wait-duration: 300ms
-  circuitbreaker:
-    instances:
-      simulator:
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        permitted-number-of-calls-in-half-open-state: 2
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
-
-info:
-  app:
-    name: Fintech Payment Platform
-    description: Gateway-ready enterprise payment backend
-    version: 1.0.0

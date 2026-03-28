@@ -1,8 +1,13 @@
 spring:
+  config:
+    activate:
+      on-profile: dev
+
   datasource:
-    url: ${SETTLEMENT_DB_URL:jdbc:postgresql://localhost:5433/settlementdb}
-    username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD:paymentpass}
+    url: jdbc:postgresql://localhost:5433/settlementdb
+    username: payment
+    password: paymentpass
+
   jpa:
     hibernate:
       ddl-auto: validate

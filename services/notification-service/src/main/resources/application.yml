@@ -1,20 +1,25 @@
 server:
-  port: ${SERVER_PORT:8083}
+  port: 8083
+
 spring:
   application:
     name: notification-service
-  profiles:
-    default: local
+
   datasource:
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://postgres:5432/notificationdb
+    username: payment
+    password: paymentpass
     driver-class-name: org.postgresql.Driver
+
   jpa:
     open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: kafka:29092
     consumer:
-      group-id: ${NOTIFICATION_CONSUMER_GROUP:notification-service}
+      group-id: notification-service
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
@@ -36,8 +41,12 @@ management:
 application:
   kafka:
     topic:
-      payment-events: ${PAYMENT_EVENTS_TOPIC:payment.events}
-      payment-events-dlt: ${PAYMENT_EVENTS_DLT_TOPIC:payment.events.dlt}
+      payment-events: payment.events
+      payment-events-dlt: payment.events.dlt
     consumer:
-      retry-attempts: ${KAFKA_CONSUMER_RETRY_ATTEMPTS:3}
-      retry-backoff-ms: ${KAFKA_CONSUMER_RETRY_BACKOFF_MS:1000}
+      retry-attempts: 3
+      retry-backoff-ms: 1000
+
+logging:
+  level:
+    root: INFO

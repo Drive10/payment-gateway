@@ -1,9 +1,0 @@
-services:
-  api-gateway:
-    environment:
-      PAYMENT_SERVICE_URL: http://payment-service:8084
-      AUTH_SERVICE_URL: http://auth-service:8081
-      LEDGER_SERVICE_URL: http://ledger-service:8082
-      NOTIFICATION_SERVICE_URL: http://notification-service:8083
-      RISK_SERVICE_URL: http://risk-service:8085
-      SETTLEMENT_SERVICE_URL: http://settlement-service:8086

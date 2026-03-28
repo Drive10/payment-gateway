@@ -1,20 +1,17 @@
 spring:
-  datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5433/paymentdb}
-    username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD:paymentpass}
-  jpa:
-    hibernate:
-      ddl-auto: validate
+  config:
+    activate:
+      on-profile: dev
 
-application:
-  security:
-    jwt:
-      secret-key: ${JWT_SECRET_KEY:VGhpc0lzQVN0cm9uZ0Jhc2U2NEVuY29kZWRKU1dUU2VjcmV0S2V5Rm9yRmluVGVjaERldg==}
-  payment:
-    checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}
-  simulator:
-    base-url: ${SIMULATOR_SERVICE_URL:http://localhost:8087}
-  bootstrap:
-    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
-    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  datasource:
+    url: jdbc:postgresql://localhost:5433/paymentdb
+    username: payment
+    password: paymentpass
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+  data:
+    redis:
+      host: localhost
+      port: 6379

@@ -1,8 +1,13 @@
 spring:
+  config:
+    activate:
+      on-profile: dev
+
   datasource:
-    url: ${RISK_DB_URL:jdbc:postgresql://localhost:5433/riskdb}
-    username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD:paymentpass}
+    url: jdbc:postgresql://localhost:5433/riskdb
+    username: payment
+    password: paymentpass
+
   jpa:
     hibernate:
       ddl-auto: validate

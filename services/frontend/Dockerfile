@@ -1,20 +1,20 @@
-# ---------- Build frontend ----------
-FROM node:22-alpine AS build
+# ---------- BUILD STAGE ----------
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 COPY . .
+
 RUN npm run build
 
-# ---------- Runtime ----------
-FROM nginx:1.27-alpine
 
-ENV API_GATEWAY_UPSTREAM=http://api-gateway:8080
+# ---------- RUN STAGE ----------
+FROM nginx:alpine
 
-COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx/nginx.conf.template /etc/nginx/conf.d/nginx.conf.template
 
-EXPOSE 80
+CMD ["/bin/sh", "-c", "envsubst '$API_GATEWAY_UPSTREAM' < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
