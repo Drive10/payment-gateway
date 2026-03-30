@@ -11,3 +11,6 @@ logs/
 out/
 **/node_modules/
 **/dist/
+__MACOSX/
+.git/
+.m2repo/

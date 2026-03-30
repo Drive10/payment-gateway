@@ -9,13 +9,7 @@
     <modules>
         <module>libs/common</module>
         <module>services/payment-service</module>
-        <module>services/ledger-service</module>
-        <module>services/notification-service</module>
-        <module>services/risk-service</module>
-        <module>services/settlement-service</module>
         <module>services/api-gateway</module>
-        <module>services/auth-service</module>
-        <module>services/simulator-service</module>
     </modules>
 
     <properties>

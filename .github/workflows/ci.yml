@@ -24,8 +24,7 @@ jobs:
 
       - name: Validate compose configurations
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services config > /dev/null
-          docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services --profile full --profile optional config > /dev/null
+          docker compose --profile services config > /dev/null
 
       - name: Package application images
         run: |

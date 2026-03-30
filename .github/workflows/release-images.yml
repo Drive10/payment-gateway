@@ -34,30 +34,6 @@ jobs:
             context: .
             dockerfile: Dockerfile.build
             build-args: SERVICE_PATH=services/api-gateway
-          - image: auth-service
-            context: .
-            dockerfile: Dockerfile.build
-            build-args: SERVICE_PATH=services/auth-service
-          - image: ledger-service
-            context: .
-            dockerfile: Dockerfile.build
-            build-args: SERVICE_PATH=services/ledger-service
-          - image: notification-service
-            context: .
-            dockerfile: Dockerfile.build
-            build-args: SERVICE_PATH=services/notification-service
-          - image: risk-service
-            context: .
-            dockerfile: Dockerfile.build
-            build-args: SERVICE_PATH=services/risk-service
-          - image: settlement-service
-            context: .
-            dockerfile: Dockerfile.build
-            build-args: SERVICE_PATH=services/settlement-service
-          - image: simulator-service
-            context: .
-            dockerfile: Dockerfile.build
-            build-args: SERVICE_PATH=services/simulator-service
           - image: frontend
             context: services/frontend
             dockerfile: Dockerfile

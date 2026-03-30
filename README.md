@@ -7,7 +7,7 @@
 ![Observability](https://img.shields.io/badge/Observability-Prometheus%20%2B%20Grafana-E6522C)
 ![Security](https://img.shields.io/badge/Security-JWT%20%2B%20Webhook%20HMAC-111827)
 
-Production-grade fintech backend platform built with Java 21, Spring Boot 3.3, PostgreSQL, Kafka, Docker, and a Dockerized React checkout. The repository is structured like a real payments engineering codebase: gateway at the edge, a hardened payment core, isolated bounded-context services, versioned schemas, double-entry ledger posting, observability, and CI that validates both backend and frontend delivery paths.
+Production-grade fintech backend platform built with Java 21, Spring Boot 3.3, PostgreSQL, Kafka, Docker, and a Dockerized React checkout. The repository now uses a developer-friendly architecture with a single modular backend (`payment-service`) behind `api-gateway`, while preserving domain boundaries in code.
 
 ## Architecture
 
@@ -18,27 +18,13 @@ flowchart LR
     Client["Client / Merchant / Frontend"] --> Nginx["Frontend (Nginx + SPA)"]
     Nginx --> Gateway["API Gateway"]
 
-    Gateway --> Payment["payment-service"]
-    Gateway --> Auth["auth-service"]
-    Gateway --> Ledger["ledger-service"]
-    Gateway --> Notify["notification-service"]
-    Gateway --> Risk["risk-service"]
-    Gateway --> Settlement["settlement-service"]
-    Gateway --> Simulator["simulator-service"]
+    Gateway --> Payment["payment-service (modular monolith)"]
 
     Payment --> Kafka["Kafka"]
     Gateway --> Redis["Redis"]
-    Payment --> Ledger
-    Payment --> Simulator
-    Notify --> Kafka
+    Payment --> Kafka
 
-    Payment --> PayDB[("paymentdb")]
-    Auth --> AuthDB[("authdb")]
-    Ledger --> LedgerDB[("ledgerdb")]
-    Notify --> NotifyDB[("notificationdb")]
-    Risk --> RiskDB[("riskdb")]
-    Settlement --> SettlementDB[("settlementdb")]
-    Simulator --> SimDB[("simulatordb")]
+    Payment --> PayDB[("paymentdb + domain tables")]
 
     Gateway --> Prom["Prometheus"]
     Payment --> Prom
@@ -58,7 +44,7 @@ More design detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Durable idempotency across payment creation, refunds, webhook processing, and Kafka consumption.
 - Refund correctness with partial refunds, multiple refunds, replay protection, and over-refund prevention.
 - Double-entry ledger posting for captures and refunds.
-- Flyway versioned schema migrations across services.
+- Flyway versioned schema migrations across domains.
 - Kafka event flow for payment domain events, bounded retries, and dead-letter routing.
 - Redis-backed rate limiting on auth and payment-facing edge routes.
 - Tracing, correlation IDs, Prometheus metrics, Grafana dashboards, and Zipkin-ready tracing export.
@@ -68,14 +54,8 @@ More design detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 | Service | Responsibility |
 | --- | --- |
-| `api-gateway` | Edge routing, retry filters, rate limiting, correlation IDs |
-| `payment-service` | Auth, orders, payments, refunds, webhook handling, Kafka publishing |
-| `ledger-service` | Double-entry journals and account views |
-| `notification-service` | Template management and idempotent event-driven notifications |
-| `auth-service` | API client lifecycle and access audit domain |
-| `risk-service` | Risk scoring and decisioning |
-| `settlement-service` | Settlement batch lifecycle |
-| `simulator-service` | Test and production-like transaction simulation |
+| `api-gateway` | Edge routing, auth verification, rate limiting, correlation IDs |
+| `payment-service` | Modular monolith with auth, payments, ledger, notifications, risk, settlement, and simulator domains |
 | `frontend` | Dockerized checkout served by Nginx |
 
 ## Core Business Flow
@@ -148,8 +128,8 @@ Useful commands:
 
 - `bootstrap`: creates `.env` from `.env.example` and installs frontend deps when Node/npm are available
 - `doctor`: checks Java, Docker, optional Node/npm, and `.env`
-- `hybrid`: starts Docker for everything except local `payment-service`
-- `full`: starts the full Docker platform
+- `hybrid`: starts the Docker platform (`services` profile)
+- `full`: alias for `hybrid` for backward compatibility
 - `payment-local`: runs `payment-service` with `SPRING_PROFILES_ACTIVE=local`
 - `frontend-check`: runs `npm ci && npm run check` in `services/frontend`
 - `smoke`: runs compose validation, core backend tests, and frontend lint when Node/npm are available
@@ -213,7 +193,7 @@ Open:
 
 ### Hybrid Development
 
-Run infrastructure and all services EXCEPT `payment-service` in Docker. This allows you to work on the payment microservice locally while the rest of the ecosystem runs seamlessly via Docker.
+Run the Docker platform in the `services` profile, then run `payment-service` locally only when you want faster Java iteration.
 
 **1. Validate your machine**
 ```bash
@@ -247,14 +227,14 @@ On Windows, use:
 
 ### Full Local (Dev) Development
 
-If you want to run ALL Java microservices locally through your IDE, just spin up the infrastructure (DBs, Kafka, Redis, Observability):
+If you want to run the Java backend locally through your IDE, spin up infrastructure first (DB, Kafka, Redis):
 
 ```bash
 cp .env.example .env
 docker compose --profile infra up -d
 ```
 
-Then run each service locally with `SPRING_PROFILES_ACTIVE=local`. Local services will automatically connect to `localhost:9092` for Kafka and `localhost:5433` for PostgreSQL.
+Then run `payment-service` and optionally `api-gateway` locally with `SPRING_PROFILES_ACTIVE=local`.
 
 
 
@@ -286,7 +266,7 @@ On Windows, use:
 Notification retry / dead-letter verification:
 
 ```bash
-docker compose --profile services logs -f notification-service
+docker compose --profile services logs -f payment-service
 ```
 
 ## Example API Flow
@@ -322,7 +302,7 @@ curl -X POST http://localhost:3000/api/v1/payments/<PAYMENT_ID>/refunds \
 ## Tech Decisions
 
 - Spring Boot for service consistency and mature production tooling.
-- PostgreSQL per service for data ownership boundaries.
+- PostgreSQL with domain-separated schema and migration ownership inside the modular monolith.
 - Kafka for event-driven domain propagation.
 - Flyway for explicit schema evolution.
 - Spring Cloud Gateway with Redis-backed request limiting for distributed throttling.

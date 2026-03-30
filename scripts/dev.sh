@@ -100,16 +100,16 @@ doctor() {
 
 hybrid() {
   require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Starting hybrid Docker stack"
+  step "Starting Docker stack"
   cd "$REPO_ROOT"
-  docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services --profile optional up -d --build
+  docker compose --profile services up -d --build
 }
 
 full() {
   require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Starting full Docker stack"
+  step "Starting Docker stack"
   cd "$REPO_ROOT"
-  docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services --profile full --profile optional up -d --build
+  docker compose --profile services up -d --build
 }
 
 down() {
@@ -144,10 +144,9 @@ verify_repo() {
 
 compose_check() {
   require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Validating Compose files"
+  step "Validating Compose file"
   cd "$REPO_ROOT"
-  docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services config >/dev/null
-  docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services --profile full --profile optional config >/dev/null
+  docker compose --profile services config >/dev/null
 }
 
 docker_daemon_ready() {
@@ -158,7 +157,7 @@ smoke() {
   step "Running fast smoke checks"
   compose_check
   cd "$REPO_ROOT"
-  ./mvnw -q -pl services/payment-service,services/ledger-service,services/api-gateway -am test
+  ./mvnw -q -pl services/payment-service,services/api-gateway -am test
   if has_cmd node && has_cmd npm; then
     step "Running frontend lint"
     cd "$FRONTEND_DIR"

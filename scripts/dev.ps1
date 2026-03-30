@@ -149,27 +149,20 @@ function Invoke-Doctor {
 
 function Start-Hybrid {
     Require-Command docker "Install Docker Desktop and ensure the daemon is running."
-    Write-Step "Starting hybrid Docker stack"
+    Write-Step "Starting Docker stack"
     Invoke-RepoCommand "docker" @(
         "compose",
-        "-f", "docker-compose.yml",
-        "-f", "docker-compose.override.yml",
         "--profile", "services",
-        "--profile", "optional",
         "up", "-d", "--build"
     )
 }
 
 function Start-Full {
     Require-Command docker "Install Docker Desktop and ensure the daemon is running."
-    Write-Step "Starting full Docker stack"
+    Write-Step "Starting Docker stack"
     Invoke-RepoCommand "docker" @(
         "compose",
-        "-f", "docker-compose.yml",
-        "-f", "docker-compose.docker.yml",
         "--profile", "services",
-        "--profile", "full",
-        "--profile", "optional",
         "up", "-d", "--build"
     )
 }
@@ -217,16 +210,12 @@ function Invoke-Verify {
 
 function Invoke-ComposeCheck {
     Require-Command docker "Install Docker Desktop and ensure the daemon is running."
-    Write-Step "Validating Compose files"
+    Write-Step "Validating Compose file"
     Push-Location $RepoRoot
     try {
-        docker compose -f docker-compose.yml -f docker-compose.override.yml --profile services config | Out-Null
+        docker compose --profile services config | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            throw "docker compose hybrid config failed with exit code $LASTEXITCODE."
-        }
-        docker compose -f docker-compose.yml -f docker-compose.docker.yml --profile services --profile full --profile optional config | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            throw "docker compose full config failed with exit code $LASTEXITCODE."
+            throw "docker compose config failed with exit code $LASTEXITCODE."
         }
     } finally {
         Pop-Location
@@ -253,7 +242,7 @@ function Invoke-Smoke {
 
     Push-Location $RepoRoot
     try {
-        & ".\mvnw.cmd" "-q" "-pl" "services/payment-service,services/ledger-service,services/api-gateway" "-am" "test"
+        & ".\mvnw.cmd" "-q" "-pl" "services/payment-service,services/api-gateway" "-am" "test"
         if ($LASTEXITCODE -ne 0) {
             throw "mvnw.cmd failed with exit code $LASTEXITCODE."
         }

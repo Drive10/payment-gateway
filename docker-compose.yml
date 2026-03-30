@@ -34,11 +34,11 @@ services:
     profiles: [ "services", "infra" ]
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: platform
       POSTGRES_USER: payment
       POSTGRES_PASSWORD: paymentpass
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5433:5432"
     networks:
@@ -55,14 +55,15 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8080
+      JWT_SECRET_B64: ${JWT_SECRET_B64:-q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=}
+      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-dev-gateway-internal-secret}
 
       REDIS_HOST: redis
       REDIS_PORT: 6379
 
-      AUTH_SERVICE_URL: http://auth-service:8081
-      LEDGER_SERVICE_URL: http://ledger-service:8082
-
-      PAYMENT_SERVICE_URL: http://host.docker.internal:8084
+      AUTH_SERVICE_URL: http://payment-service:8084
+      LEDGER_SERVICE_URL: http://payment-service:8084
+      PAYMENT_SERVICE_URL: http://payment-service:8084
 
     ports:
       - "8080:8080"
@@ -79,40 +80,8 @@ services:
     networks:
       - fintech-network
 
-  auth-service:
-    profiles: [ "services" ]
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/auth-service
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8081
-      AUTH_DB_URL: jdbc:postgresql://postgres:5432/authdb
-      DB_USERNAME: payment
-      DB_PASSWORD: paymentpass
-    networks:
-      - fintech-network
-
-  ledger-service:
-    profiles: [ "services" ]
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/ledger-service
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8082
-      LEDGER_DB_URL: jdbc:postgresql://postgres:5432/ledgerdb
-      DB_USERNAME: payment
-      DB_PASSWORD: paymentpass
-    networks:
-      - fintech-network
-
   payment-service:
-    profiles: [ "full" ]
+    profiles: [ "services" ]
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -121,10 +90,19 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8084
+      JWT_SECRET_B64: ${JWT_SECRET_B64:-q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=}
+      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-dev-gateway-internal-secret}
       DB_URL: jdbc:postgresql://postgres:5432/paymentdb
       DB_USERNAME: payment
       DB_PASSWORD: paymentpass
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SIMULATOR_BASE_URL: http://payment-service:8084
+    ports:
+      - "8084:8084"
+    depends_on:
+      - postgres
+      - kafka
+      - redis
     networks:
       - fintech-network
 

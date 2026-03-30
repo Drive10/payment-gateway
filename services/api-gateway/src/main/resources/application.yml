@@ -42,42 +42,42 @@ spring:
             - Path=/swagger-ui.html,/swagger-ui/**,/v3/api-docs/**
 
         - id: auth-service
-          uri: http://auth-service:8081
+          uri: http://payment-service:8084
           predicates:
             - Path=/platform/auth/**
           filters:
             - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
 
         - id: ledger-service
-          uri: http://ledger-service:8082
+          uri: http://payment-service:8084
           predicates:
             - Path=/platform/ledger/**
           filters:
             - RewritePath=/platform/ledger/(?<segment>.*), /internal/platform/${segment}
 
         - id: notification-service
-          uri: http://notification-service:8083
+          uri: http://payment-service:8084
           predicates:
             - Path=/platform/notification/**
           filters:
             - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
 
         - id: risk-service
-          uri: http://risk-service:8085
+          uri: http://payment-service:8084
           predicates:
             - Path=/platform/risk/**
           filters:
             - RewritePath=/platform/risk/(?<segment>.*), /internal/platform/${segment}
 
         - id: settlement-service
-          uri: http://settlement-service:8086
+          uri: http://payment-service:8084
           predicates:
             - Path=/platform/settlement/**
           filters:
             - RewritePath=/platform/settlement/(?<segment>.*), /internal/platform/${segment}
 
         - id: simulator-service
-          uri: http://simulator-service:8087
+          uri: http://payment-service:8084
           predicates:
             - Path=/platform/simulator/**
           filters:
@@ -95,8 +95,8 @@ logging:
 
 application:
   gateway:
-    internal-secret: q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-gateway-internal-secret}
 
 security:
   jwt:
-    secret-key: q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=
+    secret-key: ${JWT_SECRET_B64:q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=}

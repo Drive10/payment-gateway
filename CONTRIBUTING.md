@@ -20,13 +20,13 @@ Run `payment-service` locally while the rest stays in Docker:
 
 ```bash
 cp .env.example .env
-docker compose --profile services up --build frontend postgres api-gateway auth-service ledger-service notification-service risk-service settlement-service simulator-service kafka prometheus grafana zipkin
+docker compose --profile services up --build postgres kafka redis api-gateway frontend
 ```
 
 Then start `payment-service` with:
 
 ```text
-SPRING_PROFILES_ACTIVE=dev
+SPRING_PROFILES_ACTIVE=dev ./mvnw -pl services/payment-service -am spring-boot:run
 ```
 
 ## Test Commands
@@ -46,7 +46,7 @@ mvn -pl services/payment-service -Ptestcontainers -Dtest=PaymentFlowContainersIn
 Notification retry / DLT smoke check:
 
 ```bash
-docker compose --profile services logs -f notification-service
+docker compose --profile services logs -f payment-service
 ```
 
 Frontend:

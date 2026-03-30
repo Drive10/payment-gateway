@@ -7,13 +7,13 @@ This repo now uses a layered test strategy so one broken path does not hide behi
 - Unit tests: fast logic checks for state machines, idempotency, JWT filters, outbox retry handling, and ledger rules
 - Repository tests: database-level constraints such as actor-scoped idempotency uniqueness
 - Spring integration tests: HTTP flows, security, OpenAPI contracts, and payment lifecycle behavior
-- Cross-service integration tests: `payment-service -> Kafka -> ledger-service` journal propagation
+- Cross-domain integration tests inside monolith: payment events to ledger/notification handlers
 - Docker-backed Testcontainers tests: heavier infrastructure validation that runs when Docker is available
 - Frontend quality checks: lint plus production build validation
 
 ## Primary commands
 
-- Fast backend smoke: `./mvnw -q -pl services/payment-service,services/ledger-service,services/api-gateway -am test`
+- Fast backend smoke: `./mvnw -q -pl services/payment-service,services/api-gateway -am test`
 - Full backend verify: `./mvnw -q verify`
 - Full project matrix: `./scripts/dev.ps1 test-all` on Windows or `./scripts/dev.sh test-all` on macOS/Linux
 

@@ -38,11 +38,11 @@ management:
 application:
   gateway-trust:
     enabled: true
-    internal-secret: q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-gateway-internal-secret}
 
   security:
     jwt:
-      secret-key: q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=
+      secret-key: ${JWT_SECRET_B64:q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=}
       expiration-seconds: 3600
       refresh-expiration-seconds: 2592000
 
@@ -51,7 +51,7 @@ application:
     checkout-base-url: http://frontend
 
   simulator:
-    base-url: http://simulator-service:8087
+    base-url: ${SIMULATOR_BASE_URL:http://payment-service:8084}
 
   kafka:
     topic:
