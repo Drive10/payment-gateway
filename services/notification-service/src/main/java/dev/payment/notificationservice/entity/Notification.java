@@ -7,7 +7,12 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "notifications")
+@Table(name = "notifications", indexes = {
+    @Index(name = "idx_notification_user", columnList = "user_id"),
+    @Index(name = "idx_notification_status", columnList = "status"),
+    @Index(name = "idx_notification_channel", columnList = "channel"),
+    @Index(name = "idx_notification_created", columnList = "created_at")
+})
 public class Notification {
 
     @Id
@@ -18,7 +23,7 @@ public class Notification {
     private UUID userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "type", nullable = false)
     private NotificationType type;
 
     @Enumerated(EnumType.STRING)
@@ -37,6 +42,18 @@ public class Notification {
     @Column(nullable = false)
     private NotificationStatus status;
 
+    @Column(name = "retry_count")
+    private int retryCount = 0;
+
+    @Column(name = "last_error", columnDefinition = "TEXT")
+    private String lastError;
+
+    @Column(columnDefinition = "TEXT")
+    private String payload;
+
+    @Column(name = "event_type")
+    private String eventType;
+
     @Column(name = "sent_at")
     private LocalDateTime sentAt;
 
@@ -45,21 +62,6 @@ public class Notification {
     private LocalDateTime createdAt;
 
     public Notification() {}
-
-    public Notification(UUID id, UUID userId, NotificationType type, NotificationChannel channel,
-                       String recipient, String subject, String content, NotificationStatus status,
-                       LocalDateTime sentAt, LocalDateTime createdAt) {
-        this.id = id;
-        this.userId = userId;
-        this.type = type;
-        this.channel = channel;
-        this.recipient = recipient;
-        this.subject = subject;
-        this.content = content;
-        this.status = status;
-        this.sentAt = sentAt;
-        this.createdAt = createdAt;
-    }
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -77,6 +79,14 @@ public class Notification {
     public void setContent(String content) { this.content = content; }
     public NotificationStatus getStatus() { return status; }
     public void setStatus(NotificationStatus status) { this.status = status; }
+    public int getRetryCount() { return retryCount; }
+    public void setRetryCount(int retryCount) { this.retryCount = retryCount; }
+    public String getLastError() { return lastError; }
+    public void setLastError(String lastError) { this.lastError = lastError; }
+    public String getPayload() { return payload; }
+    public void setPayload(String payload) { this.payload = payload; }
+    public String getEventType() { return eventType; }
+    public void setEventType(String eventType) { this.eventType = eventType; }
     public LocalDateTime getSentAt() { return sentAt; }
     public void setSentAt(LocalDateTime sentAt) { this.sentAt = sentAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
@@ -93,6 +103,10 @@ public class Notification {
         private String subject;
         private String content;
         private NotificationStatus status;
+        private int retryCount = 0;
+        private String lastError;
+        private String payload;
+        private String eventType;
         private LocalDateTime sentAt;
         private LocalDateTime createdAt;
 
@@ -104,10 +118,14 @@ public class Notification {
         public NotificationBuilder subject(String subject) { this.subject = subject; return this; }
         public NotificationBuilder content(String content) { this.content = content; return this; }
         public NotificationBuilder status(NotificationStatus status) { this.status = status; return this; }
+        public NotificationBuilder retryCount(int retryCount) { this.retryCount = retryCount; return this; }
+        public NotificationBuilder lastError(String lastError) { this.lastError = lastError; return this; }
+        public NotificationBuilder payload(String payload) { this.payload = payload; return this; }
+        public NotificationBuilder eventType(String eventType) { this.eventType = eventType; return this; }
         public NotificationBuilder sentAt(LocalDateTime sentAt) { this.sentAt = sentAt; return this; }
         public NotificationBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Notification build() {
-            return new Notification(id, userId, type, channel, recipient, subject, content, status, sentAt, createdAt);
+            return new Notification();
         }
     }
 }

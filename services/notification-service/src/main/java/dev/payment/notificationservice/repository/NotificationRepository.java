@@ -19,4 +19,6 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     List<Notification> findByType(NotificationType type);
 
     List<Notification> findByStatus(NotificationStatus status);
+
+    List<Notification> findByUserIdAndStatusOrderByCreatedAtDesc(UUID userId, NotificationStatus status);
 }
