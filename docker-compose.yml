@@ -46,7 +46,7 @@ services:
     environment:
       POSTGRES_USER: payment
       POSTGRES_PASSWORD: paymentpass
-      POSTGRES_MULTIPLE_DATABASES: authdb,orderdb,paymentdb,notificationdb,webhookdb,simulatordb
+      POSTGRES_MULTIPLE_DATABASES: authdb,orderdb,paymentdb,notificationdb,webhookdb,simulatordb,settlementdb,riskdb,analyticsdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -267,6 +267,102 @@ services:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8086/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    networks:
+      - fintech-network
+
+  settlement-service:
+    profiles: ["services"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/settlement-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8087
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: settlementdb
+      DB_USERNAME: settlement
+      DB_PASSWORD: settlementpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8087:8087"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8087/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    networks:
+      - fintech-network
+
+  risk-service:
+    profiles: ["services"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/risk-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8088
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: riskdb
+      DB_USERNAME: risk
+      DB_PASSWORD: riskpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8088:8088"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8088/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    networks:
+      - fintech-network
+
+  analytics-service:
+    profiles: ["services"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/analytics-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8086
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: analyticsdb
+      DB_USERNAME: analytics
+      DB_PASSWORD: analyticspass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8089:8089"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8089/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6

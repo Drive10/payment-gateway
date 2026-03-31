@@ -18,6 +18,9 @@
         <module>services/notification-service</module>
         <module>services/webhook-service</module>
         <module>services/simulator-service</module>
+        <module>services/settlement-service</module>
+        <module>services/risk-service</module>
+        <module>services/analytics-service</module>
     </modules>
 
     <properties>

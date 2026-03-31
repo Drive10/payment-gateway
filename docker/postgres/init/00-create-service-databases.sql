@@ -18,3 +18,15 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'settlementdb')\gexec
 
 SELECT 'CREATE DATABASE simulatordb'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'simulatordb')\gexec
+
+SELECT 'CREATE DATABASE analyticsdb'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'analyticsdb')\gexec
+
+CREATE USER settlement WITH PASSWORD 'settlementpass';
+GRANT ALL PRIVILEGES ON DATABASE settlementdb TO settlement;
+
+CREATE USER risk WITH PASSWORD 'riskpass';
+GRANT ALL PRIVILEGES ON DATABASE riskdb TO risk;
+
+CREATE USER analytics WITH PASSWORD 'analyticspass';
+GRANT ALL PRIVILEGES ON DATABASE analyticsdb TO analytics;
