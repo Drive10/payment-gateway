@@ -14,12 +14,30 @@ spring:
     gateway:
       default-filters:
         - PreserveHostHeader
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 100
+            redis-rate-limiter.burstCapacity: 200
+            redis-rate-limiter.requestedTokens: 1
+        - name: SecureHeaders
+          args:
+            strictTransportSecurity: max-age=31536000;includeSubDomains
+            xFrameOptions: DENY
+            xContentTypeOptions: nosniff
+            xXssProtection: 1; mode=block
+            xPermittedCrossDomainPolicies: none
+            referrerPolicy: strict-origin-when-cross-origin
 
       routes:
         - id: auth-service
           uri: http://auth-service:8081
           predicates:
             - Path=/api/v1/auth/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
 
         - id: order-service
           uri: http://order-service:8082
@@ -35,6 +53,21 @@ spring:
           uri: http://webhook-service:8085
           predicates:
             - Path=/api/v1/webhooks/**
+
+        - id: merchant-service
+          uri: http://merchant-service:8090
+          predicates:
+            - Path=/api/v1/merchants/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
+
+        - id: dispute-service
+          uri: http://dispute-service:8091
+          predicates:
+            - Path=/api/v1/disputes/**
 
         - id: swagger-docs
           uri: http://payment-service:8083
@@ -76,6 +109,20 @@ spring:
           filters:
             - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
 
+        - id: internal-merchant
+          uri: http://merchant-service:8090
+          predicates:
+            - Path=/platform/merchant/**
+          filters:
+            - RewritePath=/platform/merchant/(?<segment>.*), /internal/platform/${segment}
+
+        - id: internal-dispute
+          uri: http://dispute-service:8091
+          predicates:
+            - Path=/platform/dispute/**
+          filters:
+            - RewritePath=/platform/dispute/(?<segment>.*), /internal/platform/${segment}
+
 management:
   endpoints:
     web:
@@ -97,6 +144,8 @@ application:
     notification: http://notification-service:8084
     webhook: http://webhook-service:8085
     simulator: http://simulator-service:8086
+    merchant: http://merchant-service:8090
+    dispute: http://dispute-service:8091
 
 security:
   jwt:

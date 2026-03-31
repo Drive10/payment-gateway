@@ -46,7 +46,7 @@ services:
     environment:
       POSTGRES_USER: payment
       POSTGRES_PASSWORD: paymentpass
-      POSTGRES_MULTIPLE_DATABASES: authdb,orderdb,paymentdb,notificationdb,webhookdb,simulatordb,settlementdb,riskdb,analyticsdb
+      POSTGRES_MULTIPLE_DATABASES: authdb,orderdb,paymentdb,notificationdb,webhookdb,simulatordb,settlementdb,riskdb,analyticsdb,merchantdb,disputedb
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -347,7 +347,7 @@ services:
         SERVICE_PATH: services/analytics-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8086
+      SERVER_PORT: 8089
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: analyticsdb
@@ -363,6 +363,70 @@ services:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8089/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    networks:
+      - fintech-network
+
+  merchant-service:
+    profiles: ["services"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/merchant-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8090
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: merchantdb
+      DB_USERNAME: merchant
+      DB_PASSWORD: merchantpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8090:8090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8090/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    networks:
+      - fintech-network
+
+  dispute-service:
+    profiles: ["services"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/dispute-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8091
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: disputedb
+      DB_USERNAME: dispute
+      DB_PASSWORD: disputepass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8091:8091"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8091/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -387,6 +451,8 @@ services:
       AUTH_SERVICE_URL: http://auth-service:8081
       ORDER_SERVICE_URL: http://order-service:8082
       PAYMENT_SERVICE_URL: http://payment-service:8083
+      MERCHANT_SERVICE_URL: http://merchant-service:8090
+      DISPUTE_SERVICE_URL: http://dispute-service:8091
     ports:
       - "8080:8080"
     volumes:

@@ -30,3 +30,15 @@ GRANT ALL PRIVILEGES ON DATABASE riskdb TO risk;
 
 CREATE USER analytics WITH PASSWORD 'analyticspass';
 GRANT ALL PRIVILEGES ON DATABASE analyticsdb TO analytics;
+
+SELECT 'CREATE DATABASE merchantdb'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'merchantdb')\gexec
+
+SELECT 'CREATE DATABASE disputedb'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'disputedb')\gexec
+
+CREATE USER merchant WITH PASSWORD 'merchantpass';
+GRANT ALL PRIVILEGES ON DATABASE merchantdb TO merchant;
+
+CREATE USER dispute WITH PASSWORD 'disputepass';
+GRANT ALL PRIVILEGES ON DATABASE disputedb TO dispute;
