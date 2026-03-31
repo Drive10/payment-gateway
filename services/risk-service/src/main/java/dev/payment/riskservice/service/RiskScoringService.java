@@ -28,7 +28,7 @@ public class RiskScoringService {
         assessment.setTransactionId(transactionId);
         assessment.setUserId(userId);
         assessment.setAmount(amount);
-        assessment.setCurrency(currency);
+        assessment.setCurrency(currency != null ? currency : "INR");
         
         int totalScore = 0;
         List<String> triggeredRules = new ArrayList<>();

@@ -1,8 +1,13 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
-COPY . .
+COPY pom.xml .
+RUN mvn -q -N install -DskipTests
+COPY libs/common/pom.xml libs/common/
+COPY libs/common/src libs/common/src
+RUN mvn -q -N -f libs/common/pom.xml install -DskipTests
+COPY services/ ./services/
 ARG SERVICE_PATH
-RUN --mount=type=cache,target=/root/.m2 mvn -q -U -DskipTests -pl ${SERVICE_PATH} -am package
+RUN mvn -q -DskipTests -pl ${SERVICE_PATH} -am package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app

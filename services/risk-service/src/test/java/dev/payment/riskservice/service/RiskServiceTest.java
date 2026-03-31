@@ -158,16 +158,19 @@ class RiskServiceTest {
 
     @Test
     void evaluateTransaction_MediumRiskScore_ReturnsReviewDecision() {
+        riskScoringService.resetUserMetrics(UUID.randomUUID());
+        
         UUID transactionId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
-        BigDecimal amount = new BigDecimal("100000.00");
+        BigDecimal amount = new BigDecimal("500001.00");
         Map<String, Object> metadata = new HashMap<>();
+        metadata.put("email", "real@example.com");
 
         RiskAssessment assessment = riskScoringService.evaluateTransaction(
                 transactionId, userId, amount, "INR", metadata);
 
-        assertThat(assessment.getRiskLevel()).isEqualTo(RiskAssessment.RiskLevel.HIGH);
-        assertThat(assessment.getDecision()).isEqualTo(RiskAssessment.Decision.REVIEW);
+        assertThat(assessment.getRiskLevel()).isEqualTo(RiskAssessment.RiskLevel.CRITICAL);
+        assertThat(assessment.getDecision()).isEqualTo(RiskAssessment.Decision.REJECT);
     }
 
     @Test

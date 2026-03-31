@@ -7,9 +7,9 @@ spring:
     name: payment-service
 
   datasource:
-    url: jdbc:postgresql://postgres:5432/paymentdb
-    username: payment
-    password: paymentpass
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:paymentdb}
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD:paymentpass}
     driver-class-name: org.postgresql.Driver
 
   jpa:

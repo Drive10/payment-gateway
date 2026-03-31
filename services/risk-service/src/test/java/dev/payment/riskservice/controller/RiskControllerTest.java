@@ -40,7 +40,9 @@ class RiskControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(riskController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(riskController)
+                .setControllerAdvice(new dev.payment.riskservice.exception.RiskExceptionHandler())
+                .build();
         objectMapper = new ObjectMapper();
     }
 

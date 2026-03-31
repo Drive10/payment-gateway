@@ -1,30 +1,30 @@
 services:
-  vault:
-    profiles: ["services", "infra"]
-    image: hashicorp/vault:1.17
-    container_name: vault
-    environment:
-      VAULT_ADDR: http://vault:8200
-      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
-      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN}
-      VAULT_TOKEN: ${VAULT_ROOT_TOKEN}
-    ports:
-      - "8200:8200"
-    cap_add:
-      - IPC_LOCK
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-          cpus: "0.50"
-    networks:
-      - fintech-network
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8200/v1/sys/health?standbyok=true"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  #vault:
+  #  profiles: ["services", "infra"]
+  #  image: hashicorp/vault:1.17
+  #  container_name: vault
+  #  environment:
+  #    VAULT_ADDR: http://vault:8200
+  #    VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+  #    VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN}
+  #    VAULT_TOKEN: ${VAULT_ROOT_TOKEN}
+  #  ports:
+  #    - "8200:8200"
+  #  cap_add:
+  #    - IPC_LOCK
+  #  restart: unless-stopped
+  #  deploy:
+  #    resources:
+  #      limits:
+  #        memory: 256m
+  #        cpus: "0.50"
+  #  networks:
+  #    - fintech-network
+  #  healthcheck:
+  #    test: ["CMD", "wget", "-q", "--spider", "http://localhost:8200/v1/sys/health?standbyok=true"]
+  #    interval: 10s
+  #    timeout: 5s
+  #    retries: 5
 
   config-service:
     profiles: ["services", "infra"]
@@ -47,9 +47,9 @@ services:
         limits:
           memory: 512m
           cpus: "0.50"
-    depends_on:
-      vault:
-        condition: service_healthy
+    #depends_on:
+    #  vault:
+    #    condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8888/actuator/health || exit 1"]
       interval: 10s
@@ -642,6 +642,9 @@ services:
       context: ./services/frontend
     ports:
       - "3000:80"
+    depends_on:
+      api-gateway:
+        condition: service_started
     restart: unless-stopped
     deploy:
       resources:

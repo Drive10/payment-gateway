@@ -4,11 +4,14 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'paymentdb')\gexec
 SELECT 'CREATE DATABASE authdb'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'authdb')\gexec
 
-SELECT 'CREATE DATABASE ledgerdb'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'ledgerdb')\gexec
+SELECT 'CREATE DATABASE orderdb'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'orderdb')\gexec
 
 SELECT 'CREATE DATABASE notificationdb'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'notificationdb')\gexec
+
+SELECT 'CREATE DATABASE webhookdb'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'webhookdb')\gexec
 
 SELECT 'CREATE DATABASE riskdb'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'riskdb')\gexec
@@ -22,23 +25,32 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'simulatordb')\gexec
 SELECT 'CREATE DATABASE analyticsdb'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'analyticsdb')\gexec
 
-CREATE USER settlement WITH PASSWORD 'settlementpass';
-GRANT ALL PRIVILEGES ON DATABASE settlementdb TO settlement;
-
-CREATE USER risk WITH PASSWORD 'riskpass';
-GRANT ALL PRIVILEGES ON DATABASE riskdb TO risk;
-
-CREATE USER analytics WITH PASSWORD 'analyticspass';
-GRANT ALL PRIVILEGES ON DATABASE analyticsdb TO analytics;
-
 SELECT 'CREATE DATABASE merchantdb'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'merchantdb')\gexec
 
 SELECT 'CREATE DATABASE disputedb'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'disputedb')\gexec
 
-CREATE USER merchant WITH PASSWORD 'merchantpass';
-GRANT ALL PRIVILEGES ON DATABASE merchantdb TO merchant;
+GRANT ALL PRIVILEGES ON DATABASE paymentdb TO payment;
+GRANT ALL PRIVILEGES ON DATABASE authdb TO payment;
+GRANT ALL PRIVILEGES ON DATABASE orderdb TO payment;
+GRANT ALL PRIVILEGES ON DATABASE notificationdb TO payment;
+GRANT ALL PRIVILEGES ON DATABASE webhookdb TO payment;
+GRANT ALL PRIVILEGES ON DATABASE riskdb TO payment;
+GRANT ALL PRIVILEGES ON DATABASE settlementdb TO payment;
+GRANT ALL PRIVILEGES ON DATABASE simulatordb TO payment;
+GRANT ALL PRIVILEGES ON DATABASE analyticsdb TO payment;
+GRANT ALL PRIVILEGES ON DATABASE merchantdb TO payment;
+GRANT ALL PRIVILEGES ON DATABASE disputedb TO payment;
 
-CREATE USER dispute WITH PASSWORD 'disputepass';
-GRANT ALL PRIVILEGES ON DATABASE disputedb TO dispute;
+ALTER DATABASE paymentdb OWNER TO payment;
+ALTER DATABASE authdb OWNER TO payment;
+ALTER DATABASE orderdb OWNER TO payment;
+ALTER DATABASE notificationdb OWNER TO payment;
+ALTER DATABASE webhookdb OWNER TO payment;
+ALTER DATABASE riskdb OWNER TO payment;
+ALTER DATABASE settlementdb OWNER TO payment;
+ALTER DATABASE simulatordb OWNER TO payment;
+ALTER DATABASE analyticsdb OWNER TO payment;
+ALTER DATABASE merchantdb OWNER TO payment;
+ALTER DATABASE disputedb OWNER TO payment;
