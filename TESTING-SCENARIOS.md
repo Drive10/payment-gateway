@@ -341,37 +341,90 @@ docker compose up -d notification-service
 
 ---
 
-## Quick Test Script
+## Cross-Platform Scripts
+
+The project includes platform-independent scripts for Windows (.ps1) and Linux/Mac (.sh):
+
+| Script | Windows | Linux/Mac |
+|--------|---------|-----------|
+| Dev Mode | `.\run-dev.ps1` | `./run-dev.sh` |
+| Docker Full | `.\run-docker.ps1` | `./run-docker.sh` |
+| Hybrid | `.\run-hybrid.ps1` | `./run-hybrid.sh` |
+| E2E Test | `.\test-e2e.ps1` | `./test-e2e.sh` |
+
+### Using Makefile (Recommended)
+
+The Makefile auto-detects your OS and runs the appropriate script:
 
 ```bash
-#!/bin/bash
-# quick-test.sh - Run all test scenarios
+# Make scripts executable (Linux/Mac only, run once)
+make setup
 
-set -e
+# Show all commands
+make help
 
-echo "=== Scenario 1: Dev Mode ==="
-docker compose --profile infra up -d
-sleep 30
-echo "Infrastructure ready. Run services manually with: mvn spring-boot:run -pl services/<service>"
-echo "Press Enter when ready to continue..."
-read
-docker compose --profile infra down -v
+# Dev Mode
+make dev-infra
+make dev-build
+make dev-run service=auth
 
-echo "=== Scenario 2: Docker Full ==="
-docker compose --profile services up -d
-sleep 120
-echo "Checking services..."
-curl -s http://localhost:8080/actuator/health || echo "API Gateway not ready"
-docker compose --profile services down -v
+# Docker Mode
+make docker-up
+make docker-up-obs    # with observability
+make docker-down
+make docker-status
 
-echo "=== Scenario 3: Hybrid Mode ==="
-docker compose --profile infra up -d
-echo "Infrastructure started. Run some services locally and test."
-echo "Press Enter to clean up..."
-read
-docker compose --profile infra down -v
+# E2E Testing
+make test-all
+make test-health
+make test-auth
 
-echo "All scenarios completed!"
+# Hybrid Scenarios
+make hybrid scenario=network-partition
+make hybrid scenario=service-restart
+
+# Cleanup
+make clean
+```
+
+### Direct Script Usage
+
+#### Linux/Mac
+```bash
+# Dev Mode
+./run-dev.sh --start-infra
+./run-dev.sh --service auth
+
+# Docker Full
+./run-docker.sh --up
+./run-docker.sh --up --observability
+./run-docker.sh --down
+
+# Hybrid
+./run-hybrid.sh network-partition
+./run-hybrid.sh all
+
+# E2E Tests
+./test-e2e.sh --all
+```
+
+#### Windows (PowerShell)
+```powershell
+# Dev Mode
+.\run-dev.ps1 -StartInfra
+.\run-dev.ps1 -Service auth
+
+# Docker Full
+.\run-docker.ps1 -Up
+.\run-docker.ps1 -Up -WithObservability
+.\run-docker.ps1 -Down
+
+# Hybrid
+.\run-hybrid.ps1 -Scenario NetworkPartition
+.\run-hybrid.ps1 -Scenario All
+
+# E2E Tests
+.\test-e2e.ps1 -RunAll
 ```
 
 ---
