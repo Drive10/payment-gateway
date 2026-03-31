@@ -9,7 +9,7 @@ spring:
 
 application:
   simulator:
-    base-url: http://payment-service:8084
+    base-url: ${SIMULATOR_BASE_URL:http://simulator-service:8085}
 
   gateway-trust:
     enabled: true

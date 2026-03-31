@@ -4,22 +4,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.payment.apigateway.security.GatewayJwtService;
 import dev.payment.common.api.ApiResponse;
 import dev.payment.common.api.ErrorDetails;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Component
-public class JwtAuthenticationFilter implements WebFilter, Ordered {
+public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private static final List<String> PUBLIC_PREFIXES = List.of(
             "/actuator",
@@ -39,7 +40,7 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
     }
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
         if (isPublic(path)) {
             return chain.filter(exchange);
@@ -75,11 +76,13 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
         try {
             byte[] body = objectMapper.writeValueAsBytes(ApiResponse.failure(new ErrorDetails(code, message, null)));
-            return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(body)));
+            DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(body);
+            return exchange.getResponse().writeWith(Mono.just(buffer));
         } catch (Exception exception) {
             byte[] fallback = ("{\"success\":false,\"error\":{\"code\":\"" + code + "\",\"message\":\"" + message + "\"}}")
                     .getBytes(StandardCharsets.UTF_8);
-            return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(fallback)));
+            DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(fallback);
+            return exchange.getResponse().writeWith(Mono.just(buffer));
         }
     }
 
