@@ -27,20 +27,6 @@ spring:
         response-timeout: 5s
       default-filters:
         - PreserveHostHeader
-        - name: RequestRateLimiter
-          args:
-            redis-rate-limiter.replenishRate: 100
-            redis-rate-limiter.burstCapacity: 200
-            redis-rate-limiter.requestedTokens: 1
-        - name: SecureHeaders
-          args:
-            strictTransportSecurity: max-age=31536000;includeSubDomains
-            xFrameOptions: DENY
-            xContentTypeOptions: nosniff
-            xXssProtection: 1; mode=block
-            xPermittedCrossDomainPolicies: none
-            referrerPolicy: strict-origin-when-cross-origin
-
       routes:
         - id: auth-service
           uri: http://auth-service:8081
