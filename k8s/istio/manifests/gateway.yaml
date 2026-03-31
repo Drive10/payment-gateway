@@ -1,0 +1,71 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: payment-gateway-gw
+  namespace: payment-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+    tls:
+      httpsRedirect: true
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: payment-gateway-tls
+    hosts:
+    - "*"
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: payment-gateway-mtls
+  namespace: payment-gateway
+spec:
+  mtls:
+    mode: STRICT
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: payment-gateway-authz
+  namespace: payment-gateway
+spec:
+  selector:
+    matchLabels:
+      app: api-gateway
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/payment-gateway/sa/*
+        - cluster.local/ns/default/sa/*
+
+---
+apiVersion: telemetry.istio.io/v1beta1
+metadata:
+  name: payment-gateway-telemetry
+  namespace: payment-gateway
+spec:
+  tracing:
+  - providers:
+    - name: jaeger
+    randomSamplingPercentage: 10
+    targets:
+    - override:
+        target: */api-gateway/*
+      customTags:
+        environment:
+          static:
+            value: production

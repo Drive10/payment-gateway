@@ -68,10 +68,19 @@ spring:
           predicates:
             - Path=/api/v1/disputes/**
 
-        - id: swagger-docs
+        - id: swagger-ui
           uri: http://payment-service:8083
           predicates:
-            - Path=/swagger-ui.html,/swagger-ui/**,/v3/api-docs/**
+            - Path=/swagger-ui/**,/swagger-ui.html
+          filters:
+            - StripPrefix=0
+
+        - id: openapi-docs
+          uri: http://payment-service:8083
+          predicates:
+            - Path=/v3/api-docs/**
+          filters:
+            - StripPrefix=1
 
         - id: internal-auth
           uri: http://auth-service:8081
@@ -131,6 +140,14 @@ management:
     export:
       prometheus:
         enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
 
 logging:
   level:
