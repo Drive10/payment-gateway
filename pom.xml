@@ -11,6 +11,7 @@
 
     <modules>
         <module>libs/common</module>
+        <module>services/config-service</module>
         <module>services/api-gateway</module>
         <module>services/auth-service</module>
         <module>services/order-service</module>
@@ -23,6 +24,7 @@
         <module>services/analytics-service</module>
         <module>services/merchant-service</module>
         <module>services/dispute-service</module>
+        <module>services/featureflags-service</module>
     </modules>
 
     <properties>
@@ -33,6 +35,7 @@
         <lombok.version>1.18.34</lombok.version>
         <springdoc.version>2.6.0</springdoc.version>
         <jjwt.version>0.12.6</jjwt.version>
+        <resilience4j.version>2.2.0</resilience4j.version>
     </properties>
 
     <dependencyManagement>
@@ -70,6 +73,30 @@
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-spring-boot3</artifactId>
+                <version>${resilience4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-circuitbreaker</artifactId>
+                <version>${resilience4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-retry</artifactId>
+                <version>${resilience4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-timelimiter</artifactId>
+                <version>${resilience4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
             </dependency>
         </dependencies>
     </dependencyManagement>

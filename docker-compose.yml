@@ -1,6 +1,6 @@
 services:
   redis:
-    profiles: ["services", "infra"]
+    profiles: ["services", "infra", "observability"]
     image: redis:7.4-alpine
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     ports:
@@ -30,6 +30,8 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_DLQ_TOPIC_SUFFIX: .DLQ
+      KAFKA_TRANSACTION_MAX_TIMEOUT_MS: 900000
     ports:
       - "9092:9092"
     networks:
@@ -497,8 +499,92 @@ services:
     networks:
       - fintech-network
 
+  prometheus:
+    profiles: ["observability"]
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - fintech-network
+
+  grafana:
+    profiles: ["observability"]
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    ports:
+      - "3002:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - fintech-network
+
+  jaeger:
+    profiles: ["observability"]
+    image: jaegertracing/all-in-one:1.62
+    container_name: jaeger
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+      - "14268:14268"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: badger
+    networks:
+      - fintech-network
+
+  loki:
+    profiles: ["observability"]
+    image: grafana/loki:3.2.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - fintech-network
+
+  promtail:
+    profiles: ["observability"]
+    image: grafana/promtail:3.2.0
+    container_name: promtail
+    volumes:
+      - ./docker/promtail/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - fintech-network
+
+  kowl:
+    profiles: ["observability"]
+    image: quay.io/cloudhut/kowl:master
+    container_name: kowl
+    ports:
+      - "8087:8080"
+    environment:
+      KAFKA_BROKERS: kafka:29092
+    networks:
+      - fintech-network
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 networks:
   fintech-network:

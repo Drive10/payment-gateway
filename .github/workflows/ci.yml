@@ -1,9 +1,14 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
     branches: ["main", "master"]
   pull_request:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/payment-gateway
 
 jobs:
   backend:
@@ -23,8 +28,7 @@ jobs:
         run: mvn -q verify
 
       - name: Validate compose configurations
-        run: |
-          docker compose --profile services config > /dev/null
+        run: docker compose --profile services config > /dev/null
 
       - name: Package application images
         run: |
@@ -106,8 +110,7 @@ jobs:
           cache: maven
 
       - name: Dependency Check
-        run: |
-          mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
+        run: mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
 
       - name: Upload dependency check report
         uses: actions/upload-artifact@v4
@@ -138,8 +141,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Check for malicious dependencies
-        run: |
-          npx audit-ci --critical
+        run: npx audit-ci --critical
 
   docker-security:
     runs-on: ubuntu-latest
@@ -148,11 +150,113 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Docker Compose security check
-        run: |
-          docker compose config --quiet
+        run: docker compose config --quiet
           
       - name: Build and scan payment-service
         run: |
           docker build -f Dockerfile -t fintech/payment-service:scan .
           docker scan fintech/payment-service:scan --exit-code --severity=high || true
         continue-on-error: true
+
+  deploy-staging:
+    needs: [backend, security-scan, docker-security]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Images
+        run: |
+          docker build -f Dockerfile -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api-gateway:staging .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api-gateway:staging
+
+      - name: Deploy to Staging
+        run: |
+          kubectl set image deployment/api-gateway api-gateway=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api-gateway:staging
+          kubectl rollout status deployment/api-gateway --timeout=300s
+
+  canary-deploy:
+    needs: [deploy-staging]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
+          echo "KUBECONFIG=$(pwd)/kubeconfig" >> $GITHUB_ENV
+
+      - name: Deploy Canary (10% traffic)
+        run: |
+          kubectl set image deployment/api-gateway api-gateway=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api-gateway:staging
+          kubectl patch deployment api-gateway -p '{"spec":{"strategy":{"type":"RollingUpdate","rollingUpdate":{"maxSurge":"25%","maxUnavailable":"10%"}}}}'
+          kubectl rollout status deployment/api-gateway --timeout=300s
+
+      - name: Wait for smoke tests
+        run: |
+          sleep 60
+          curl -f https://api.staging.example.com/health || exit 1
+
+      - name: Full Production Deploy
+        if: success()
+        run: |
+          kubectl set image deployment/api-gateway api-gateway=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api-gateway:staging
+          kubectl rollout status deployment/api-gateway --timeout=600s
+
+  rollback:
+    needs: [canary-deploy]
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
+          echo "KUBECONFIG=$(pwd)/kubeconfig" >> $GITHUB_ENV
+
+      - name: Rollback to previous version
+        run: |
+          kubectl rollout undo deployment/api-gateway
+          kubectl rollout status deployment/api-gateway --timeout=300s
+
+      - name: Notify failure
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Production deployment FAILED and rolled back automatically",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Payment Gateway Deployment Failed*\nBranch: ${{ github.ref_name }}\nCommit: ${{ github.sha }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

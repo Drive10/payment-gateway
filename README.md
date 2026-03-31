@@ -211,12 +211,19 @@ A production-grade fintech payment platform built with Java 21, Spring Boot 3.3,
 | Service | Port | Description |
 |---------|------|-------------|
 | **API Gateway** | 8080 | Edge routing, JWT validation, rate limiting, correlation ID management |
+| **Config Service** | 8888 | Spring Cloud Config Server for centralized configuration |
 | **Auth Service** | 8081 | User registration, login, JWT issuance, token refresh |
 | **Order Service** | 8082 | Order creation, management, integration with payment service |
 | **Payment Service** | 8083 | Payment processing, idempotency, refunds, ledger entries |
 | **Notification Service** | 8084 | Email/SMS notifications, event-driven notification handling |
 | **Webhook Service** | 8085 | Webhook receiver, HMAC validation, event deduplication |
 | **Simulator Service** | 8086 | Payment provider simulator for testing |
+| **Settlement Service** | 8087 | Daily settlement batch processing, merchant payouts |
+| **Risk Service** | 8088 | Real-time fraud detection, risk scoring |
+| **Analytics Service** | 8089 | Analytics, reporting, business metrics |
+| **Merchant Service** | 8090 | Merchant onboarding, KYC, bank accounts |
+| **Dispute Service** | 8091 | Chargeback management, dispute resolution |
+| **Feature Flags Service** | 8092 | Feature toggles, gradual rollouts |
 
 ---
 
