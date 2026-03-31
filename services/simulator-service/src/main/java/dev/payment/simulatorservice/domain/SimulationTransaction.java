@@ -60,6 +60,9 @@ public class SimulationTransaction extends BaseEntity {
     @Column(length = 255)
     private String notes;
 
+    @Column(name = "webhook_callback_url", length = 512)
+    private String webhookCallbackUrl;
+
     public UUID getId() {
         return id;
     }
@@ -158,5 +161,13 @@ public class SimulationTransaction extends BaseEntity {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getWebhookCallbackUrl() {
+        return webhookCallbackUrl;
+    }
+
+    public void setWebhookCallbackUrl(String webhookCallbackUrl) {
+        this.webhookCallbackUrl = webhookCallbackUrl;
     }
 }

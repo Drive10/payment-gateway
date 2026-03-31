@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Search, Download, FileText, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, FileText, ChevronLeft, ChevronRight, RefreshCw, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { userService, type UserPayment } from '@/services/user.service'
+import { useToast } from '@/hooks/useToast'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 const ITEMS_PER_PAGE = 10
@@ -18,6 +19,8 @@ export function UserPayments() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [retryingId, setRetryingId] = useState<string | null>(null)
+  const { addToast } = useToast()
 
   useEffect(() => {
     loadPayments()
@@ -29,8 +32,23 @@ export function UserPayments() {
       setPayments(data)
     } catch (error) {
       console.error('Failed to load payments:', error)
+      addToast('error', 'Failed to load payments', 'Please try again later')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRetryPayment = async (payment: UserPayment) => {
+    setRetryingId(payment.id)
+    try {
+      const result = await userService.retryPayment(payment.id)
+      addToast('success', 'Payment retry successful', `Payment ${result.status} for ${formatCurrency(result.amount)}`)
+      await loadPayments()
+    } catch (error) {
+      console.error('Failed to retry payment:', error)
+      addToast('error', 'Payment retry failed', 'Please try again or contact support')
+    } finally {
+      setRetryingId(null)
     }
   }
 
@@ -145,7 +163,7 @@ Method: ${payment.method}
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Invoice</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -165,9 +183,26 @@ Method: ${payment.method}
                       <TableCell>{getStatusBadge(payment.status)}</TableCell>
                       <TableCell>{formatDate(payment.date)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleDownloadInvoice(payment)}>
-                          <FileText className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          {payment.status === 'FAILED' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRetryPayment(payment)}
+                              disabled={retryingId === payment.id}
+                            >
+                              {retryingId === payment.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                              <span className="ml-1">Retry</span>
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => handleDownloadInvoice(payment)}>
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

@@ -11,8 +11,12 @@
 
     <modules>
         <module>libs/common</module>
-        <module>services/payment-service</module>
         <module>services/api-gateway</module>
+        <module>services/auth-service</module>
+        <module>services/order-service</module>
+        <module>services/payment-service</module>
+        <module>services/notification-service</module>
+        <module>services/webhook-service</module>
         <module>services/simulator-service</module>
     </modules>
 

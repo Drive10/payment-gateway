@@ -7,8 +7,10 @@ import { AdminDashboard } from './pages/admin/Dashboard'
 import { AdminTransactions } from './pages/admin/Transactions'
 import { AdminTransactionDetail } from './pages/admin/TransactionDetail'
 import { AdminAnalytics } from './pages/admin/Analytics'
+import { AdminOrders } from './pages/admin/Orders'
 import { UserDashboard } from './pages/user/Dashboard'
 import { UserPayments } from './pages/user/Payments'
+import { UserOrders } from './pages/user/Orders'
 import { LoginPage } from './pages/LoginPage'
 import { Skeleton } from './components/ui/skeleton'
 
@@ -34,6 +36,7 @@ function App() {
             <Route path="/admin/transactions" element={<AdminTransactions />} />
             <Route path="/admin/transactions/:id" element={<AdminTransactionDetail />} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
+            <Route path="/admin/orders" element={<AdminOrders />} />
           </Route>
         </Route>
 
@@ -41,6 +44,7 @@ function App() {
           <Route element={<UserLayout />}>
             <Route path="/user" element={<UserDashboard />} />
             <Route path="/user/payments" element={<UserPayments />} />
+            <Route path="/user/orders" element={<UserOrders />} />
           </Route>
         </Route>
 

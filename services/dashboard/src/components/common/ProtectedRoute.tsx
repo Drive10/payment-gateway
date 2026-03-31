@@ -1,12 +1,11 @@
-import { Navigate, useLocation } from 'react-router-dom'
+import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { useAuth, type UserRole } from '@/store/auth-context'
 
 interface ProtectedRouteProps {
-  children: React.ReactNode
   allowedRoles?: UserRole[]
 }
 
-export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   const { user, loading } = useAuth()
   const location = useLocation()
 
@@ -26,5 +25,5 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/user'} replace />
   }
 
-  return <>{children}</>
+  return <Outlet />
 }

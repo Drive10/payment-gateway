@@ -9,7 +9,13 @@ spring:
 
 application:
   simulator:
-    base-url: ${SIMULATOR_BASE_URL:http://simulator-service:8085}
+    base-url: ${SIMULATOR_BASE_URL:http://simulator-service:8086}
+  webhook:
+    service-url: ${WEBHOOK_SERVICE_URL:http://webhook-service:8085}
+  order:
+    service-url: ${ORDER_SERVICE_URL:http://order-service:8082}
+  auth:
+    service-url: ${AUTH_SERVICE_URL:http://auth-service:8081}
 
   gateway-trust:
     enabled: true

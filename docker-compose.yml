@@ -1,15 +1,20 @@
 services:
   redis:
-    profiles: [ "services", "infra" ]
+    profiles: ["services", "infra"]
     image: redis:7.4-alpine
-    command: [ "redis-server", "--save", "", "--appendonly", "no" ]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
     ports:
       - "6379:6379"
     networks:
       - fintech-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   kafka:
-    profiles: [ "services", "infra" ]
+    profiles: ["services", "infra"]
     image: apache/kafka:3.8.0
     environment:
       KAFKA_NODE_ID: 1
@@ -29,55 +34,97 @@ services:
       - "9092:9092"
     networks:
       - fintech-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
 
   postgres:
-    profiles: [ "services", "infra" ]
+    profiles: ["services", "infra"]
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: payment
       POSTGRES_PASSWORD: paymentpass
+      POSTGRES_MULTIPLE_DATABASES: authdb,orderdb,paymentdb,notificationdb,webhookdb,simulatordb
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5433:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U payment" ]
+      test: ["CMD-SHELL", "pg_isready -U payment"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
       - fintech-network
 
-
-  api-gateway:
-    profiles: [ "services" ]
+  auth-service:
+    profiles: ["services"]
     build:
       context: .
       dockerfile: Dockerfile.build
       args:
-        SERVICE_PATH: services/api-gateway
+        SERVICE_PATH: services/auth-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8080
-      JWT_SECRET_B64: ${JWT_SECRET_B64:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNo}
+      SERVER_PORT: 8081
+      JWT_SECRET_B64: ${JWT_SECRET_B64:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk}
       GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-dev-gateway-internal-secret}
-
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: authdb
+      DB_USERNAME: auth
+      DB_PASSWORD: authpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       REDIS_HOST: redis
       REDIS_PORT: 6379
-
-      AUTH_SERVICE_URL: http://payment-service:8084
-      LEDGER_SERVICE_URL: http://payment-service:8084
-      PAYMENT_SERVICE_URL: http://payment-service:8084
-
     ports:
-      - "8080:8080"
-    volumes:
-      - ./config:/config:ro
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_started
     healthcheck:
-      test: [ "CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1" ]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    networks:
+      - fintech-network
+
+  order-service:
+    profiles: ["services"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/order-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8082
+      JWT_SECRET_B64: ${JWT_SECRET_B64:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk}
+      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-dev-gateway-internal-secret}
+      POSTGRES_HOST: postgres
+      ORDER_DB: orderdb
+      ORDER_DB_USER: order
+      ORDER_DB_PASSWORD: orderpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      PAYMENT_SERVICE_URL: http://payment-service:8083
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8082/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -86,7 +133,7 @@ services:
       - fintech-network
 
   payment-service:
-    profiles: [ "services" ]
+    profiles: ["services"]
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -94,14 +141,56 @@ services:
         SERVICE_PATH: services/payment-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8084
-      JWT_SECRET_B64: ${JWT_SECRET_B64:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNo}
+      SERVER_PORT: 8083
+      JWT_SECRET_B64: ${JWT_SECRET_B64:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk}
       GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-dev-gateway-internal-secret}
-      DB_URL: jdbc:postgresql://postgres:5432/paymentdb
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: paymentdb
       DB_USERNAME: payment
       DB_PASSWORD: paymentpass
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SIMULATOR_BASE_URL: http://simulator-service:8085
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SIMULATOR_SERVICE_URL: http://simulator-service:8086
+      ORDER_SERVICE_URL: http://order-service:8082
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8083/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    networks:
+      - fintech-network
+
+  notification-service:
+    profiles: ["services"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/notification-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8084
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: notificationdb
+      DB_USERNAME: notification
+      DB_PASSWORD: notificationpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "8084:8084"
     depends_on:
@@ -112,7 +201,40 @@ services:
       redis:
         condition: service_started
     healthcheck:
-      test: [ "CMD-SHELL", "wget -q -O /dev/null http://localhost:8084/actuator/health || exit 1" ]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8084/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    networks:
+      - fintech-network
+
+  webhook-service:
+    profiles: ["services"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/webhook-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8085
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: webhookdb
+      DB_USERNAME: webhook
+      DB_PASSWORD: webhookpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      PAYMENT_SERVICE_URL: http://payment-service:8083
+    ports:
+      - "8085:8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8085/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -121,7 +243,7 @@ services:
       - fintech-network
 
   simulator-service:
-    profiles: [ "services" ]
+    profiles: ["services"]
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -129,30 +251,87 @@ services:
         SERVICE_PATH: services/simulator-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8085
-      DB_URL: jdbc:postgresql://postgres:5432/paymentdb
-      DB_USERNAME: payment
-      DB_PASSWORD: paymentpass
+      SERVER_PORT: 8086
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: simulatordb
+      DB_USERNAME: simulator
+      DB_PASSWORD: simulatorpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
-      - "8085:8085"
+      - "8086:8086"
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
     healthcheck:
-      test: [ "CMD-SHELL", "wget -q -O /dev/null http://localhost:8085/actuator/health || exit 1" ]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8086/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
-      start_period: 20s
+      start_period: 40s
+    networks:
+      - fintech-network
+
+  api-gateway:
+    profiles: ["services"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/api-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8080
+      JWT_SECRET_B64: ${JWT_SECRET_B64:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNo}
+      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-dev-gateway-internal-secret}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      AUTH_SERVICE_URL: http://auth-service:8081
+      ORDER_SERVICE_URL: http://order-service:8082
+      PAYMENT_SERVICE_URL: http://payment-service:8083
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/config:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
     networks:
       - fintech-network
 
   frontend:
-    profiles: [ "services" ]
+    profiles: ["services"]
     build:
       context: ./services/frontend
     ports:
       - "3000:80"
+    networks:
+      - fintech-network
+
+  dashboard:
+    profiles: ["services"]
+    build:
+      context: ./services/dashboard
+    ports:
+      - "3001:3001"
+    environment:
+      VITE_API_URL: http://localhost:8080
     networks:
       - fintech-network
 

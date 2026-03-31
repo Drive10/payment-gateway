@@ -6,6 +6,7 @@ import dev.payment.paymentservice.domain.enums.OrderStatus;
 import dev.payment.paymentservice.dto.request.CreateOrderRequest;
 import dev.payment.paymentservice.dto.response.OrderResponse;
 import dev.payment.paymentservice.exception.ApiException;
+import dev.payment.paymentservice.integration.client.OrderServiceClient;
 import dev.payment.paymentservice.repository.OrderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,10 +26,16 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final AuditService auditService;
+    private final OrderServiceClient orderServiceClient;
 
-    public OrderService(OrderRepository orderRepository, AuditService auditService) {
+    public OrderService(
+            OrderRepository orderRepository,
+            AuditService auditService,
+            OrderServiceClient orderServiceClient
+    ) {
         this.orderRepository = orderRepository;
         this.auditService = auditService;
+        this.orderServiceClient = orderServiceClient;
     }
 
     @Transactional
@@ -68,24 +75,42 @@ public class OrderService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Order not found"));
     }
 
+    @Transactional
     public void markPaymentPending(Order order) {
         order.setStatus(OrderStatus.PAYMENT_PENDING);
         orderRepository.save(order);
+        notifyOrderStatusChange(order, "PAYMENT_PENDING");
     }
 
+    @Transactional
     public void markPaid(Order order) {
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
+        notifyOrderStatusChange(order, "PAID");
     }
 
+    @Transactional
     public void markFailed(Order order) {
         order.setStatus(OrderStatus.FAILED);
         orderRepository.save(order);
+        notifyOrderStatusChange(order, "FAILED");
     }
 
+    @Transactional
     public void markRefunded(Order order) {
         order.setStatus(OrderStatus.REFUNDED);
         orderRepository.save(order);
+        notifyOrderStatusChange(order, "REFUNDED");
+    }
+
+    private void notifyOrderStatusChange(Order order, String status) {
+        try {
+            orderServiceClient.updateOrderStatus(order.getOrderReference(), status);
+            log.info("event=order_status_notified orderId={} status={}", order.getId(), status);
+        } catch (Exception e) {
+            log.warn("event=order_status_notify_failed orderId={} status={} error={}",
+                    order.getId(), status, e.getMessage());
+        }
     }
 
     private String generateOrderReference() {

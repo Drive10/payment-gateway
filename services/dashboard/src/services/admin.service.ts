@@ -1,96 +1,128 @@
+import { api } from './api/client'
 import { mockData } from './mock-data'
+import type {
+  Transaction,
+  TransactionDetail,
+  DashboardStats,
+  AnalyticsData,
+  OrderAnalytics,
+  Order,
+} from './api/types'
 
-export interface Transaction {
-  id: string
-  orderReference: string
-  userEmail: string
-  amount: number
-  currency: string
-  status: string
-  provider: string
-  method: string
-  createdAt: string
+export type {
+  Transaction,
+  TransactionDetail,
+  DashboardStats,
+  AnalyticsData,
+  OrderAnalytics,
+  Order,
 }
 
-export interface TransactionDetail extends Transaction {
-  userName: string
-  providerOrderId: string
-  providerPaymentId: string | null
-  checkoutUrl: string
-  transactions: {
-    id: string
-    type: string
-    status: string
-    amount: number
-    remarks: string
-    createdAt: string
-  }[]
-  errorLogs?: { message: string; timestamp: string }[]
-}
-
-export interface DashboardStats {
-  totalRevenue: string
-  revenueChange: number
-  totalTransactions: number
-  transactionChange: number
-  successRate: number
-  successRateChange: number
-  failedTransactions: number
-  failedChange: number
-}
-
-export interface AnalyticsData {
-  totalVolume: number
-  averageTransaction: number
-  successRate: number
-  peakHour: number
-  successCount: number
-  failedCount: number
-  pendingCount: number
-  refundedCount: number
-  revenueTrends: { date: string; revenue: number }[]
-  transactionTrends: { date: string; count: number }[]
-  providerStats: { name: string; successRate: number }[]
-}
+const USE_MOCK = false
 
 class AdminService {
   async getDashboardStats(): Promise<DashboardStats> {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return mockData.dashboardStats
+    if (USE_MOCK) {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      return mockData.dashboardStats
+    }
+
+    const response = await api.get<{ data: DashboardStats }>('/admin/dashboard/stats')
+    return response.data
   }
 
   async getRecentTransactions(limit: number): Promise<Transaction[]> {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return mockData.transactions.slice(0, limit)
+    if (USE_MOCK) {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      return mockData.transactions.slice(0, limit)
+    }
+
+    const response = await api.get<{ data: Transaction[] }>(`/transactions?limit=${limit}`)
+    return response.data
   }
 
   async getTransactions(): Promise<Transaction[]> {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return mockData.transactions
+    if (USE_MOCK) {
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      return mockData.transactions
+    }
+
+    const response = await api.get<{ data: Transaction[] }>('/payments')
+    return response.data
   }
 
   async getTransactionDetail(id: string): Promise<TransactionDetail> {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    const transaction = mockData.transactions.find((t) => t.id === id)
-    if (!transaction) {
-      throw new Error('Transaction not found')
+    if (USE_MOCK) {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      const transaction = mockData.transactions.find((t) => t.id === id)
+      if (!transaction) {
+        throw new Error('Transaction not found')
+      }
+      return {
+        ...transaction,
+        userName: 'Test User',
+        providerOrderId: `prov_order_${id.slice(0, 8)}`,
+        providerPaymentId: transaction.status === 'CAPTURED' ? `prov_pay_${id.slice(0, 8)}` : null,
+        checkoutUrl: `https://checkout.payflow.com/pay/${id}`,
+        transactions: mockData.transactionHistory,
+        errorLogs: transaction.status === 'FAILED' ? [
+          { message: 'Payment declined by bank', timestamp: transaction.createdAt }
+        ] : undefined
+      }
     }
-    return {
-      ...transaction,
-      userName: 'Test User',
-      providerOrderId: `prov_order_${id.slice(0, 8)}`,
-      providerPaymentId: transaction.status === 'CAPTURED' ? `prov_pay_${id.slice(0, 8)}` : null,
-      checkoutUrl: `https://checkout.payflow.com/pay/${id}`,
-      transactions: mockData.transactionHistory,
-      errorLogs: transaction.status === 'FAILED' ? [
-        { message: 'Payment declined by bank', timestamp: transaction.createdAt }
-      ] : undefined
-    }
+
+    const response = await api.get<{ data: TransactionDetail }>(`/payments/${id}`)
+    return response.data
   }
 
   async getAnalytics(): Promise<AnalyticsData> {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return mockData.analytics
+    if (USE_MOCK) {
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      return mockData.analytics
+    }
+
+    const response = await api.get<{ data: AnalyticsData }>('/analytics')
+    return response.data
+  }
+
+  async getOrders(): Promise<Order[]> {
+    if (USE_MOCK) {
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      return mockData.transactions.map((t) => ({
+        id: t.id,
+        orderReference: t.orderReference,
+        userId: 'user-1',
+        userEmail: t.userEmail,
+        amount: t.amount,
+        currency: t.currency,
+        status: t.status === 'CAPTURED' ? 'PAID' : t.status === 'FAILED' ? 'FAILED' : 'PENDING',
+        description: `Order ${t.orderReference}`,
+        createdAt: t.createdAt,
+        updatedAt: t.createdAt,
+      }))
+    }
+
+    const response = await api.get<{ data: Order[] }>('/orders')
+    return response.data
+  }
+
+  async getOrderAnalytics(): Promise<OrderAnalytics> {
+    if (USE_MOCK) {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      return {
+        totalOrders: mockData.transactions.length,
+        pendingOrders: 12,
+        completedOrders: mockData.transactions.filter(t => t.status === 'CAPTURED').length,
+        failedOrders: mockData.transactions.filter(t => t.status === 'FAILED').length,
+        orderTrends: Array.from({ length: 30 }, (_, i) => ({
+          date: new Date(Date.now() - (29 - i) * 86400000).toISOString().split('T')[0],
+          count: Math.floor(Math.random() * 20) + 5,
+        })),
+      }
+    }
+
+    const response = await api.get<{ data: OrderAnalytics }>('/orders/analytics')
+    return response.data
   }
 }
 

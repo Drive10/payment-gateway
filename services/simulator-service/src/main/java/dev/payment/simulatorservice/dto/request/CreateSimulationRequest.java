@@ -14,6 +14,7 @@ public record CreateSimulationRequest(
         @NotNull BigDecimal amount,
         @NotBlank @Size(min = 3, max = 3) String currency,
         @NotNull SimulationMode simulationMode,
-        @Size(max = 255) String notes
+        @Size(max = 255) String notes,
+        @Size(max = 512) String webhookCallbackUrl
 ) {
 }

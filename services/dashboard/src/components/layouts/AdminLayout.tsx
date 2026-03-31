@@ -7,6 +7,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  ShoppingCart,
 } from 'lucide-react'
 import { useAuth } from '@/store/auth-context'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Transactions', href: '/admin/transactions', icon: Receipt },
+  { label: 'Orders', href: '/admin/orders', icon: ShoppingCart },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
 ]
 

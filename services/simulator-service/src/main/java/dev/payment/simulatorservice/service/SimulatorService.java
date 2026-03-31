@@ -18,9 +18,12 @@ import java.util.UUID;
 public class SimulatorService {
 
     private final SimulationTransactionRepository simulationTransactionRepository;
+    private final WebhookService webhookService;
 
-    public SimulatorService(SimulationTransactionRepository simulationTransactionRepository) {
+    public SimulatorService(SimulationTransactionRepository simulationTransactionRepository,
+                           WebhookService webhookService) {
         this.simulationTransactionRepository = simulationTransactionRepository;
+        this.webhookService = webhookService;
     }
 
     public SimulationResponse createIntent(CreateSimulationRequest request) {
@@ -37,6 +40,7 @@ public class SimulatorService {
         transaction.setProviderOrderId(buildProviderOrderId(request.simulationMode()));
         transaction.setCheckoutUrl(buildCheckoutUrl(request.simulationMode(), transaction.getProviderOrderId()));
         transaction.setNotes(request.notes());
+        transaction.setWebhookCallbackUrl(request.webhookCallbackUrl());
 
         simulationTransactionRepository.save(transaction);
         return toResponse(transaction);
@@ -50,6 +54,17 @@ public class SimulatorService {
         transaction.setProviderSignature(buildSignature(request.simulationMode(), transaction.getProviderOrderId()));
         transaction.setStatus(SimulationStatus.CAPTURED);
         simulationTransactionRepository.save(transaction);
+
+        webhookService.sendCallback(
+                transaction.getId(),
+                transaction.getPaymentReference(),
+                transaction.getProviderOrderId(),
+                transaction.getProviderPaymentId(),
+                transaction.getStatus().name(),
+                transaction.getAmount(),
+                transaction.getCurrency()
+        );
+
         return toResponse(transaction);
     }
 
@@ -109,7 +124,8 @@ public class SimulatorService {
                 transaction.getCheckoutUrl(),
                 transaction.getSimulationMode() == SimulationMode.TEST,
                 transaction.getNotes(),
-                transaction.getCreatedAt()
+                transaction.getCreatedAt(),
+                transaction.getWebhookCallbackUrl()
         );
     }
 }

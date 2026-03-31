@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Home, CreditCard, LogOut, Menu, X } from 'lucide-react'
+import { Home, CreditCard, LogOut, Menu, ShoppingCart } from 'lucide-react'
 import { useAuth } from '@/store/auth-context'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { label: 'Overview', href: '/user', icon: Home },
   { label: 'My Payments', href: '/user/payments', icon: CreditCard },
+  { label: 'My Orders', href: '/user/orders', icon: ShoppingCart },
 ]
 
 export function UserLayout() {

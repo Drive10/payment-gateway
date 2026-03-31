@@ -1,5 +1,5 @@
 server:
-  port: 8084
+  port: 8083
   shutdown: graceful
 
 spring:
@@ -19,7 +19,7 @@ spring:
         format_sql: false
 
   kafka:
-    bootstrap-servers: kafka:29092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -51,21 +51,30 @@ application:
     default-provider: RAZORPAY_SIMULATOR
     checkout-base-url: http://frontend
 
-  ledger:
-    accounts:
-      cash: CASH
-      customer-funds: CUSTOMER_FUNDS
-
   simulator:
-    base-url: ${SIMULATOR_BASE_URL:http://payment-service:8084}
+    base-url: ${SIMULATOR_BASE_URL:http://simulator-service:8086}
+
+  webhook:
+    service-url: ${WEBHOOK_SERVICE_URL:http://webhook-service:8085}
+
+  order:
+    service-url: ${ORDER_SERVICE_URL:http://order-service:8082}
+
+  auth:
+    service-url: ${AUTH_SERVICE_URL:http://auth-service:8081}
 
   kafka:
     topic:
       payment-events: payment.events
       payment-events-dlt: payment.events.dlt
+      payment-status-updated: payment.status.updated
+      webhook-updates: webhook.updates
     consumer:
       retry-attempts: 3
       retry-backoff-ms: 1000
+
+  outbox:
+    relay-delay-ms: 2000
 
   reconciliation:
     enabled: false
@@ -86,3 +95,16 @@ resilience4j:
       simulator:
         max-attempts: 3
         wait-duration: 300ms
+      orderService:
+        max-attempts: 3
+        wait-duration: 300ms
+  circuitbreaker:
+    instances:
+      simulator:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+      orderService:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s

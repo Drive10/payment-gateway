@@ -19,6 +19,7 @@ public record SimulationResponse(
         String checkoutUrl,
         boolean simulated,
         String notes,
-        Instant createdAt
+        Instant createdAt,
+        String webhookCallbackUrl
 ) {
 }

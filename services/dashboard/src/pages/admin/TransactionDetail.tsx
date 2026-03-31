@@ -142,7 +142,7 @@ export function AdminTransactionDetail() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Updated</p>
-                <p className="font-medium">{formatDateTime(transaction.updatedAt)}</p>
+                <p className="font-medium">{formatDateTime(transaction.updatedAt || transaction.createdAt)}</p>
               </div>
             </div>
           </CardContent>
@@ -193,7 +193,7 @@ export function AdminTransactionDetail() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6"
-                      onClick={() => copyToClipboard(transaction.providerPaymentId, 'Provider Payment ID')}
+                      onClick={() => copyToClipboard(transaction.providerPaymentId || '', 'Provider Payment ID')}
                     >
                       <Copy className="h-3 w-3" />
                     </Button>

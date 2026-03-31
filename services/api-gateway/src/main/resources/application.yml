@@ -16,68 +16,61 @@ spring:
         - PreserveHostHeader
 
       routes:
-        - id: payment-auth
-          uri: http://payment-service:8084
+        - id: auth-service
+          uri: http://auth-service:8081
           predicates:
             - Path=/api/v1/auth/**
 
-        - id: payment-orders
-          uri: http://payment-service:8084
+        - id: order-service
+          uri: http://order-service:8082
           predicates:
             - Path=/api/v1/orders/**
 
-        - id: payment-transactions
-          uri: http://payment-service:8084
+        - id: payment-service
+          uri: http://payment-service:8083
           predicates:
             - Path=/api/v1/payments/**,/api/v1/admin/**
 
-        - id: payment-webhooks
-          uri: http://payment-service:8084
+        - id: webhook-service
+          uri: http://webhook-service:8085
           predicates:
             - Path=/api/v1/webhooks/**
 
-        - id: payment-docs
-          uri: http://payment-service:8084
+        - id: swagger-docs
+          uri: http://payment-service:8083
           predicates:
             - Path=/swagger-ui.html,/swagger-ui/**,/v3/api-docs/**
 
-        - id: auth-service
-          uri: http://payment-service:8084
+        - id: internal-auth
+          uri: http://auth-service:8081
           predicates:
             - Path=/platform/auth/**
           filters:
             - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
 
-        - id: ledger-service
-          uri: http://payment-service:8084
+        - id: internal-order
+          uri: http://order-service:8082
           predicates:
-            - Path=/platform/ledger/**
+            - Path=/platform/order/**
           filters:
-            - RewritePath=/platform/ledger/(?<segment>.*), /internal/platform/${segment}
+            - RewritePath=/platform/order/(?<segment>.*), /internal/platform/${segment}
 
-        - id: notification-service
-          uri: http://payment-service:8084
+        - id: internal-notification
+          uri: http://notification-service:8084
           predicates:
             - Path=/platform/notification/**
           filters:
             - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
 
-        - id: risk-service
-          uri: http://payment-service:8084
+        - id: internal-webhook
+          uri: http://webhook-service:8085
           predicates:
-            - Path=/platform/risk/**
+            - Path=/platform/webhook/**
           filters:
-            - RewritePath=/platform/risk/(?<segment>.*), /internal/platform/${segment}
+            - RewritePath=/platform/webhook/(?<segment>.*), /internal/platform/${segment}
 
-        - id: settlement-service
-          uri: http://payment-service:8084
-          predicates:
-            - Path=/platform/settlement/**
-          filters:
-            - RewritePath=/platform/settlement/(?<segment>.*), /internal/platform/${segment}
-
-        - id: simulator-service
-          uri: http://payment-service:8084
+        - id: internal-simulator
+          uri: http://simulator-service:8086
           predicates:
             - Path=/platform/simulator/**
           filters:
@@ -96,6 +89,14 @@ logging:
 application:
   gateway:
     internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-gateway-internal-secret}
+
+  services:
+    auth: http://auth-service:8081
+    order: http://order-service:8082
+    payment: http://payment-service:8083
+    notification: http://notification-service:8084
+    webhook: http://webhook-service:8085
+    simulator: http://simulator-service:8086
 
 security:
   jwt:

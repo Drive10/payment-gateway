@@ -10,81 +10,106 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+import reactor.util.retry.RetryBackoffSpec;
+
+import java.math.BigDecimal;
+import java.time.Duration;
 
 @Component
 @Profile("!test")
 public class SimulatorServiceClient implements PaymentProcessorClient {
 
-    private final RestClient restClient;
+    private final WebClient webClient;
 
     public SimulatorServiceClient(@Value("${application.simulator.base-url}") String baseUrl) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(3000);
-        requestFactory.setReadTimeout(5000);
-
-        this.restClient = RestClient.builder()
+        this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
-                .requestFactory(requestFactory)
                 .build();
     }
 
     @Override
     @Retry(name = "simulator")
-    @CircuitBreaker(name = "simulator")
+    @CircuitBreaker(name = "simulator", fallbackMethod = "createIntentFallback")
     public PaymentProcessorIntentResponse createIntent(Payment payment, String orderReference, TransactionMode mode) {
-        try {
-            SimulatorResponse response = restClient.post()
-                    .uri("/internal/simulator/payments/intents")
-                    .body(new SimulatorIntentRequest(
-                            orderReference,
-                            payment.getIdempotencyKey(),
-                            payment.getProvider(),
-                            payment.getAmount(),
-                            payment.getCurrency(),
-                            mode.name(),
-                            payment.getNotes()
-                    ))
-                    .retrieve()
-                    .body(SimulatorEnvelope.class)
-                    .data();
+        SimulatorIntentRequest request = new SimulatorIntentRequest(
+                orderReference,
+                payment.getIdempotencyKey(),
+                payment.getProvider(),
+                payment.getAmount(),
+                payment.getCurrency(),
+                mode.name(),
+                payment.getNotes()
+        );
 
-            return new PaymentProcessorIntentResponse(response.providerOrderId(), response.checkoutUrl(), response.simulated());
-        } catch (RestClientException exception) {
-            throw new ApiException(HttpStatus.BAD_GATEWAY, "SIMULATOR_UNAVAILABLE", "Unable to create simulator payment intent");
-        }
+        return webClient.post()
+                .uri("/internal/simulator/payments/intents")
+                .bodyValue(request)
+                .retrieve()
+                .onStatus(status -> status.value() >= 400,
+                        response -> response.bodyToMono(String.class)
+                                .flatMap(body -> Mono.error(new ApiException(
+                                        HttpStatus.BAD_GATEWAY,
+                                        "SIMULATOR_ERROR",
+                                        "Simulator error: " + body))))
+                .bodyToMono(SimulatorEnvelope.class)
+                .map(envelope -> new PaymentProcessorIntentResponse(
+                        envelope.data().providerOrderId(),
+                        envelope.data().checkoutUrl(),
+                        envelope.data().simulated()))
+                .timeout(Duration.ofSeconds(5))
+                .block();
+    }
+
+    @SuppressWarnings("unused")
+    private PaymentProcessorIntentResponse createIntentFallback(Payment payment, String orderReference,
+            TransactionMode mode, Throwable throwable) {
+        throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SIMULATOR_UNAVAILABLE",
+                "Simulator service is currently unavailable");
     }
 
     @Override
     @Retry(name = "simulator")
-    @CircuitBreaker(name = "simulator")
+    @CircuitBreaker(name = "simulator", fallbackMethod = "captureFallback")
     public PaymentProcessorCaptureResponse capture(Payment payment, CapturePaymentRequest request, TransactionMode mode) {
-        try {
-            SimulatorResponse response = restClient.post()
-                    .uri("/internal/simulator/payments/{providerOrderId}/capture", payment.getProviderOrderId())
-                    .body(new SimulatorCaptureRequest(payment.getIdempotencyKey(), mode.name()))
-                    .retrieve()
-                    .body(SimulatorEnvelope.class)
-                    .data();
+        SimulatorCaptureRequest captureRequest = new SimulatorCaptureRequest(
+                payment.getIdempotencyKey(),
+                mode.name()
+        );
 
-            return new PaymentProcessorCaptureResponse(
-                    response.providerPaymentId(),
-                    response.providerSignature(),
-                    response.providerPaymentId(),
-                    response.simulated()
-            );
-        } catch (RestClientException exception) {
-            throw new ApiException(HttpStatus.BAD_GATEWAY, "SIMULATOR_UNAVAILABLE", "Unable to capture simulator payment");
-        }
+        return webClient.post()
+                .uri("/internal/simulator/payments/{providerOrderId}/capture", payment.getProviderOrderId())
+                .bodyValue(captureRequest)
+                .retrieve()
+                .onStatus(status -> status.value() >= 400,
+                        response -> response.bodyToMono(String.class)
+                                .flatMap(body -> Mono.error(new ApiException(
+                                        HttpStatus.BAD_GATEWAY,
+                                        "SIMULATOR_ERROR",
+                                        "Simulator capture error: " + body))))
+                .bodyToMono(SimulatorEnvelope.class)
+                .map(envelope -> new PaymentProcessorCaptureResponse(
+                        envelope.data().providerPaymentId(),
+                        envelope.data().providerSignature(),
+                        envelope.data().providerPaymentId(),
+                        envelope.data().simulated()))
+                .timeout(Duration.ofSeconds(5))
+                .block();
+    }
+
+    @SuppressWarnings("unused")
+    private PaymentProcessorCaptureResponse captureFallback(Payment payment, CapturePaymentRequest request,
+            TransactionMode mode, Throwable throwable) {
+        throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SIMULATOR_UNAVAILABLE",
+                "Simulator service is currently unavailable for capture");
     }
 
     private record SimulatorIntentRequest(
             String orderReference,
             String paymentReference,
             String provider,
-            java.math.BigDecimal amount,
+            BigDecimal amount,
             String currency,
             String simulationMode,
             String notes
@@ -99,11 +124,11 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
 
     private record SimulatorEnvelope(
             boolean success,
-            SimulatorResponse data
+            SimulatorData data
     ) {
     }
 
-    private record SimulatorResponse(
+    private record SimulatorData(
             String providerOrderId,
             String providerPaymentId,
             String providerSignature,

@@ -1,5 +1,10 @@
 server:
-  port: 8085
+  port: 8086
+
+webhook:
+  service-url: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
+  simulator-success-rate: ${SIMULATOR_SUCCESS_RATE:90}
+  simulator-mode: ${SIMULATOR_MODE:random}
 
 spring:
   application:
