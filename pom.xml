@@ -13,6 +13,7 @@
         <module>libs/common</module>
         <module>services/payment-service</module>
         <module>services/api-gateway</module>
+        <module>services/simulator-service</module>
     </modules>
 
     <properties>

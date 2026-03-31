@@ -101,7 +101,7 @@ services:
       DB_USERNAME: payment
       DB_PASSWORD: paymentpass
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SIMULATOR_BASE_URL: http://payment-service:8084
+      SIMULATOR_BASE_URL: http://simulator-service:8085
     ports:
       - "8084:8084"
     depends_on:
@@ -117,6 +117,33 @@ services:
       timeout: 5s
       retries: 6
       start_period: 40s
+    networks:
+      - fintech-network
+
+  simulator-service:
+    profiles: [ "services" ]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/simulator-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8085
+      DB_URL: jdbc:postgresql://postgres:5432/paymentdb
+      DB_USERNAME: payment
+      DB_PASSWORD: paymentpass
+    ports:
+      - "8085:8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q -O /dev/null http://localhost:8085/actuator/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     networks:
       - fintech-network
 

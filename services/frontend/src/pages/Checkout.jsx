@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CardForm from "../components/CardForm";
 import UpiQR from "../components/UpiQR";
@@ -19,18 +19,31 @@ const initialForm = {
   cardholder: "",
 };
 
-const trustSignals = [
-  "Idempotent payment creation",
-  "Ledger-backed settlement trail",
-  "Request tracing across gateway and Kafka",
+const paymentMethods = [
+  {
+    id: "card",
+    name: "Credit/Debit Card",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+      </svg>
+    ),
+  },
+  {
+    id: "upi",
+    name: "UPI",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
 ];
 
 export default function Checkout() {
   const [method, setMethod] = useState("card");
   const [values, setValues] = useState(initialForm);
-  const [transactionMode, setTransactionMode] = useState(
-    TRANSACTION_MODES.PRODUCTION,
-  );
+  const [transactionMode, setTransactionMode] = useState(TRANSACTION_MODES.PRODUCTION);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -70,256 +83,219 @@ export default function Checkout() {
   const disabled =
     submitting ||
     (method === "card" &&
-      (!values.cardNumber ||
-        !values.expiry ||
-        !values.cvv ||
-        !values.cardholder.trim()));
+      (!values.cardNumber || !values.expiry || !values.cvv || !values.cardholder.trim()));
 
   return (
-    <main className="relative min-h-screen overflow-hidden px-4 py-10 sm:px-6 lg:px-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_28%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.12),transparent_20%),radial-gradient(circle_at_bottom,rgba(249,115,22,0.1),transparent_30%)]" />
-
-      <div className="relative mx-auto grid w-full max-w-7xl gap-8 xl:grid-cols-[1.1fr_0.9fr]">
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
-          className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 text-white shadow-[0_28px_120px_rgba(2,6,23,0.5)]"
+          className="mb-8 flex items-center justify-between"
         >
-          <div className="border-b border-white/10 px-6 py-5 sm:px-8">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.34em] text-cyan-300">
-                  Nova Commerce
-                </p>
-                <h1 className="mt-3 max-w-2xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                  Checkout designed like a real payment rail, not a form demo.
-                </h1>
-              </div>
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 px-5 py-4 text-right">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">
-                  Total due
-                </p>
-                <p className="mt-2 text-3xl font-semibold text-white">
-                  {formatCurrency(PAYMENT_AMOUNT)}
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-600 to-teal-600 shadow-lg shadow-cyan-500/20">
+              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">PayFlow</h1>
+              <p className="text-sm text-slate-500">Secure Payment Gateway</p>
             </div>
           </div>
+          <div className="flex items-center gap-2 rounded-full bg-green-50 px-4 py-2">
+            <span className="relative flex h-3 w-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500"></span>
+            </span>
+            <span className="text-sm font-medium text-green-700">Secure Connection</span>
+          </div>
+        </motion.div>
 
-          <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.15fr_0.85fr]">
-            <div>
-              <p className="max-w-xl text-base leading-7 text-slate-300">
-                A production-style checkout connected to your Spring Boot payment
-                platform with gateway auth, actor-scoped idempotency,
-                outbox-backed event publishing, and ledger verification.
-              </p>
-
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Merchant
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-white">
-                    Nova Commerce
-                  </p>
-                </div>
-                <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Use case
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-white">
-                    Checkout capture
-                  </p>
-                </div>
-                <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Network
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-white">
-                    India domestic
-                  </p>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:col-span-2"
+          >
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
+              <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">Order Summary</p>
+                    <h2 className="mt-1 text-2xl font-bold text-slate-900">Checkout</h2>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-slate-500">Total Amount</p>
+                    <p className="text-3xl font-bold text-slate-900">{formatCurrency(PAYMENT_AMOUNT)}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-8 rounded-[1.75rem] border border-cyan-400/15 bg-cyan-400/5 p-5">
-                <p className="text-xs uppercase tracking-[0.28em] text-cyan-300">
-                  Why this flow is safer
-                </p>
-                <div className="mt-4 grid gap-3">
-                  {trustSignals.map((signal, index) => (
-                    <div
-                      key={signal}
-                      className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/5 px-4 py-3"
-                    >
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-400/10 text-cyan-300">
-                        {`0${index + 1}`}
-                      </span>
-                      <p className="text-sm font-medium text-slate-100">
-                        {signal}
-                      </p>
+              <div className="space-y-6 p-6">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="rounded-xl bg-slate-50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Merchant</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">Nova Commerce</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Order ID</p>
+                    <p className="mt-1 font-mono text-sm text-slate-900">#{Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Date</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold text-slate-900">Payment Details</h3>
+                  <div className="mt-4 space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Subscription Renewal</span>
+                      <span className="font-medium text-slate-900">{formatCurrency(PAYMENT_AMOUNT)}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <aside className="space-y-4 rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
-              <p className="text-xs uppercase tracking-[0.28em] text-slate-400">
-                Payment summary
-              </p>
-              <div className="rounded-[1.5rem] border border-white/10 bg-slate-900/70 p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-slate-400">
-                    Subscription renewal
-                  </span>
-                  <span className="text-sm font-semibold text-white">
-                    {formatCurrency(PAYMENT_AMOUNT)}
-                  </span>
-                </div>
-                <div className="mt-4 border-t border-white/10 pt-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-slate-400">Taxes and fees</span>
-                    <span className="text-sm font-semibold text-white">
-                      Included
-                    </span>
+                    <div className="flex justify-between border-t border-slate-100 pt-3 text-sm">
+                      <span className="text-slate-600">Processing Fee</span>
+                      <span className="font-medium text-green-600">Free</span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-100 pt-3 text-sm">
+                      <span className="font-semibold text-slate-900">Total</span>
+                      <span className="font-bold text-slate-900">{formatCurrency(PAYMENT_AMOUNT)}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="mt-4 border-t border-white/10 pt-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-slate-400">Settlement rail</span>
-                    <span className="text-sm font-semibold text-white">
-                      {transactionMode === TRANSACTION_MODES.TEST
-                        ? "Sandbox processor"
-                        : "Primary processor"}
-                    </span>
+
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <svg className="mt-0.5 h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <p className="text-sm text-amber-800">
+                      {PAYMENT_NOTE}
+                    </p>
                   </div>
                 </div>
               </div>
+            </div>
+          </motion.div>
 
-              <div className="rounded-[1.5rem] border border-white/10 bg-slate-900/70 p-5">
-                <p className="text-sm font-semibold text-white">Operator note</p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  {PAYMENT_NOTE}
-                </p>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="sticky top-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
+              <div className="border-b border-slate-100 bg-gradient-to-r from-cyan-600 to-teal-600 p-6">
+                <h3 className="text-lg font-semibold text-white">Payment Method</h3>
+                <p className="mt-1 text-sm text-cyan-100">Select how you want to pay</p>
               </div>
-            </aside>
-          </div>
-        </motion.section>
 
-        <motion.section
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.08, ease: "easeOut" }}
-          className="rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_28px_90px_rgba(15,23,42,0.16)] backdrop-blur sm:p-8"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700">
-                Secure checkout
-              </p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-                Complete payment intent
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-slate-500">
-                Choose a payment rail, confirm the merchant details, and create
-                a tracked payment request.
-              </p>
-            </div>
-            <div className="rounded-[1.25rem] bg-slate-100 px-4 py-3 text-right">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
-                Payable
-              </p>
-              <p className="mt-1 text-2xl font-semibold text-slate-950">
-                {formatCurrency(PAYMENT_AMOUNT)}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-3 rounded-[1.5rem] bg-slate-100 p-2">
-            {["card", "upi"].map((option) => {
-              const active = method === option;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setMethod(option)}
-                  className={`rounded-[1.1rem] px-4 py-3 text-sm font-semibold transition ${
-                    active
-                      ? "bg-slate-950 text-white shadow-sm"
-                      : "text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  {option === "card" ? "Card" : "UPI"}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">
-              Processing lane
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-3 rounded-[1.5rem] bg-slate-100 p-2">
-              {[TRANSACTION_MODES.PRODUCTION, TRANSACTION_MODES.TEST].map(
-                (option) => {
-                  const active = transactionMode === option;
-                  return (
+              <div className="p-6">
+                <div className="mb-6 grid grid-cols-2 gap-3">
+                  {paymentMethods.map((pm) => (
                     <button
-                      key={option}
-                      type="button"
-                      onClick={() => setTransactionMode(option)}
-                      className={`rounded-[1.1rem] px-4 py-3 text-sm font-semibold transition ${
-                        active
-                          ? "bg-white text-slate-950 shadow-sm"
-                          : "text-slate-500 hover:text-slate-900"
+                      key={pm.id}
+                      onClick={() => setMethod(pm.id)}
+                      className={`flex items-center justify-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                        method === pm.id
+                          ? "border-cyan-500 bg-cyan-50 text-cyan-700"
+                          : "border-slate-200 text-slate-600 hover:border-slate-300"
                       }`}
                     >
-                      {option === TRANSACTION_MODES.TEST
-                        ? "Sandbox"
-                        : "Primary"}
+                      {pm.icon}
+                      <span className="text-sm font-medium">{pm.name}</span>
                     </button>
-                  );
-                },
-              )}
+                  ))}
+                </div>
+
+                <div className="mb-6">
+                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                    Processing Environment
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: TRANSACTION_MODES.PRODUCTION, label: "Production", desc: "Live transactions" },
+                      { id: TRANSACTION_MODES.TEST, label: "Test/Sandbox", desc: "Simulated" },
+                    ].map((env) => (
+                      <button
+                        key={env.id}
+                        onClick={() => setTransactionMode(env.id)}
+                        className={`rounded-xl border-2 p-3 text-left transition-all ${
+                          transactionMode === env.id
+                            ? "border-cyan-500 bg-cyan-50"
+                            : "border-slate-200 hover:border-slate-300"
+                        }`}
+                      >
+                        <p className={`text-sm font-semibold ${transactionMode === env.id ? "text-cyan-700" : "text-slate-700"}`}>
+                          {env.label}
+                        </p>
+                        <p className="text-xs text-slate-500">{env.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  {method === "card" ? (
+                    <CardForm values={values} errors={errors} onChange={handleChange} />
+                  ) : (
+                    <UpiQR />
+                  )}
+                </div>
+
+                {submitError && (
+                  <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                    <div className="flex items-center gap-2 text-red-700">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm font-medium">{submitError}</span>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={pay}
+                  disabled={disabled}
+                  className="w-full rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 py-4 text-base font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all hover:shadow-xl hover:shadow-cyan-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                >
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </span>
+                  ) : (
+                    `Pay ${formatCurrency(PAYMENT_AMOUNT)}`
+                  )}
+                </button>
+
+                <div className="mt-4 flex items-center justify-center gap-4">
+                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span>SSL Encrypted</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span>PCI Compliant</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-
-          <div className="mt-6">
-            {method === "card" ? (
-              <CardForm
-                values={values}
-                errors={errors}
-                onChange={handleChange}
-              />
-            ) : (
-              <UpiQR />
-            )}
-          </div>
-
-          <div className="mt-6 rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
-            Payments are created with an idempotency key, traced with a request
-            ID, and routed through the gateway before capture.
-          </div>
-
-          {submitError ? (
-            <div className="mt-4 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
-              {submitError}
-            </div>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={pay}
-            disabled={disabled}
-            className="mt-6 w-full rounded-[1.25rem] bg-slate-950 px-5 py-4 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            {submitting
-              ? "Creating payment intent..."
-              : `Pay ${formatCurrency(PAYMENT_AMOUNT)}`}
-          </button>
-        </motion.section>
+          </motion.div>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
