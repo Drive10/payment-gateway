@@ -1,6 +1,10 @@
 server:
   port: 8083
   shutdown: graceful
+  tomcat:
+    max-threads: 200
+    accept-count: 100
+    connection-timeout: 20000
 
 spring:
   application:
@@ -11,12 +15,26 @@ spring:
     username: ${DB_USERNAME:payment}
     password: ${DB_PASSWORD:paymentpass}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 30000
+      pool-name: PaymentHikariPool
 
   jpa:
     open-in-view: false
     properties:
       hibernate:
         format_sql: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+    hibernate:
+      ddl-auto: validate
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
@@ -25,16 +43,33 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       acks: all
       retries: 10
+      properties:
+        buffer.memory: 33554432
+        batch.size: 16384
+        linger.ms: 1
     consumer:
       group-id: payment-service
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      max-poll-records: 500
+      properties:
+        fetch.min.bytes: 1
+        fetch.max.wait.ms: 500
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=300s
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
 
 application:
   gateway-trust:

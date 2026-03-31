@@ -1,6 +1,9 @@
 server:
   port: 8082
   shutdown: graceful
+  tomcat:
+    max-threads: 150
+    accept-count: 100
 
 spring:
   application:
@@ -11,12 +14,25 @@ spring:
     username: ${ORDER_DB_USER:order}
     password: ${ORDER_DB_PASSWORD:orderpass}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 3
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 25000
+      pool-name: OrderHikariPool
 
   jpa:
     open-in-view: false
     properties:
       hibernate:
         format_sql: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+    hibernate:
+      ddl-auto: validate
 
   flyway:
     enabled: true
@@ -30,16 +46,30 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       acks: all
       retries: 10
+      properties:
+        buffer.memory: 33554432
+        batch.size: 16384
+        linger.ms: 1
     consumer:
       group-id: order-service
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      max-poll-records: 500
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=300s
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
 
 application:
   order-service:
