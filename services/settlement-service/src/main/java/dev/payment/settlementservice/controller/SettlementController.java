@@ -73,15 +73,6 @@ public class SettlementController {
         );
         return ResponseEntity.ok(ApiResponse.success(balance));
     }
-
-    @GetMapping("/health")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> health() {
-        Map<String, Object> health = Map.of(
-            "status", "UP",
-            "service", "settlement-service"
-        );
-        return ResponseEntity.ok(ApiResponse.success(health));
-    }
     
     private void validateCreateRequest(Map<String, Object> request) {
         if (request.get("merchantId") == null) {
