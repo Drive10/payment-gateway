@@ -80,36 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error instanceof ApiError) {
         throw error
       }
-      const mockUsers: Record<string, User> = {
-        'admin@payflow.com': {
-          id: '1',
-          email: 'admin@payflow.com',
-          fullName: 'Admin User',
-          role: 'ADMIN',
-        },
-        'john.doe@example.com': {
-          id: '3',
-          email: 'john.doe@example.com',
-          fullName: 'John Doe',
-          role: 'USER',
-        },
-        'jane.smith@example.com': {
-          id: '4',
-          email: 'jane.smith@example.com',
-          fullName: 'Jane Smith',
-          role: 'USER',
-        },
-      }
-
-      const foundUser = mockUsers[email.toLowerCase()]
-      if (!foundUser || password !== 'Test@1234') {
-        throw new ApiError('Invalid credentials', 401)
-      }
-
-      const mockToken = `mock_token_${Date.now()}`
-      setUser(foundUser)
-      setToken(mockToken)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: foundUser, token: mockToken }))
+      throw new ApiError('Authentication failed. Please check your connection and try again.', 500)
     }
   }
 

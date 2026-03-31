@@ -234,6 +234,26 @@ public class AnalyticsService {
         }
     }
 
+    public Optional<Report> getReportById(Long id) {
+        return reportRepository.findById(id);
+    }
+
+    public List<Report> getReports(String merchantId, String status) {
+        List<Report> reports;
+
+        if (merchantId != null && status != null) {
+            reports = reportRepository.findByMerchantIdAndStatus(merchantId, status);
+        } else if (merchantId != null) {
+            reports = reportRepository.findByMerchantId(merchantId);
+        } else if (status != null) {
+            reports = reportRepository.findByStatus(status);
+        } else {
+            reports = reportRepository.findAll();
+        }
+
+        return reports;
+    }
+
     private Instant getPeriodStart(Instant now, String period) {
         return switch (period.toLowerCase()) {
             case "minute" -> now.truncatedTo(ChronoUnit.MINUTES);
