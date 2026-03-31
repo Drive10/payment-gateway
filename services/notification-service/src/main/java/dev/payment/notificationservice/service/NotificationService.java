@@ -6,19 +6,22 @@ import dev.payment.notificationservice.entity.Notification;
 import dev.payment.notificationservice.entity.NotificationChannel;
 import dev.payment.notificationservice.entity.NotificationStatus;
 import dev.payment.notificationservice.repository.NotificationRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class NotificationService {
 
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
     private final NotificationRepository notificationRepository;
+
+    public NotificationService(NotificationRepository notificationRepository) {
+        this.notificationRepository = notificationRepository;
+    }
 
     @Transactional
     public Notification sendNotification(SendNotificationRequest request) {

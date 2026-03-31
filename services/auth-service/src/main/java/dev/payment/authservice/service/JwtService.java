@@ -33,13 +33,13 @@ public class JwtService {
         claims.put("roles", user.getRoles().stream()
                 .map(role -> role.getName())
                 .toList());
-        return buildToken(claims, user.getEmail(), jwtConfig.getAccessTokenExpiration());
+        return buildToken(claims, user.getEmail(), jwtConfig.getExpiration());
     }
 
     public String generateRefreshToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
-        return buildToken(claims, user.getEmail(), jwtConfig.getRefreshTokenExpiration());
+        return buildToken(claims, user.getEmail(), jwtConfig.getRefreshExpiration());
     }
 
     private String buildToken(Map<String, Object> claims, String subject, long expiration) {
@@ -87,10 +87,10 @@ public class JwtService {
     }
 
     public long getAccessTokenExpiration() {
-        return jwtConfig.getAccessTokenExpiration();
+        return jwtConfig.getExpiration();
     }
 
     public long getRefreshTokenExpiration() {
-        return jwtConfig.getRefreshTokenExpiration();
+        return jwtConfig.getRefreshExpiration();
     }
 }
