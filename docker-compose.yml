@@ -60,7 +60,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8080
-      JWT_SECRET_B64: ${JWT_SECRET_B64:-q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=}
+      JWT_SECRET_B64: ${JWT_SECRET_B64:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNo}
       GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-dev-gateway-internal-secret}
 
       REDIS_HOST: redis
@@ -95,7 +95,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8084
-      JWT_SECRET_B64: ${JWT_SECRET_B64:-q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=}
+      JWT_SECRET_B64: ${JWT_SECRET_B64:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNo}
       GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-dev-gateway-internal-secret}
       DB_URL: jdbc:postgresql://postgres:5432/paymentdb
       DB_USERNAME: payment
