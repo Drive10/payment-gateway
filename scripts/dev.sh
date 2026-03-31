@@ -6,7 +6,10 @@ FRONTEND_DIR="$REPO_ROOT/services/frontend"
 COMMAND="${1:-help}"
 
 step() {
-  echo "==> $1"
+  echo ""
+  echo "=========================================="
+  echo " $1"
+  echo "=========================================="
 }
 
 has_cmd() {
@@ -24,21 +27,37 @@ require_cmd() {
 
 show_help() {
   cat <<'EOF'
+Fintech Payment Gateway - Developer Scripts
+
 Usage: ./scripts/dev.sh <command>
 
-Commands:
-  bootstrap       Prepare local repo defaults and optional frontend deps
-  doctor          Validate Java, Maven, Docker, and optional Node/npm
-  hybrid          Start Docker services for hybrid mode
-  full            Start the full Docker stack
-  down            Stop the active Docker stack
-  payment-local   Run payment-service locally with the local profile
-  frontend-check  Run frontend install + quality checks
-  smoke           Run fast local smoke checks
-  test-all        Run the full project test matrix
-  verify          Run backend verification
-  compose-check   Validate Compose rendering for hybrid and full modes
-  help            Show this help
+Infrastructure:
+  infra           Start PostgreSQL, Kafka, Redis (Docker)
+  infra-down      Stop infrastructure containers
+  infra-logs      Show infrastructure logs
+
+Modes:
+  docker          Full Docker stack (recommended for demo)
+  hybrid          Docker infra + local payment-service
+  local           Full local development (no Docker)
+
+Management:
+  build           Build all services
+  build-service   Build specific service (payment-service/api-gateway)
+  down            Stop all Docker containers
+  logs            Show logs for running services
+  status          Show status of all services
+
+Utilities:
+  doctor          Check prerequisites (Java, Maven, Docker)
+  swagger         Open Swagger UI in browser
+  clean           Clean build artifacts
+
+Quick Start:
+  1. ./scripts/dev.sh doctor
+  2. ./scripts/dev.sh infra
+  3. ./scripts/dev.sh docker
+
 EOF
 }
 
@@ -48,166 +67,230 @@ bootstrap() {
     cp "$REPO_ROOT/.env.example" "$REPO_ROOT/.env"
     echo "Created .env from .env.example"
   elif [[ -f "$REPO_ROOT/.env" ]]; then
-    echo ".env already exists"
+    echo ".env already exists - skipping"
   fi
 
   if has_cmd node && has_cmd npm; then
     step "Installing frontend dependencies"
-    cd "$FRONTEND_DIR"
-    npm ci
-  else
-    echo "Skipping frontend install because node/npm are not available."
+    cd "$FRONTEND_DIR" && npm ci
   fi
 
-  echo "Next steps:"
+  step "Building backend"
+  cd "$REPO_ROOT" && ./mvnw clean install -DskipTests -q
+  
+  echo ""
+  echo "Setup complete! Next steps:"
   echo "  1. ./scripts/dev.sh doctor"
-  echo "  2. ./scripts/dev.sh hybrid"
-  echo "  3. ./scripts/dev.sh payment-local"
+  echo "  2. ./scripts/dev.sh infra"
+  echo "  3. ./scripts/dev.sh docker"
 }
 
 doctor() {
-  step "Checking local toolchain"
+  step "Checking Prerequisites"
+  echo ""
+  
   local failed=0
-  for name in java docker; do
-    if has_cmd "$name"; then
-      printf "%-10s OK\n" "$name"
-    else
-      printf "%-10s MISSING\n" "$name"
-      failed=1
-    fi
-  done
-
-  for name in mvn node npm; do
-    if has_cmd "$name"; then
-      printf "%-10s OK\n" "$name"
-    else
-      printf "%-10s MISSING\n" "$name"
-    fi
-  done
-
-  if [[ ! -f "$REPO_ROOT/.env" ]]; then
-    echo ".env       MISSING"
-    echo "           Copy .env.example to .env before running the platform."
+  
+  if has_cmd java; then
+    printf "  %-20s ✓ ($(java -version 2>&1 | head -1))\n" "Java"
   else
-    echo ".env       OK"
+    printf "  %-20s ✗ MISSING\n" "Java"
+    failed=1
   fi
-
+  
+  if has_cmd mvn; then
+    printf "  %-20s ✓ ($(mvn -version 2>&1 | head -1 | cut -d' ' -f3))\n" "Maven"
+  else
+    printf "  %-20s ✗ MISSING\n" "Maven"
+    failed=1
+  fi
+  
+  if has_cmd docker && docker info >/dev/null 2>&1; then
+    printf "  %-20s ✓ Running\n" "Docker"
+  else
+    printf "  %-20s ⚠ Not running\n" "Docker"
+  fi
+  
+  if has_cmd node; then
+    printf "  %-20s ✓ (v%s)\n" "Node.js" "$(node -v)"
+  else
+    printf "  %-20s (optional)\n" "Node.js"
+  fi
+  
+  echo ""
+  if [[ ! -f "$REPO_ROOT/.env" ]]; then
+    echo "  .env              ⚠ Create with: cp .env.example .env"
+  else
+    echo "  .env              ✓"
+  fi
+  
+  echo ""
   if [[ "$failed" -ne 0 ]]; then
-    echo "Required tooling is missing." >&2
+    echo "Please install missing required tools."
     exit 1
   fi
 }
 
+infra() {
+  require_cmd docker "Install Docker Desktop"
+  step "Starting Infrastructure (PostgreSQL, Kafka, Redis)"
+  cd "$REPO_ROOT"
+  docker compose --profile infra up -d
+  echo ""
+  echo "Waiting for services to be ready..."
+  sleep 10
+  docker compose ps
+  echo ""
+  echo "Infrastructure ready! Connect with:"
+  echo "  PostgreSQL: localhost:5433"
+  echo "  Kafka:      localhost:9092"
+  echo "  Redis:      localhost:6379"
+}
+
+infra-down() {
+  step "Stopping Infrastructure"
+  cd "$REPO_ROOT"
+  docker compose --profile infra down
+}
+
+docker() {
+  require_cmd docker "Install Docker Desktop"
+  step "Starting Full Docker Stack"
+  cd "$REPO_ROOT"
+  docker compose --profile services up -d --build
+  echo ""
+  echo "Waiting for services to start..."
+  sleep 15
+  docker compose ps
+  echo ""
+  echo "Services ready!"
+  echo "  Frontend:     http://localhost:3000"
+  echo "  Gateway:      http://localhost:8080"
+  echo "  Swagger:      http://localhost:8080/swagger-ui.html"
+  echo "  Prometheus:   http://localhost:9090"
+  echo "  Grafana:      http://localhost:3001"
+}
+
 hybrid() {
-  require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Starting Docker stack"
+  require_cmd docker "Install Docker Desktop"
+  step "Starting Hybrid Mode (Docker Infra + Local Services)"
   cd "$REPO_ROOT"
-  docker compose --profile services up -d --build
+  docker compose --profile infra up -d
+  echo ""
+  echo "Docker infra started. Now run in another terminal:"
+  echo "  ./scripts/dev.sh payment-local"
+  echo ""
+  docker compose ps
 }
 
-full() {
-  require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Starting Docker stack"
+payment-local() {
+  step "Starting Local payment-service"
   cd "$REPO_ROOT"
-  docker compose --profile services up -d --build
-}
-
-down() {
-  require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Stopping Docker stack"
-  cd "$REPO_ROOT"
-  docker compose down
-}
-
-payment_local() {
-  step "Running payment-service locally"
-  cd "$REPO_ROOT"
+  echo "Make sure Docker infrastructure is running: ./scripts/dev.sh infra"
+  echo ""
   SPRING_PROFILES_ACTIVE=local ./mvnw -pl services/payment-service -am spring-boot:run
 }
 
-frontend_check() {
-  require_cmd node "Install the Node.js version pinned in .nvmrc."
-  require_cmd npm "Install Node.js and npm before working on the frontend."
-  step "Running frontend quality checks"
-  cd "$FRONTEND_DIR"
-  if [[ ! -x "$FRONTEND_DIR/node_modules/.bin/eslint" ]]; then
-    npm ci
-  fi
-  npm run check
-}
-
-verify_repo() {
-  step "Running backend verification"
+local() {
+  step "Starting Full Local Development"
   cd "$REPO_ROOT"
-  ./mvnw -q verify
+  echo "Starting PostgreSQL, Kafka, Redis via Docker..."
+  docker compose --profile infra up -d
+  sleep 10
+  
+  echo ""
+  echo "Starting payment-service..."
+  SPRING_PROFILES_ACTIVE=local ./mvnw -pl services/payment-service -am spring-boot:run &
+  PAYMENT_PID=$!
+  
+  echo ""
+  echo "payment-service starting on port 8084 (PID: $PAYMENT_PID)"
+  echo "Press Ctrl+C to stop all services"
+  
+  wait $PAYMENT_PID
 }
 
-compose_check() {
-  require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Validating Compose file"
+build() {
+  step "Building All Services"
   cd "$REPO_ROOT"
-  docker compose --profile services config >/dev/null
+  ./mvnw clean package -DskipTests
+  echo ""
+  echo "Build complete! JAR files:"
+  ls -la services/*/target/*.jar 2>/dev/null || echo "No JAR files found"
 }
 
-docker_daemon_ready() {
-  has_cmd docker && docker info >/dev/null 2>&1
-}
-
-smoke() {
-  step "Running fast smoke checks"
-  compose_check
+build-service() {
+  local service="${2:-payment-service}"
+  step "Building $service"
   cd "$REPO_ROOT"
-  ./mvnw -q -pl services/payment-service,services/api-gateway -am test
-  if has_cmd node && has_cmd npm; then
-    step "Running frontend lint"
-    cd "$FRONTEND_DIR"
-    if [[ ! -x "$FRONTEND_DIR/node_modules/.bin/eslint" ]]; then
-      npm ci
-    fi
-    npm run lint
+  ./mvnw clean package -DskipTests -pl services/$service -am
+}
+
+down() {
+  step "Stopping All Containers"
+  cd "$REPO_ROOT"
+  docker compose down
+  echo "All containers stopped."
+}
+
+logs() {
+  local service="${2:-}"
+  cd "$REPO_ROOT"
+  if [[ -z "$service" ]]; then
+    docker compose logs -f
   else
-    echo "Skipping frontend lint because node/npm are not available."
+    docker compose logs -f "$service"
   fi
 }
 
-test_all() {
-  step "Running the full project test matrix"
-  compose_check
-  verify_repo
-
-  if docker_daemon_ready; then
-    step "Running Docker-backed payment Testcontainers tests"
-    cd "$REPO_ROOT"
-    ./mvnw -q -pl services/payment-service -am -Ptestcontainers test
-  else
-    echo "Skipping Docker-backed Testcontainers tests because Docker is unavailable."
+status() {
+  step "Service Status"
+  cd "$REPO_ROOT"
+  echo ""
+  docker compose ps
+  echo ""
+  echo "Local ports:"
+  if has_cmd lsof; then
+    lsof -i :8080 -i :8084 -i :3000 -i :5433 -i :9092 -i :6379 2>/dev/null | grep LISTEN || echo "  No local services detected"
   fi
+}
 
-  if has_cmd node && has_cmd npm; then
-    frontend_check
+swagger() {
+  step "Opening Swagger UI"
+  if has_cmd open; then
+    open "http://localhost:8080/swagger-ui.html"
   else
-    echo "Skipping frontend checks because node/npm are not available."
+    echo "Open in browser: http://localhost:8080/swagger-ui.html"
   fi
+}
 
-  echo "Coverage report: target/site/jacoco-aggregate/index.html"
+clean() {
+  step "Cleaning Build Artifacts"
+  cd "$REPO_ROOT"
+  ./mvnw clean
+  rm -rf services/*/target
+  echo "Clean complete."
 }
 
 case "$COMMAND" in
   bootstrap) bootstrap ;;
   doctor) doctor ;;
+  infra) infra ;;
+  infra-down) infra-down ;;
+  docker) docker ;;
   hybrid) hybrid ;;
-  full) full ;;
+  local) local ;;
+  build) build ;;
+  build-service) build-service ;;
   down) down ;;
-  payment-local) payment_local ;;
-  frontend-check) frontend_check ;;
-  smoke) smoke ;;
-  test-all) test_all ;;
-  verify) verify_repo ;;
-  compose-check) compose_check ;;
+  logs) logs ;;
+  status) status ;;
+  swagger) swagger ;;
+  clean) clean ;;
+  payment-local) payment-local ;;
   help) show_help ;;
   *)
     show_help
-    echo "Unknown command: $COMMAND" >&2
     exit 1
     ;;
 esac

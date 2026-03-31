@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/paymentdb
+    username: payment
+    password: paymentpass
+
+  kafka:
+    bootstrap-servers: kafka:29092
+
+application:
+  simulator:
+    base-url: http://payment-service:8084
+
+  gateway-trust:
+    enabled: true
+
+logging:
+  level:
+    root: INFO
