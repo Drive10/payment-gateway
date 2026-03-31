@@ -1,510 +1,370 @@
 # Fintech Payment Gateway
 
-Production-Grade Microservices Architecture
+**Enterprise-grade microservices payment platform with Java 21, Spring Boot 3.3, Kafka, and React**
 
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?style=flat-square&logo=openjdk)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?style=flat-square&logo=springboot)](https://spring.io/projects/spring-boot)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
-[![Kafka](https://img.shields.io/badge/Apache%20Kafka-231F20?style=flat-square&logo=apachekafka)](https://kafka.apache.org/)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?style=flat-square&logo=spring)](https://spring.io/projects/spring-boot)
+[![Kafka](https://img.shields.io/badge/Apache%20Kafka-3.8-231F20?style=flat-square&logo=apachekafka)](https://kafka.apache.org/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)](https://react.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-A production-grade fintech payment platform built with Java 21, Spring Boot 3.3, and event-driven microservices architecture. Designed for high-scale payment processing with robust security, observability, and reliability patterns.
+---
+
+## Quick Start
+
+```bash
+# One-command startup
+git clone https://github.com/your-org/payment-gateway.git
+cd payment-gateway
+./scripts/start.sh
+```
+
+**Access Points:**
+- API Gateway: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- Grafana: http://localhost:3002 (admin/admin123)
+- Prometheus: http://localhost:9090
+- Jaeger: http://localhost:16686
 
 ---
 
 ## Architecture Overview
 
 ```
-+---------------------------------------------------------------------------------------+
-|                                    CLIENTS                                           |
-|                          (Browser / Mobile App)                                      |
-+--------------------------------------+----------------------------------------------+
-                                       |
-                                       v
-+---------------------------------------------------------------------------------------+
-|                              API GATEWAY (8080)                                       |
-|  +------------------+  +------------------+  +------------------+                   |
-|  |  Rate Limiting   |  |   JWT Validation |  |  Request Routing |                   |
-|  |    (Redis)       |  |                  |  |                  |                   |
-|  +------------------+  +------------------+  +------------------+                   |
-+--------------------------------------+----------------------------------------------+
-                                       |
-         +-----------------------------+-----------------------------+
-         |                             |                             |
-         v                             v                             v
-+---------------+          +-------------------+          +-------------------+
-| Auth Service  |          |  Order Service    |          |  Payment Service  |
-|    (8081)     |          |     (8082)        |          |      (8083)       |
-+---------------+          +-------------------+          +-------------------+
-        |                             |                             |
-        |                             |                             |
-        v                             v                             v
-+---------------+          +-------------------+          +-------------------+
-|  PostgreSQL   |          |    PostgreSQL     |          |    PostgreSQL     |
-|   (authdb)    |          |    (orderdb)       |          |   (paymentdb)    |
-+---------------+          +-------------------+          +-------------------+
-         |                             |                             |
-         |                             |                             |
-         +-----------------------------+-----------------------------+
-                                       |
-                                       v
-+---------------------------------------------------------------------------------------+
-|                                     KAFKA                                             |
-|                              (Event Bus - 9092)                                       |
-|  +------------------+  +------------------+  +------------------+                   |
-|  | payment.events  |  |  order.events    |  | notification.events                 |
-|  +------------------+  +------------------+  +------------------+                   |
-+--------------------------------------+-----------------------------------------------+
-         |                             |                             |
-         v                             v                             v
-+-------------------+    +-------------------+    +-------------------+
-| Notification Svc  |    |   Webhook Svc     |    |  Simulator Svc    |
-|      (8084)       |    |      (8085)       |    |      (8086)       |
-+-------------------+    +-------------------+    +-------------------+
-         |                             |
-         v                             v
-+-------------------+    +-------------------+
-|  PostgreSQL       |    |    PostgreSQL     |
-| (notificationdb)  |    |   (webhookdb)     |
-+-------------------+    +-------------------+
-
-+---------------------------------------------------------------------------------------+
-|                                    REDIS                                              |
-|                              (Rate Limiting - 6379)                                  |
-+---------------------------------------------------------------------------------------+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           EXTERNAL SYSTEMS                                     │
+│  Card Networks │ Banks/ABKS │ Email/SMS │ Banking Partners                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           API GATEWAY (8080)                                   │
+│  JWT Auth │ Rate Limiting │ Security Headers │ Circuit Breaker              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+        ┌────────────────────────────┼────────────────────────────┐
+        │                            │                            │
+        ▼                            ▼                            ▼
+┌──────────────┐            ┌──────────────┐            ┌──────────────┐
+│Auth Service  │            │Order Service │            │Payment Svc  │
+│   (8081)    │            │   (8082)    │            │   (8083)    │
+└──────────────┘            └──────────────┘            └──────────────┘
+        │                            │                            │
+        └────────────────────────────┴────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         KAFKA EVENT BUS                                          │
+│  Topics: payment.events, refund.events, settlement.events, risk.events             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+        ┌────────────────────────────┼────────────────────────────┐
+        │                            │                            │
+        ▼                            ▼                            ▼
+┌──────────────┐            ┌──────────────┐            ┌──────────────┐
+│Settlement    │            │   Risk       │            │Analytics    │
+│  (8087)     │            │   (8088)    │            │  (8089)     │
+└──────────────┘            └──────────────┘            └──────────────┘
 ```
 
 ---
 
-## Data Flow
-
-### 1. User Authentication Flow
-
-```
-┌──────────┐     ┌───────────────┐     ┌─────────────┐     ┌──────────────┐
-│  Client  │────>│ API Gateway  │────>│ Auth Svc    │────>│  PostgreSQL  │
-│          │     │   (8080)     │     │  (8081)     │     │  (authdb)    │
-└──────────┘     └───────────────┘     └─────────────┘     └──────────────┘
-      │                                        │
-      │  POST /api/v1/auth/register            │
-      │  POST /api/v1/auth/login               │
-      │                                        │
-      │<───────────────────────────────────────┘
-      │        JWT Access + Refresh Token
-```
-
-1. User sends credentials to `/api/v1/auth/register` or `/api/v1/auth/login`
-2. API Gateway validates request, applies rate limiting
-3. Auth Service validates credentials against PostgreSQL
-4. Auth Service issues JWT (access token + refresh token)
-5. Subsequent requests include JWT in Authorization header
-
-### 2. Order Creation Flow
-
-```
-┌──────────┐     ┌───────────────┐     ┌─────────────┐     ┌──────────────┐
-│  Client  │────>│ API Gateway  │────>│ Order Svc   │────>│  PostgreSQL  │
-│          │     │   (8080)     │     │  (8082)     │     │  (orderdb)   │
-└──────────┘     └───────────────┘     └─────────────┘     └──────────────┘
-      │                                        │
-      │  POST /api/v1/orders                   │
-      │  Authorization: Bearer <JWT>          │
-      │                                        │
-      │<───────────────────────────────────────┘
-      │        Order ID + Amount
-```
-
-1. Authenticated user creates order via `/api/v1/orders`
-2. Order Service validates JWT and creates order in PostgreSQL
-3. Order Service emits Kafka event for downstream services
-4. Payment Service consumes event and awaits payment
-
-### 3. Payment Processing Flow
-
-```
-┌──────────┐     ┌───────────────┐     ┌─────────────┐     ┌──────────────┐
-│  Client  │────>│ API Gateway  │────>│ Payment Svc  │────>│  PostgreSQL  │
-│          │     │   (8080)     │     │  (8083)     │     │  (paymentdb) │
-└──────────┘     └───────────────┘     └─────────────┘     └──────────────┘
-      │                                        |                     │
-      │  POST /api/v1/payments                 |                     │
-      │  Idempotency-Key: <key>                v                     v
-      │                                        |              +--------------+
-      │                                        |              │  Simulator   │
-      │                                        |              │    (8086)    │
-      │                                        |              +--------------+
-      │                                              |
-      │<─────────────────────────────────────────────┘
-      │            Payment Entity + Provider Intent
-      │
-      v
-┌─────────────────────────────────────────────────────────────┐
-│                    PAYMENT LIFECYCLE                         │
-│  CREATED ──> AUTHORIZED ──> CAPTURED ──> COMPLETED           │
-│                          │                                   │
-                          v                                   │
-                    +-----------+                               │
-                    │  Refunded │ ──> PARTIAL/FULL             │
-                    +-----------+                               │
-└─────────────────────────────────────────────────────────────┘
-```
-
-1. Client initiates payment with `Idempotency-Key` header
-2. Payment Service generates provider payment intent
-3. Simulator processes payment (async via Kafka)
-4. Payment status updates through lifecycle
-5. Webhook events trigger final state updates
-6. Notifications sent via Notification Service
-
-### 4. Webhook Callback Flow
-
-```
-┌──────────────┐     ┌───────────────┐     ┌─────────────┐     ┌──────────────┐
-│  External    │────>│  Webhook Svc  │────>│ Payment Svc │────>│  PostgreSQL  │
-│  Provider    │     │    (8085)     │     │  (8083)     │     │  (paymentdb) │
-└──────────────┘     └───────────────┘     └─────────────┘     └──────────────┘
-      │                     |                                        |
-      │  HMAC Signature     |         +-----------+                 |
-      │                     +────────>│  Kafka    │                 |
-      │                     │         │  (events) │                 |
-      │                     │         +-----------+                 |
-      │                     v                                        |
-      │              ┌──────────────┐                               │
-      │              │ Dedup Check  │ (event_id)                    │
-      │              └──────────────┘                               │
-```
-
-1. External provider sends webhook with HMAC-SHA256 signature
-2. Webhook Service validates signature
-3. Webhook Service checks for duplicate events (dedup by event_id)
-4. Events published to Kafka
-5. Payment Service consumes and processes
-6. Idempotent processing ensures data consistency
-
-### 5. Notification Flow
-
-```
-┌──────────────┐     ┌───────────────┐     ┌─────────────┐
-│    Kafka     │────>│ Notification  │────>│  PostgreSQL │
-│   (events)   │     │    Svc (8084) │     │(notificationdb)
-└──────────────┘     └───────────────┘     └─────────────┘
-                            │
-                            v
-                     ┌──────────────┐
-                     │   Email/SMS  │
-                     │   Provider   │
-                     └──────────────┘
-```
-
-1. Kafka events trigger notification processing
-2. Notification Service consumes events idempotently
-3. Persists notification record in PostgreSQL
-4. Sends notification via external provider
-5. Retry logic with exponential backoff
-6. Dead-letter handling for failed notifications
-
----
-
-## Service Descriptions
+## Microservices (16 Services)
 
 | Service | Port | Description |
 |---------|------|-------------|
-| **API Gateway** | 8080 | Edge routing, JWT validation, rate limiting, correlation ID management |
-| **Config Service** | 8888 | Spring Cloud Config Server for centralized configuration |
-| **Auth Service** | 8081 | User registration, login, JWT issuance, token refresh |
-| **Order Service** | 8082 | Order creation, management, integration with payment service |
-| **Payment Service** | 8083 | Payment processing, idempotency, refunds, ledger entries |
-| **Notification Service** | 8084 | Email/SMS notifications, event-driven notification handling |
-| **Webhook Service** | 8085 | Webhook receiver, HMAC validation, event deduplication |
-| **Simulator Service** | 8086 | Payment provider simulator for testing |
-| **Settlement Service** | 8087 | Daily settlement batch processing, merchant payouts |
-| **Risk Service** | 8088 | Real-time fraud detection, risk scoring |
-| **Analytics Service** | 8089 | Analytics, reporting, business metrics |
-| **Merchant Service** | 8090 | Merchant onboarding, KYC, bank accounts |
-| **Dispute Service** | 8091 | Chargeback management, dispute resolution |
-| **Feature Flags Service** | 8092 | Feature toggles, gradual rollouts |
+| **API Gateway** | 8080 | JWT validation, rate limiting, routing |
+| **Config Service** | 8888 | Centralized configuration (Spring Cloud Config) |
+| **Auth Service** | 8081 | User auth, JWT, API keys |
+| **Order Service** | 8082 | Order management |
+| **Payment Service** | 8083 | Payment processing, refunds |
+| **Notification Service** | 8084 | Email/SMS notifications |
+| **Webhook Service** | 8085 | Webhook delivery, retry |
+| **Simulator Service** | 8086 | Payment provider simulator |
+| **Settlement Service** | 8087 | Daily settlements, payouts |
+| **Risk Service** | 8088 | Fraud detection |
+| **Analytics Service** | 8089 | Metrics, reporting |
+| **Merchant Service** | 8090 | Merchant onboarding, KYC |
+| **Dispute Service** | 8091 | Chargeback management |
+| **Feature Flags** | 8092 | Feature toggles |
+
+---
+
+## Key Features
+
+### Payment Lifecycle
+```
+INITIATED → AUTHORIZED → CAPTURED → COMPLETED
+                    ↓            ↓
+                 FAILED      REFUNDED (partial/full)
+```
+
+### Event-Driven Architecture
+- **Outbox Pattern** for reliable event publishing
+- **Saga Pattern** for distributed transactions
+- **Dead Letter Queue** for failed messages
+- **Event versioning** for schema evolution
+
+### Resilience
+- **Circuit Breaker** (Resilience4j)
+- **Retry with exponential backoff**
+- **Timeout handling**
+- **Bulkhead isolation**
+
+### Security
+- JWT authentication
+- RBAC (Role-Based Access Control)
+- HMAC webhook validation
+- Rate limiting per user/API key
+- Security headers
+
+---
+
+## System Flow
+
+### Payment Flow (Happy Path)
+```
+1. Client → API Gateway (auth + rate limit)
+2. Gateway → Auth Service (validate JWT)
+3. Auth → Gateway (token valid)
+4. Gateway → Payment Service (create payment)
+5. Payment → Risk Service (fraud check)
+6. Risk → Payment (approved/declined)
+7. Payment → Simulator (process payment)
+8. Simulator → Payment (success/failure)
+9. Payment → Kafka (event published)
+10. Payment → Client (response)
+```
+
+### Idempotency
+- `Idempotency-Key` header ensures exactly-once processing
+- Keys stored with 24h expiration
+- Duplicate requests return cached response
 
 ---
 
 ## API Documentation
 
-### Authentication Endpoints
+### Authentication
+```bash
+# Register
+POST /api/v1/auth/register
+{"email": "user@example.com", "password": "password123", "name": "User"}
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/auth/register` | Register new user |
-| POST | `/api/v1/auth/login` | User login |
-| POST | `/api/v1/auth/refresh` | Refresh access token |
-| POST | `/api/v1/auth/logout` | User logout |
+# Login
+POST /api/v1/auth/login
+{"email": "user@example.com", "password": "password123"}
+→ {"accessToken": "eyJ...", "refreshToken": "eyJ..."}
+```
 
-### Order Endpoints
+### Payments
+```bash
+# Create Payment
+POST /api/v1/payments
+Headers: Authorization: Bearer <token>, Idempotency-Key: <uuid>
+{
+  "amount": 5000,
+  "currency": "USD",
+  "paymentMethod": {
+    "type": "card",
+    "card": {"number": "4242...", "expiryMonth": "12", "expiryYear": "25", "cvv": "123"}
+  }
+}
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/orders` | Create new order |
-| GET | `/api/v1/orders/{id}` | Get order by ID |
-| GET | `/api/v1/orders` | List orders |
+# Capture
+POST /api/v1/payments/{id}/capture
 
-### Payment Endpoints
+# Refund
+POST /api/v1/payments/{id}/refunds
+{"amount": 1000, "reason": "CUSTOMER_REQUEST"}
+```
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/payments` | Create payment |
-| GET | `/api/v1/payments/{id}` | Get payment by ID |
-| GET | `/api/v1/payments` | List payments |
-| POST | `/api/v1/payments/{id}/refunds` | Process refund |
-| GET | `/api/v1/payments/{id}/refunds` | List refunds |
-
-### Webhook Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/webhooks` | Receive webhook |
+### Error Response Format
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PAYMENT_DECLINED",
+    "message": "Card declined by issuer",
+    "correlationId": "abc-123"
+  }
+}
+```
 
 ---
 
-## Quick Start
+## Observability
 
-### Prerequisites
+### Prometheus Metrics
+```
+# Payment success rate
+payment_success_total / payment_total * 100
 
-- Java 21
-- Maven 3.9+
-- Docker Desktop or Docker Engine
-- Docker Compose
+# Average response time
+rate(http_server_requests_seconds_sum[5m]) / rate(http_server_requests_seconds_count[5m])
 
-### Environment Variables
-
-Create a `.env` file in the project root:
-
-```bash
-JWT_SECRET_B64=dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNo
-GATEWAY_INTERNAL_SECRET=dev-gateway-internal-secret
+# Circuit breaker state
+resilience4j_circuitbreaker_state{name="payment"}
 ```
 
-### Docker Compose Setup
+### Distributed Tracing (Jaeger)
+- Every request tagged with `correlationId`
+- Trace spans for: Gateway → Auth → Service → DB → Kafka
+- End-to-end latency breakdown
 
-```bash
-# Start all services
-docker compose --profile services up --build
-
-# Start infrastructure only (for local development)
-docker compose --profile infra up -d
+### Centralized Logging (Loki)
 ```
+# Query all payment errors
+{app="payment-service"} |= "ERROR" |= "payment"
 
-### Running Locally
-
-**Hybrid Mode (Recommended):**
-
-```bash
-# Start infrastructure + gateway
-docker compose --profile services up -d postgres kafka redis api-gateway
-
-# Run payment-service locally
-./mvnw -pl services/payment-service -am spring-boot:run
+# Query by correlation ID
+{app="payment-service"} |= "correlationId=abc-123"
 ```
-
-**Full Docker:**
-
-```bash
-docker compose --profile services up --build
-```
-
-### Access Points
-
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost:3000 |
-| API Gateway | http://localhost:8080 |
-| Swagger UI | http://localhost:8080/swagger-ui.html |
-| Grafana | http://localhost:3001 |
-| Prometheus | http://localhost:9090 |
-| Zipkin | http://localhost:9411 |
 
 ---
 
-## Development
+## Design Decisions
 
-### Building Services
+### Why Kafka over REST for inter-service communication?
 
-```bash
-# Build all services
-mvn clean install
+| Factor | REST | Kafka |
+|--------|------|-------|
+| **Coupling** | Tight (direct calls) | Loose (event-driven) |
+| **Reliability** | Need circuit breakers | Built-in retry + DLQ |
+| **Scalability** | Thread-per-request | Partitioned consumers |
+| **Audit Trail** | None | Events stored permanently |
+| **Use Case** | Synchronous queries | Async workflows |
 
-# Build specific service
-mvn -pl services/payment-service clean package
+**Decision:** Kafka for all async workflows (payments, settlements, notifications). REST for synchronous queries only.
+
+### Why Outbox Pattern?
+
+```
+Problem: DB write + Kafka publish are not atomic
+Solution: Single DB transaction writes both payment + outbox event
+         Outbox processor polls and publishes to Kafka
 ```
 
-### Running Tests
+### Why Database-per-Service?
 
-```bash
-# Unit tests
-mvn test
+- **Isolation:** Each service owns its data
+- **Scalability:** Scale services independently
+- **Technology:** Choose best DB per use case
+- **Failure isolation:** DB outage doesn't cascade
 
-# Integration tests with Testcontainers
-mvn -pl services/payment-service -Ptestcontainers -Dtest=PaymentFlowContainersIntegrationTest test
+---
 
-# All tests with verification
-mvn verify
+## Failure Scenarios
+
+### 1. Payment Service Crashes After DB Write
+```
+Solution: Outbox Pattern
+- Payment + OutboxEvent written in same transaction
+- On restart, outbox processor replays pending events
+- At-least-once delivery, consumer handles idempotency
 ```
 
-### Code Structure
+### 2. Kafka Consumer Fails
+```
+Solution: Retry with Exponential Backoff
+- Attempt 1: Immediate
+- Attempt 2: 2s
+- Attempt 3: 4s
+- Attempt 4: 8s
+- Attempt 5: Move to DLQ + Alert
+```
+
+### 3. Idempotency Key Collision
+```
+Solution: Store idempotency keys in DB
+- Check on every request
+- If exists: return cached response
+- Expire after 24h
+```
+
+---
+
+## Scaling Strategy
+
+### Stateless Services (Horizontal Scaling)
+```
+API Gateway ─┬─▶ Auth (3 pods)
+             ├─▶ Payment (10 pods) ← hot path
+             ├─▶ Order (5 pods)
+             └─▶ Notification (2 pods)
+```
+
+### Database Scaling
+```
+Primary DB ← All writes + critical reads
+     ↑
+Read Replica ← Analytics, reporting
+```
+
+### Caching Strategy
+- **Redis:** Sessions, rate limits, feature flags
+- **Local:** Payment method lookup, merchant configs
+
+---
+
+## Project Structure
 
 ```
 payment-gateway/
-├── libs/common/                    # Shared libraries
-│   └── src/main/java/dev/payment/common/
-│       ├── api/                    # Common API models
-│       ├── dto/                    # Data transfer objects
-│       └── events/                 # Kafka event definitions
 ├── services/
-│   ├── api-gateway/                # Edge routing & rate limiting
-│   ├── auth-service/               # Authentication & JWT
-│   ├── order-service/              # Order management
-│   ├── payment-service/            # Payment processing
-│   ├── notification-service/       # Notifications
-│   ├── webhook-service/            # Webhook handling
-│   └── simulator-service/          # Payment simulator
-├── docker/                         # Docker configurations
-├── config/                         # Service configurations
-├── scripts/                        # Development scripts
-└── ops/                            # Operational configs (K8s, Grafana)
+│   ├── api-gateway/          # Edge routing
+│   ├── auth-service/          # Authentication
+│   ├── payment-service/       # Core payments
+│   ├── order-service/         # Orders
+│   ├── notification-service/  # Notifications
+│   ├── webhook-service/       # Webhooks
+│   ├── simulator-service/     # Testing
+│   ├── settlement-service/    # Settlements
+│   ├── risk-service/         # Fraud detection
+│   ├── analytics-service/     # Metrics
+│   ├── merchant-service/      # Merchants
+│   ├── dispute-service/       # Disputes
+│   ├── featureflags-service/  # Feature toggles
+│   └── config-service/       # Config server
+├── libs/
+│   └── common/               # Shared code
+├── docker/                   # Docker configs
+├── docker-compose.yml         # Full stack
+├── docs/                     # Documentation
+│   ├── api/                 # OpenAPI spec
+│   ├── demo/                # Demo guide
+│   └── ARCHITECTURE.md      # Architecture
+├── infrastructure/           # Terraform (AWS)
+├── scripts/                  # Dev scripts
+└── tests/                    # Load tests
 ```
-
----
-
-## Configuration
-
-### Environment Variables
-
-#### Common Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SERVER_PORT` | Service port | Service-specific |
-| `SPRING_PROFILES_ACTIVE` | Spring profile | `docker` |
-| `JWT_SECRET_B64` | Base64-encoded JWT secret | Required |
-| `GATEWAY_INTERNAL_SECRET` | Internal gateway secret | Required |
-
-#### Database Configuration
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DB_HOST` | PostgreSQL host | `postgres` |
-| `DB_PORT` | PostgreSQL port | `5432` |
-| `DB_NAME` | Database name | Service-specific |
-| `DB_USERNAME` | Database user | Service-specific |
-| `DB_PASSWORD` | Database password | Service-specific |
-
-#### Kafka Configuration
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `KAFKA_BOOTSTRAP_SERVERS` | Kafka bootstrap servers | `kafka:29092` |
-
-#### Redis Configuration
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `REDIS_HOST` | Redis host | `redis` |
-| `REDIS_PORT` | Redis port | `6379` |
-
-#### Service URLs
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AUTH_SERVICE_URL` | Auth service URL | `http://auth-service:8081` |
-| `ORDER_SERVICE_URL` | Order service URL | `http://order-service:8082` |
-| `PAYMENT_SERVICE_URL` | Payment service URL | `http://payment-service:8083` |
-| `NOTIFICATION_SERVICE_URL` | Notification service URL | `http://notification-service:8084` |
-| `SIMULATOR_SERVICE_URL` | Simulator service URL | `http://simulator-service:8086` |
-
----
-
-## Technology Stack
-
-### Backend
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Java | 21 | Runtime |
-| Spring Boot | 3.3 | Framework |
-| Spring Cloud | 2023.0 | Cloud Native |
-| Spring Security | 6.x | Security |
-| Spring Data JPA | 3.3 | Data Access |
-| Spring Kafka | 3.2 | Event Streaming |
-
-### Data & Messaging
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| PostgreSQL | 16 | Primary Database |
-| Kafka | 3.8 | Event Bus |
-| Redis | 7.4 | Caching & Rate Limiting |
-
-### Observability
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Prometheus | - | Metrics |
-| Grafana | - | Dashboards |
-| Zipkin | - | Distributed Tracing |
-| Micrometer | - | Metrics API |
-
-### Build & Deploy
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Maven | 3.9+ | Build Tool |
-| Docker | - | Containerization |
-| Docker Compose | - | Orchestration |
 
 ---
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### Getting Started
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Workflow
-
 ```bash
-# Run tests before committing
+# Setup
+git clone https://github.com/your-org/payment-gateway.git
+cd payment-gateway
+
+# Build
+mvn clean install
+
+# Run tests
 mvn test
 
-# Verify build
-mvn verify
-
-# Check code style (if configured)
-mvn checkstyle:check
+# Start for development
+docker compose --profile infra up -d
+./mvnw spring-boot:run -pl services/api-gateway
 ```
-
-### Pull Request Requirements
-
-- [ ] All tests passing
-- [ ] Code follows project conventions
-- [ ] Documentation updated for externally visible changes
-- [ ] Clear commit messages
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE)
 
 ---
 
-## Support
-
-For issues and questions, please open an issue on GitHub.
-
----
-
-**Built with passion for fintech innovation**
+**Built with enterprise-grade patterns for production payment systems**
