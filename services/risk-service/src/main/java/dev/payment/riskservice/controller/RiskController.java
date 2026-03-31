@@ -45,15 +45,6 @@ public class RiskController {
         riskScoringService.resetUserMetrics(userId);
         return ResponseEntity.ok(ApiResponse.success(Map.of("message", "User metrics reset successfully")));
     }
-
-    @GetMapping("/health")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> health() {
-        Map<String, Object> health = Map.of(
-            "status", "UP",
-            "service", "risk-service"
-        );
-        return ResponseEntity.ok(ApiResponse.success(health));
-    }
     
     private void validateEvaluateRequest(Map<String, Object> request) {
         if (request.get("transactionId") == null) {

@@ -164,15 +164,6 @@ public class AnalyticsController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
-    @GetMapping("/health")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> health() {
-        Map<String, Object> health = new HashMap<>();
-        health.put("status", "UP");
-        health.put("service", "analytics-service");
-        health.put("timestamp", Instant.now());
-        return ResponseEntity.ok(ApiResponse.success(health));
-    }
-
     private void validateEventRequest(Map<String, Object> request) {
         if (request.get("eventType") == null) {
             throw new IllegalArgumentException("eventType is required");

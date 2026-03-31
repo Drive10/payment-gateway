@@ -146,15 +146,6 @@ public class DisputeController {
         return ResponseEntity.ok(ApiResponse.success(overdue));
     }
 
-    @GetMapping("/health")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> health() {
-        Map<String, Object> health = Map.of(
-                "status", "UP",
-                "service", "dispute-service"
-        );
-        return ResponseEntity.ok(ApiResponse.success(health));
-    }
-
     private void validateCreateRequest(Map<String, Object> request) {
         if (!request.containsKey("paymentId") || request.get("paymentId") == null) {
             throw new IllegalArgumentException("paymentId is required");

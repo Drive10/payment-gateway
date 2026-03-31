@@ -31,6 +31,14 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'merchantdb')\gexec
 SELECT 'CREATE DATABASE disputedb'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'disputedb')\gexec
 
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'payment') THEN
+        CREATE ROLE payment WITH LOGIN PASSWORD '88L2yTDHrhGcUwHh1MtByHgeEJVMUTKa1jaduAKayrY';
+    END IF;
+END
+$$;
+
 GRANT ALL PRIVILEGES ON DATABASE paymentdb TO payment;
 GRANT ALL PRIVILEGES ON DATABASE authdb TO payment;
 GRANT ALL PRIVILEGES ON DATABASE orderdb TO payment;

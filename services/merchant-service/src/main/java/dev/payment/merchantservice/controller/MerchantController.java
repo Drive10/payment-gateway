@@ -202,15 +202,6 @@ public class MerchantController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
-    @GetMapping("/health")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> health() {
-        Map<String, Object> health = Map.of(
-                "status", "UP",
-                "service", "merchant-service"
-        );
-        return ResponseEntity.ok(ApiResponse.success(health));
-    }
-
     // Helper methods
     private void validateCreateRequest(Map<String, Object> request) {
         if (!request.containsKey("email") || request.get("email") == null) {
