@@ -26,6 +26,7 @@ spring:
       acks: all
       retries: 10
     consumer:
+      group-id: payment-service
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
 
@@ -50,12 +51,30 @@ application:
     default-provider: RAZORPAY_SIMULATOR
     checkout-base-url: http://frontend
 
+  ledger:
+    accounts:
+      cash: CASH
+      customer-funds: CUSTOMER_FUNDS
+
   simulator:
     base-url: ${SIMULATOR_BASE_URL:http://payment-service:8084}
 
   kafka:
     topic:
       payment-events: payment.events
+      payment-events-dlt: payment.events.dlt
+    consumer:
+      retry-attempts: 3
+      retry-backoff-ms: 1000
+
+  reconciliation:
+    enabled: false
+    batch-size: 50
+    lookback: PT6H
+
+  bootstrap:
+    admin-email: ""
+    admin-password: ""
 
 logging:
   level:

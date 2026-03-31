@@ -8,11 +8,13 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 @Configuration
 public class OpenApiConfig {
 
     @Bean
+    @Primary
     public OpenAPI paymentGatewayOpenApi() {
         final String securityScheme = "bearerAuth";
         return new OpenAPI()

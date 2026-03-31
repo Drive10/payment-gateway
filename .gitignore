@@ -14,3 +14,8 @@ out/
 __MACOSX/
 .git/
 .m2repo/
+
+# Eclipse IDE
+.classpath
+.project
+.settings/

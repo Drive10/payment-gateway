@@ -12,6 +12,9 @@ spring:
       ddl-auto: create-drop
   flyway:
     enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
 
 application:
   gateway-trust:
@@ -23,3 +26,7 @@ application:
   webhook:
     razorpay:
       secret: test_webhook_secret
+  ledger:
+    accounts:
+      cash: CASH
+      customer-funds: CUSTOMER_FUNDS

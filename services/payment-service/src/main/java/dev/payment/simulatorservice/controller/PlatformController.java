@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/internal/platform")
+@RequestMapping("/internal/platform/simulator")
 public class PlatformController {
 
     private final SimulatorService simulatorService;

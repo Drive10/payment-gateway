@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/internal/platform")
+@RequestMapping("/internal/platform/auth")
 public class PlatformController {
 
     @GetMapping("/status")
