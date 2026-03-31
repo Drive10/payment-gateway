@@ -8,6 +8,9 @@ import {
   X,
   ChevronDown,
   ShoppingCart,
+  Users,
+  Activity,
+  Bug,
 } from 'lucide-react'
 import { useAuth } from '@/store/auth-context'
 import { Button } from '@/components/ui/button'
@@ -27,6 +30,12 @@ const navItems = [
   { label: 'Transactions', href: '/admin/transactions', icon: Receipt },
   { label: 'Orders', href: '/admin/orders', icon: ShoppingCart },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+]
+
+const managementItems = [
+  { label: 'Users', href: '/admin/users', icon: Users },
+  { label: 'System Health', href: '/admin/system-health', icon: Activity },
+  { label: 'Debugger', href: '/admin/debugger', icon: Bug },
 ]
 
 export function AdminLayout() {
@@ -76,6 +85,32 @@ export function AdminLayout() {
           {navItems.map((item) => {
             const isActive = location.pathname === item.href ||
               (item.href !== '/admin' && location.pathname.startsWith(item.href))
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                )}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </Link>
+            )
+          })}
+          
+          <div className="pt-4">
+            <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Management
+            </p>
+          </div>
+          
+          {managementItems.map((item) => {
+            const isActive = location.pathname === item.href
             return (
               <Link
                 key={item.href}

@@ -8,6 +8,9 @@ import { AdminTransactions } from './pages/admin/Transactions'
 import { AdminTransactionDetail } from './pages/admin/TransactionDetail'
 import { AdminAnalytics } from './pages/admin/Analytics'
 import { AdminOrders } from './pages/admin/Orders'
+import { AdminUsers } from './pages/admin/Users'
+import { AdminSystemHealth } from './pages/admin/SystemHealth'
+import { AdminDebugger } from './pages/admin/Debugger'
 import { UserDashboard } from './pages/user/Dashboard'
 import { UserPayments } from './pages/user/Payments'
 import { UserOrders } from './pages/user/Orders'
@@ -37,6 +40,9 @@ function App() {
             <Route path="/admin/transactions/:id" element={<AdminTransactionDetail />} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/system-health" element={<AdminSystemHealth />} />
+            <Route path="/admin/debugger" element={<AdminDebugger />} />
           </Route>
         </Route>
 
