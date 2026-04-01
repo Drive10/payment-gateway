@@ -134,10 +134,8 @@ public class PaymentReconciliationJob {
         return switch (payment.getStatus()) {
             case PENDING, CREATED, PROCESSING, AUTHORIZED -> "CREATED";
             case CAPTURED, PARTIALLY_REFUNDED, REFUNDED -> "CAPTURED";
-            case PENDING -> "PENDING";
             case EXPIRED -> "EXPIRED";
             case FAILED -> "FAILED";
-            case EXPIRED -> "EXPIRED";
         };
     }
 }
