@@ -1,66 +1,40 @@
 services:
-  #vault:
-  #  profiles: ["services", "infra"]
-  #  image: hashicorp/vault:1.17
-  #  container_name: vault
-  #  environment:
-  #    VAULT_ADDR: http://vault:8200
-  #    VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
-  #    VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN}
-  #    VAULT_TOKEN: ${VAULT_ROOT_TOKEN}
-  #  ports:
-  #    - "8200:8200"
-  #  cap_add:
-  #    - IPC_LOCK
-  #  restart: unless-stopped
-  #  deploy:
-  #    resources:
-  #      limits:
-  #        memory: 256m
-  #        cpus: "0.50"
-  #  networks:
-  #    - fintech-network
-  #  healthcheck:
-  #    test: ["CMD", "wget", "-q", "--spider", "http://localhost:8200/v1/sys/health?standbyok=true"]
-  #    interval: 10s
-  #    timeout: 5s
-  #    retries: 5
+  # Default environment variables with sensible defaults for development
+  x-defaults: &defaults
+    SPRING_PROFILES_ACTIVE: docker
 
-  config-service:
+  vault:
+    <<: *defaults
     profiles: ["services", "infra"]
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/config-service
+    image: hashicorp/vault:1.17
+    container_name: vault
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8888
-      CONFIG_GIT_URI: ${CONFIG_GIT_URI:-https://github.com/example/payment-gateway-config.git}
+      VAULT_ADDR: http://vault:8200
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN}
+      VAULT_TOKEN: ${VAULT_ROOT_TOKEN}
     ports:
-      - "8888:8888"
-    volumes:
-      - ./config-repo:/config-repo
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 256m
           cpus: "0.50"
-    #depends_on:
-    #  vault:
-    #    condition: service_healthy
+    networks:
+      - fintech-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8888/actuator/health || exit 1"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8200/v1/sys/health?standbyok=true"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - fintech-network
 
   redis:
+    <<: *defaults
     profiles: ["services", "infra", "observability"]
-    image: redis:7.4-alpine
+    image: redis:7-alpine
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--save", "", "--appendonly", "no"]
     ports:
       - "6379:6379"
@@ -77,6 +51,35 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  config-service:
+    <<: *defaults
+    profiles: ["services", "infra"]
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        SERVICE_PATH: services/config-service
+    environment:
+      SERVER_PORT: 8888
+      CONFIG_GIT_URI: ${CONFIG_GIT_URI}
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./config-repo:/config-repo
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.50"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8888/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fintech-network
 
   kafka:
     profiles: ["services", "infra"]

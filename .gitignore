@@ -11,50 +11,7 @@ target/
 *.iml
 .DS_Store
 __MACOSX/
-
-# Build
-.mvn/wrapper/maven-wrapper.jar
-.m2repo/
-
-# Environment (NEVER COMMIT .env files with real secrets)
-.env
-.env.local
-.env.*.local
-
-# Logs
-logs/
-*.log
-out/
-
-# Frontend
-**/node_modules/
-**/dist/
-**/build/
-
-# Eclipse IDE
-.classpath
 .factorypath
+.classpath
 .project
 .settings/
-
-# Test output
-**/test-output/
-**/surefire-reports/
-**/dependency-check-reports/
-
-# Docker volumes
-postgres_data/
-prometheus_data/
-grafana_data/
-loki_data/
-
-# Terraform
-*.tfstate
-*.tfstate.*
-.terraform/
-
-# Misc
-*.bak
-*.swp
-*~
-coverage/
