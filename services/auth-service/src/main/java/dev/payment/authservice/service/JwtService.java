@@ -30,6 +30,7 @@ public class JwtService {
     public String generateAccessToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("token_type", "access");
+        claims.put("type", "access");
         claims.put("roles", user.getRoles().stream()
                 .map(role -> role.getName())
                 .toList());
@@ -39,6 +40,7 @@ public class JwtService {
     public String generateRefreshToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("token_type", "refresh");
+        claims.put("type", "refresh");
         return buildToken(claims, user.getEmail(), jwtConfig.getRefreshExpiration());
     }
 

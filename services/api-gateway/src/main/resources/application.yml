@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   tomcat:
     max-threads: 200
     accept-count: 100
@@ -15,8 +15,8 @@ spring:
 
   data:
     redis:
-      host: redis
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       timeout: 2000ms
       lettuce:
@@ -35,7 +35,7 @@ spring:
         - PreserveHostHeader
       routes:
         - id: auth-service
-          uri: http://auth-service:8081
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/api/v1/auth/**
           filters:
@@ -46,22 +46,22 @@ spring:
                 redis-rate-limiter.burstCapacity: 100
 
         - id: order-service
-          uri: http://order-service:8082
+          uri: ${ORDER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/v1/orders/**
 
         - id: payment-service
-          uri: http://payment-service:8083
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/v1/payments/**,/api/v1/admin/**
 
         - id: webhook-service
-          uri: http://webhook-service:8085
+          uri: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
           predicates:
             - Path=/api/v1/webhooks/**
 
         - id: merchant-service
-          uri: http://merchant-service:8090
+          uri: ${MERCHANT_SERVICE_URL:http://localhost:8090}
           predicates:
             - Path=/api/v1/merchants/**
           filters:
@@ -71,68 +71,68 @@ spring:
                 redis-rate-limiter.burstCapacity: 200
 
         - id: dispute-service
-          uri: http://dispute-service:8091
+          uri: ${DISPUTE_SERVICE_URL:http://localhost:8091}
           predicates:
             - Path=/api/v1/disputes/**
 
         - id: swagger-ui
-          uri: http://payment-service:8083
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/swagger-ui/**,/swagger-ui.html
           filters:
             - StripPrefix=0
 
         - id: openapi-docs
-          uri: http://payment-service:8083
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/v3/api-docs/**
           filters:
             - StripPrefix=1
 
         - id: internal-auth
-          uri: http://auth-service:8081
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/platform/auth/**
           filters:
             - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-order
-          uri: http://order-service:8082
+          uri: ${ORDER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/platform/order/**
           filters:
             - RewritePath=/platform/order/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-notification
-          uri: http://notification-service:8084
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/platform/notification/**
           filters:
             - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-webhook
-          uri: http://webhook-service:8085
+          uri: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
           predicates:
             - Path=/platform/webhook/**
           filters:
             - RewritePath=/platform/webhook/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-simulator
-          uri: http://simulator-service:8086
+          uri: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
           predicates:
             - Path=/platform/simulator/**
           filters:
             - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-merchant
-          uri: http://merchant-service:8090
+          uri: ${MERCHANT_SERVICE_URL:http://localhost:8090}
           predicates:
             - Path=/platform/merchant/**
           filters:
             - RewritePath=/platform/merchant/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-dispute
-          uri: http://dispute-service:8091
+          uri: ${DISPUTE_SERVICE_URL:http://localhost:8091}
           predicates:
             - Path=/platform/dispute/**
           filters:
@@ -165,14 +165,14 @@ application:
     internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-gateway-internal-secret}
 
   services:
-    auth: http://auth-service:8081
-    order: http://order-service:8082
-    payment: http://payment-service:8083
-    notification: http://notification-service:8084
-    webhook: http://webhook-service:8085
-    simulator: http://simulator-service:8086
-    merchant: http://merchant-service:8090
-    dispute: http://dispute-service:8091
+    auth: ${AUTH_SERVICE_URL:http://localhost:8081}
+    order: ${ORDER_SERVICE_URL:http://localhost:8082}
+    payment: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+    notification: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+    webhook: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
+    simulator: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+    merchant: ${MERCHANT_SERVICE_URL:http://localhost:8090}
+    dispute: ${DISPUTE_SERVICE_URL:http://localhost:8091}
 
 security:
   jwt:

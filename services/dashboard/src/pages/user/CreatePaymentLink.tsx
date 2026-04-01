@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check } from 'lucide-react'
+import { Plus, Link, Loader2, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -55,7 +55,7 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, merchantId, onSucc
 
   const handleCopyLink = () => {
     if (createdLink) {
-      const fullUrl = `${window.location.origin}/?ref=${createdLink.paymentLinkId}`
+      const fullUrl = createdLink.paymentLinkUrl || `${window.location.origin}/?ref=${createdLink.paymentLinkId}`
       navigator.clipboard.writeText(fullUrl)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -152,18 +152,28 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, merchantId, onSucc
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
               <Button onClick={handleSubmit} disabled={loading}>
-                {loading ? 'Creating...' : 'Create Link'}
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                Create Link
               </Button>
             </DialogFooter>
           </div>
         ) : (
           <div className="space-y-4">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+              <div className="mb-2 flex items-center gap-2 text-green-700">
+                <Check className="h-4 w-4" />
+                <span className="font-medium">Payment link created</span>
+              </div>
+              <p className="text-sm text-green-700">
+                Share this link with your customer to start checkout.
+              </p>
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Share this link with your customer</label>
               <div className="flex gap-2">
                 <Input
                   readOnly
-                  value={`${window.location.origin}/?ref=${createdLink.paymentLinkId}`}
+                  value={createdLink.paymentLinkUrl || `${window.location.origin}/?ref=${createdLink.paymentLinkId}`}
                   className="font-mono text-sm"
                 />
                 <Button size="icon" variant="outline" onClick={handleCopyLink}>
@@ -172,12 +182,13 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, merchantId, onSucc
               </div>
             </div>
 
-            <div className="text-sm text-gray-500 text-center">
-              This link will expire in 24 hours
+            <div className="flex items-start gap-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+              <Link className="mt-0.5 h-4 w-4" />
+              <span>This link expires in 24 hours and can be used once.</span>
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>Close</Button>
+              <Button variant="outline" onClick={handleClose}>Done</Button>
             </DialogFooter>
           </div>
         )}

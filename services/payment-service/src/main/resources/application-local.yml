@@ -1,19 +1,25 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/paymentdb
-    username: payment
-    password: paymentpass
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/paymentdb}
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD:${POSTGRES_PASSWORD:pg-dev-password}}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 5
       minimum-idle: 2
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
 application:
   simulator:
-    base-url: http://localhost:8084
+    base-url: ${SIMULATOR_BASE_URL:http://localhost:8086}
+  webhook:
+    service-url: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
+  order:
+    service-url: ${ORDER_SERVICE_URL:http://localhost:8082}
+  auth:
+    service-url: ${AUTH_SERVICE_URL:http://localhost:8081}
 
   gateway-trust:
     enabled: false

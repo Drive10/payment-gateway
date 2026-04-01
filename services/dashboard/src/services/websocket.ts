@@ -50,8 +50,14 @@ class WebSocketService {
 
   private getWebSocketUrl(token: string): string {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const host = import.meta.env.VITE_API_URL || 'http://localhost:8080'
-    const baseUrl = host.replace(/^http/, protocol)
+    const configuredBase = import.meta.env.VITE_API_URL
+    let origin = window.location.origin
+
+    if (configuredBase && /^https?:\/\//.test(configuredBase)) {
+      origin = new URL(configuredBase).origin
+    }
+
+    const baseUrl = origin.replace(/^http/, protocol)
     return `${baseUrl}/ws?token=${token}`
   }
 

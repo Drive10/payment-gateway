@@ -7,11 +7,17 @@ COPY libs/common/src libs/common/src
 RUN mvn -q -N -f libs/common/pom.xml install -DskipTests
 COPY services/ ./services/
 ARG SERVICE_PATH
-RUN mvn -q -DskipTests -pl ${SERVICE_PATH} -am package
+RUN mvn -q -DskipTests -pl ${SERVICE_PATH} -am clean package
+RUN set -eux; \
+    artifact="$(find "/workspace/${SERVICE_PATH}/target" -maxdepth 1 -type f -name '*-exec.jar' | head -n 1)"; \
+    if [ -z "$artifact" ]; then \
+      artifact="$(find "/workspace/${SERVICE_PATH}/target" -maxdepth 1 -type f -name '*.jar' ! -name '*.original' | head -n 1)"; \
+    fi; \
+    test -n "$artifact"; \
+    cp "$artifact" /workspace/app.jar
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-ARG SERVICE_PATH
-COPY --from=build /workspace/${SERVICE_PATH}/target/*.jar /app/app.jar
+COPY --from=build /workspace/app.jar /app/app.jar
 EXPOSE 8080
 ENTRYPOINT ["java","-XX:+UseZGC","-XX:MaxRAMPercentage=75.0","-XX:+HeapDumpOnOutOfMemoryError","-Djava.security.egd=file:/dev/./urandom","-jar","/app/app.jar"]

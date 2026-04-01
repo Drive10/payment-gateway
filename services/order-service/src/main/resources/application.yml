@@ -1,5 +1,5 @@
 server:
-  port: 8082
+  port: ${SERVER_PORT:8082}
   shutdown: graceful
   tomcat:
     max-threads: 150
@@ -10,7 +10,7 @@ spring:
     name: order-service
 
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:5432/${ORDER_DB:orderdb}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${DB_PORT:5432}/${ORDER_DB:orderdb}
     username: ${ORDER_DB_USER:order}
     password: ${ORDER_DB_PASSWORD:orderpass}
     driver-class-name: org.postgresql.Driver
@@ -73,10 +73,10 @@ management:
 
 application:
   order-service:
-    url: ${ORDER_SERVICE_URL:http://order-service:8082}
+    url: ${ORDER_SERVICE_URL:http://localhost:8082}
 
   payment-service:
-    url: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
 
   kafka:
     topic:

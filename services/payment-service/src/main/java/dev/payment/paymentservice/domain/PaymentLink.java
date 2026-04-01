@@ -2,6 +2,7 @@ package dev.payment.paymentservice.domain;
 
 import dev.payment.paymentservice.domain.enums.PaymentStatus;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -23,8 +24,8 @@ public class PaymentLink {
     @Column(name = "merchant_id", nullable = false)
     private UUID merchantId;
 
-    @Column(nullable = false)
-    private Double amount;
+    @Column(nullable = false, precision = 19, scale = 4)
+    private BigDecimal amount;
 
     @Column(nullable = false)
     private String currency;
@@ -68,7 +69,7 @@ public class PaymentLink {
 
     public PaymentLink() {}
 
-    public PaymentLink(UUID merchantId, Double amount, String currency, String description,
+    public PaymentLink(UUID merchantId, BigDecimal amount, String currency, String description,
                        String customerName, String customerEmail, String customerPhone,
                        String successUrl, String cancelUrl, Long createdBy) {
         this.referenceId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
@@ -97,8 +98,8 @@ public class PaymentLink {
     public UUID getMerchantId() { return merchantId; }
     public void setMerchantId(UUID merchantId) { this.merchantId = merchantId; }
 
-    public Double getAmount() { return amount; }
-    public void setAmount(Double amount) { this.amount = amount; }
+    public BigDecimal getAmount() { return amount; }
+    public void setAmount(BigDecimal amount) { this.amount = amount; }
 
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; }

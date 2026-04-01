@@ -1,5 +1,5 @@
 server:
-  port: 8083
+  port: ${SERVER_PORT:8083}
   shutdown: graceful
   tomcat:
     max-threads: 200
@@ -11,9 +11,9 @@ spring:
     name: payment-service
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:paymentdb}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:paymentdb}
     username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD:paymentpass}
+    password: ${DB_PASSWORD:${POSTGRES_PASSWORD:pg-dev-password}}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 30
@@ -51,7 +51,7 @@ spring:
       ddl-auto: validate
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -103,19 +103,19 @@ application:
 
   payment:
     default-provider: RAZORPAY_SIMULATOR
-    checkout-base-url: http://frontend
+    checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}
 
   simulator:
-    base-url: ${SIMULATOR_BASE_URL:http://simulator-service:8086}
+    base-url: ${SIMULATOR_BASE_URL:http://localhost:8086}
 
   webhook:
-    service-url: ${WEBHOOK_SERVICE_URL:http://webhook-service:8085}
+    service-url: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
 
   order:
-    service-url: ${ORDER_SERVICE_URL:http://order-service:8082}
+    service-url: ${ORDER_SERVICE_URL:http://localhost:8082}
 
   auth:
-    service-url: ${AUTH_SERVICE_URL:http://auth-service:8081}
+    service-url: ${AUTH_SERVICE_URL:http://localhost:8081}
 
   kafka:
     topic:

@@ -10,11 +10,18 @@ import dev.payment.paymentservice.domain.enums.TransactionMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -26,6 +33,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ContextConfiguration(classes = PaymentRepositoryIntegrationTest.JpaSliceConfig.class)
 class PaymentRepositoryIntegrationTest {
 
     @Autowired
@@ -246,6 +255,25 @@ class PaymentRepositoryIntegrationTest {
         payment.setSimulated(false);
         payment.setCheckoutUrl("https://checkout.example.com");
         payment.setMerchantId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        payment.setPlatformFee(BigDecimal.ZERO);
+        payment.setGatewayFee(BigDecimal.ZERO);
+        payment.setPricingTier("STANDARD");
         return payment;
+    }
+
+    @SpringBootConfiguration
+    @EnableAutoConfiguration
+    @EnableJpaAuditing
+    @EnableJpaRepositories(basePackageClasses = {
+            PaymentRepository.class,
+            OrderRepository.class,
+            UserRepository.class
+    })
+    @EntityScan(basePackageClasses = {
+            Payment.class,
+            Order.class,
+            User.class
+    })
+    static class JpaSliceConfig {
     }
 }

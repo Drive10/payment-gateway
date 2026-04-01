@@ -1,11 +1,11 @@
 server:
-  port: 8090
+  port: ${SERVER_PORT:8090}
 
 spring:
   application:
     name: merchant-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:merchantdb}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:merchantdb}
     username: ${DB_USERNAME:merchant}
     password: ${DB_PASSWORD:merchantpass}
     driver-class-name: org.postgresql.Driver
@@ -24,10 +24,11 @@ spring:
 
 eureka:
   client:
+    enabled: ${EUREKA_ENABLED:false}
     service-url:
-      defaultZone: http://eureka:8761/eureka
-    fetch-registry: true
-    register-with-eureka: true
+      defaultZone: ${EUREKA_SERVER:http://eureka:8761/eureka}
+    fetch-registry: ${EUREKA_ENABLED:false}
+    register-with-eureka: ${EUREKA_ENABLED:false}
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${server.port}

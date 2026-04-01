@@ -52,13 +52,15 @@ export default function Checkout() {
   const [submitError, setSubmitError] = useState("");
   const [paymentLinkData, setPaymentLinkData] = useState(null);
   const [loadingLink, setLoadingLink] = useState(false);
+  const [paymentLinkChecked, setPaymentLinkChecked] = useState(false);
   const navigate = useNavigate();
 
-  // Check for payment link reference in URL
   useEffect(() => {
     const referenceId = searchParams.get("ref");
     if (referenceId) {
       loadPaymentLink(referenceId);
+    } else {
+      setPaymentLinkChecked(true);
     }
   }, [searchParams]);
 
@@ -77,8 +79,28 @@ export default function Checkout() {
       setSubmitError("Failed to load payment details");
     } finally {
       setLoadingLink(false);
+      setPaymentLinkChecked(true);
     }
   };
+
+  if (loadingLink) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (searchParams.get("ref") && paymentLinkChecked && !paymentLinkData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Invalid Payment Link</h1>
+          <p className="text-slate-600">This payment link is invalid or has expired.</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleChange = (field, value) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -98,33 +120,13 @@ export default function Checkout() {
     setSubmitError("");
 
     try {
-      // If we have a payment link, include the reference
-      const payload = paymentLinkData ? {
-        paymentLinkRef: paymentLinkData.paymentLinkId,
-        method: method,
-        card: method === "card" ? {
-          number: values.cardNumber.replace(/\s/g, ""),
-          expiryMonth: values.expiry.split("/")[0],
-          expiryYear: values.expiry.split("/")[1],
-          cvv: values.cvv,
-          cardholderName: values.cardholder
-        } : undefined
-      } : {
-        amount: PAYMENT_AMOUNT,
-        currency: "USD",
-        method: method,
-        card: method === "card" ? {
-          number: values.cardNumber.replace(/\s/g, ""),
-          expiryMonth: values.expiry.split("/")[0],
-          expiryYear: values.expiry.split("/")[1],
-          cvv: values.cvv,
-          cardholderName: values.cardholder
-        } : undefined,
-        note: PAYMENT_NOTE
-      };
-
-      await startCheckout(payload);
-      navigate("/processing");
+      const checkout = await startCheckout({
+        amount: paymentLinkData?.amount ?? PAYMENT_AMOUNT,
+        method,
+        cardholder: values.cardholder,
+        transactionMode,
+      });
+      navigate("/processing", { state: { checkout } });
     } catch (error) {
       setSubmitError(error.message || "Payment failed. Please try again.");
     } finally {
@@ -132,27 +134,8 @@ export default function Checkout() {
     }
   };
 
-  // Show loading while fetching payment link
-  if (loadingLink) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  // Show error if payment link invalid
-  if (searchParams.get("ref") && !paymentLinkData && !loadingLink) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Invalid Payment Link</h1>
-          <p className="text-slate-600">This payment link is invalid or has expired.</p>
-        </div>
-      </div>
-    );
-  }
-
+  const displayAmount = paymentLinkData?.amount ?? PAYMENT_AMOUNT;
+  const displayCurrency = paymentLinkData?.currency || "INR";
   const disabled =
     submitting ||
     (method === "card" &&
@@ -203,10 +186,9 @@ export default function Checkout() {
                   <div className="text-right">
                     <p className="text-sm text-slate-500">Total Amount</p>
                     <p className="text-3xl font-bold text-slate-900">
-                      {paymentLinkData 
-                        ? `${paymentLinkData.currency || 'USD'} ${paymentLinkData.amount?.toFixed(2)}`
-                        : formatCurrency(PAYMENT_AMOUNT)
-                      }
+                      {displayCurrency === "INR"
+                        ? formatCurrency(displayAmount)
+                        : `${displayCurrency} ${displayAmount?.toFixed?.(2) ?? displayAmount}`}
                     </p>
                   </div>
                 </div>
@@ -235,7 +217,7 @@ export default function Checkout() {
                   <div className="mt-4 space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-600">Subscription Renewal</span>
-                      <span className="font-medium text-slate-900">{formatCurrency(PAYMENT_AMOUNT)}</span>
+                      <span className="font-medium text-slate-900">{formatCurrency(displayAmount)}</span>
                     </div>
                     <div className="flex justify-between border-t border-slate-100 pt-3 text-sm">
                       <span className="text-slate-600">Processing Fee</span>
@@ -243,7 +225,7 @@ export default function Checkout() {
                     </div>
                     <div className="flex justify-between border-t border-slate-100 pt-3 text-sm">
                       <span className="font-semibold text-slate-900">Total</span>
-                      <span className="font-bold text-slate-900">{formatCurrency(PAYMENT_AMOUNT)}</span>
+                      <span className="font-bold text-slate-900">{formatCurrency(displayAmount)}</span>
                     </div>
                   </div>
                 </div>
@@ -351,7 +333,7 @@ export default function Checkout() {
                       Processing...
                     </span>
                   ) : (
-                    `Pay ${formatCurrency(PAYMENT_AMOUNT)}`
+                    `Pay ${formatCurrency(displayAmount)}`
                   )}
                 </button>
 

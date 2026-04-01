@@ -5,11 +5,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public record CreatePaymentLinkRequest(
         @NotNull UUID merchantId,
-        @NotNull @Positive Double amount,
+        @NotNull @Positive BigDecimal amount,
         @NotBlank @Size(max = 3) String currency,
         @Size(max = 255) String description,
         @Size(max = 100) String customerName,

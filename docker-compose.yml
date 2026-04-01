@@ -1,4 +1,25 @@
 services:
+  vault:
+    profiles: ["services", "infra"]
+    image: hashicorp/vault:1.17
+    container_name: vault
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN:-dev-root-token}
+      VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.50"
+    networks:
+      - fintech-network
   redis:
     profiles: ["services", "infra", "observability"]
     image: redis:7-alpine
@@ -29,7 +50,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8888
-      CONFIG_GIT_URI: ${CONFIG_GIT_URI}
+      CONFIG_GIT_URI: ${CONFIG_GIT_URI:-file:///config-repo}
     ports:
       - "8888:8888"
     volumes:
@@ -44,7 +65,8 @@ services:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8888/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 12
+      start_period: 30s
     networks:
       - fintech-network
 
@@ -138,19 +160,12 @@ services:
         limits:
           memory: 768m
           cpus: "0.75"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -171,7 +186,7 @@ services:
       ORDER_DB_USER: ${ORDER_DB_USER}
       ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      PAYMENT_SERVICE_URL: http://payment-service:8083
+      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8083}
     ports:
       - "8082:8082"
     restart: unless-stopped
@@ -180,22 +195,17 @@ services:
         limits:
           memory: 768m
           cpus: "0.75"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8082/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
   payment-service:
-    profiles: ["services"]
+    profiles: ["full"]
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -210,7 +220,7 @@ services:
       DB_PORT: 5432
       DB_NAME: paymentdb
       DB_USERNAME: ${PAYMENT_DB_USER}
-      DB_PASSWORD: ${PAYMENT_DB_PASSWORD}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -227,19 +237,12 @@ services:
         limits:
           memory: 768m
           cpus: "0.75"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8083/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -270,19 +273,12 @@ services:
         limits:
           memory: 768m
           cpus: "0.75"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8084/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -302,7 +298,7 @@ services:
       DB_USERNAME: ${WEBHOOK_DB_USER}
       DB_PASSWORD: ${WEBHOOK_DB_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      PAYMENT_SERVICE_URL: http://payment-service:8083
+      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8083}
     ports:
       - "8085:8085"
     restart: unless-stopped
@@ -311,17 +307,12 @@ services:
         limits:
           memory: 768m
           cpus: "0.75"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8085/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -349,17 +340,12 @@ services:
         limits:
           memory: 512m
           cpus: "0.50"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8086/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -387,17 +373,12 @@ services:
         limits:
           memory: 768m
           cpus: "0.75"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8087/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -428,19 +409,12 @@ services:
         limits:
           memory: 512m
           cpus: "0.50"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8088/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -468,17 +442,12 @@ services:
         limits:
           memory: 512m
           cpus: "0.50"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8089/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -506,17 +475,12 @@ services:
         limits:
           memory: 512m
           cpus: "0.50"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8090/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -544,17 +508,12 @@ services:
         limits:
           memory: 512m
           cpus: "0.50"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8091/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -573,11 +532,11 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      AUTH_SERVICE_URL: http://auth-service:8081
-      ORDER_SERVICE_URL: http://order-service:8082
-      PAYMENT_SERVICE_URL: http://payment-service:8083
-      MERCHANT_SERVICE_URL: http://merchant-service:8090
-      DISPUTE_SERVICE_URL: http://dispute-service:8091
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:8081}
+      ORDER_SERVICE_URL: ${ORDER_SERVICE_URL:-http://order-service:8082}
+      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8083}
+      MERCHANT_SERVICE_URL: ${MERCHANT_SERVICE_URL:-http://merchant-service:8090}
+      DISPUTE_SERVICE_URL: ${DISPUTE_SERVICE_URL:-http://dispute-service:8091}
     ports:
       - "8080:8080"
     volumes:
@@ -590,23 +549,12 @@ services:
         limits:
           memory: 512m
           cpus: "0.75"
-    depends_on:
-      auth-service:
-        condition: service_healthy
-      order-service:
-        condition: service_healthy
-      merchant-service:
-        condition: service_healthy
-      dispute-service:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 12
+      start_period: 120s
     networks:
       - fintech-network
 
@@ -615,37 +563,18 @@ services:
     profiles: ["services"]
     build:
       context: ./services/frontend
-      target: builder
-    volumes:
-      - ./services/frontend/dist:/app/dist
+    ports:
+      - "3000:80"
+    restart: unless-stopped
     networks:
       - fintech-network
 
-  # Dashboard - build only, static files served by reverse-proxy
   dashboard:
     profiles: ["services"]
     build:
       context: ./services/dashboard
-      target: builder
-    environment:
-      VITE_API_URL: /api/v1
-    volumes:
-      - ./services/dashboard/dist:/app/dist
-    networks:
-      - fintech-network
-
-  # Unified Nginx reverse-proxy - serves all frontends + routes API
-  reverse-proxy:
-    profiles: ["services"]
-    build:
-      context: ./nginx
     ports:
-      - "80:80"
-    volumes:
-      - ./services/frontend/dist:/usr/share/nginx/html/frontend:ro
-      - ./services/dashboard/dist:/usr/share/nginx/html/dashboard:ro
-    depends_on:
-      - api-gateway
+      - "3001:80"
     restart: unless-stopped
     deploy:
       resources:
@@ -702,4 +631,3 @@ services:
       - prometheus
     networks:
       - fintech-network
-

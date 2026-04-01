@@ -1,5 +1,5 @@
 server:
-  port: 8084
+  port: ${SERVER_PORT:8084}
 
 spring:
   application:
@@ -14,7 +14,7 @@ spring:
       properties:
         spring.json.trusted.packages: dev.payment.common.event
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/notificationdb
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:notificationdb}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver

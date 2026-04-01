@@ -1,11 +1,12 @@
 package dev.payment.paymentservice.dto.response;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public record PaymentLinkResponse(
         String paymentLinkId,
         String paymentLinkUrl,
-        Double amount,
+        BigDecimal amount,
         String currency,
         String status,
         Instant createdAt,

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { ApiError } from '@/services/api/client'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
 export type UserRole = 'ADMIN' | 'USER'
 
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       try {
-        const { user: storedUser, token: storedToken } = JSON.parse(stored)
+        const { user: storedUser, accessToken: storedToken } = JSON.parse(stored)
         setUser(storedUser)
         setToken(storedToken)
       } catch {
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json()
-      const { token: authToken, user: userData } = data.data
+      const { accessToken: authToken, user: userData } = data.data
 
       const user: User = {
         id: userData.id,
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(user)
       setToken(authToken)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ user, token: authToken }))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ user, accessToken: authToken }))
     } catch (error) {
       if (error instanceof ApiError) {
         throw error

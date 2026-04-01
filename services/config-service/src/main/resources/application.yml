@@ -1,23 +1,22 @@
 server:
-  port: 8888
+  port: ${SERVER_PORT:8888}
 
 spring:
   application:
     name: config-service
-  cloud:
-    config:
-      server:
-        git:
-          uri: ${CONFIG_GIT_URI:file:./config-repo}
-          default-label: main
-          timeout: 5
-          refresh-rate: 60
+  profiles:
+    default: local
+    group:
+      local: native
+      docker: native
+      prod: git
   rabbitmq:
     host: ${RABBITMQ_HOST:rabbitmq}
     port: ${RABBITMQ_PORT:5672}
 
 eureka:
   client:
+    enabled: ${EUREKA_ENABLED:false}
     service-url:
       defaultZone: ${EUREKA_SERVER:http://eureka:8761/eureka}
   instance:
@@ -31,6 +30,8 @@ management:
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
 
 logging:
   level:

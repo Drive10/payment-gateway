@@ -1,11 +1,11 @@
 server:
-  port: 8091
+  port: ${SERVER_PORT:8091}
 
 spring:
   application:
     name: dispute-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:disputedb}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:disputedb}
     username: ${DB_USERNAME:dispute}
     password: ${DB_PASSWORD:disputepass}
     driver-class-name: org.postgresql.Driver
@@ -20,10 +20,11 @@ spring:
 
 eureka:
   client:
+    enabled: ${EUREKA_ENABLED:false}
     service-url:
-      defaultZone: http://eureka:8761/eureka
-    fetch-registry: true
-    register-with-eureka: true
+      defaultZone: ${EUREKA_SERVER:http://eureka:8761/eureka}
+    fetch-registry: ${EUREKA_ENABLED:false}
+    register-with-eureka: ${EUREKA_ENABLED:false}
 
 management:
   endpoints:

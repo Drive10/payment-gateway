@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,7 +35,7 @@ public class PaymentLinkService {
                 request.customerPhone(),
                 request.successUrl(),
                 request.cancelUrl(),
-                creator.getId()
+                actorIdAsUuid(creator.getId())
         );
 
         PaymentLink saved = paymentLinkRepository.save(paymentLink);
@@ -87,5 +88,16 @@ public class PaymentLinkService {
                         paymentLink.getCustomerPhone()
                 )
         );
+    }
+
+    private UUID actorIdAsUuid(Long actorId) {
+        if (actorId == null) {
+            return null;
+        }
+        ByteBuffer buffer = ByteBuffer.allocate(16);
+        buffer.putLong(0L);
+        buffer.putLong(actorId);
+        buffer.flip();
+        return new UUID(buffer.getLong(), buffer.getLong());
     }
 }
