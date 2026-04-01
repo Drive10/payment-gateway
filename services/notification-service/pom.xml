@@ -8,6 +8,7 @@
         <groupId>dev.payment</groupId>
         <artifactId>payment-gateway</artifactId>
         <version>1.0.0</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>notification-service</artifactId>

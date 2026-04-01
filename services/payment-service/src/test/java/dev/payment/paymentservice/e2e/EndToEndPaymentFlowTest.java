@@ -1,6 +1,7 @@
 package dev.payment.paymentservice.e2e;
 
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -14,13 +15,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpEntity;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import java.util.Map;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+@EnabledIfEnvironmentVariable(named = "RUN_E2E", matches = "(?i)true")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class EndToEndPaymentFlowTest {
@@ -30,16 +30,6 @@ public class EndToEndPaymentFlowTest {
 
   @Autowired
   private TestRestTemplate restTemplate;
-
-  private boolean runEnabled = false;
-
-  @BeforeAll
-  void beforeAll() {
-    // Gate the E2E tests behind RUN_E2E env var so unit tests still pass in CI without Docker
-    String flag = System.getenv("RUN_E2E");
-    runEnabled = flag != null && flag.equalsIgnoreCase("true");
-    Assumptions.assumeTrue(runEnabled, "RUN_E2E not enabled. Skipping E2E harness.");
-  }
 
   @Test
   @Order(1)

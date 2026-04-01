@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Plus, Link, Loader2, Copy, Check } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -102,8 +101,8 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, merchantId, onSucc
 
             <div className="space-y-2">
               <label htmlFor="currency" className="text-sm font-medium">Currency</label>
-              <Select 
-                value={form.currency} 
+              <Select
+                value={form.currency}
                 onValueChange={(value) => setForm({ ...form, currency: value })}
               >
                 <SelectTrigger>
@@ -150,6 +149,15 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, merchantId, onSucc
               </div>
             </div>
 
+            <DialogFooter>
+              <Button variant="outline" onClick={handleClose}>Cancel</Button>
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? 'Creating...' : 'Create Link'}
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Share this link with your customer</label>
               <div className="flex gap-2">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Copy, CheckCircle2, XCircle, Clock, AlertTriangle, DollarSign, CreditCard, Receipt } from 'lucide-react'
+import { ArrowLeft, Copy, CheckCircle2, XCircle, Clock, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'

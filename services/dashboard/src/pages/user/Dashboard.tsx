@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { userService, type UserDashboardData } from '@/services/user.service'
-import { merchantPaymentService, type MerchantBalance, type MerchantAnalytics, type PaymentTrend } from '@/services/payment.service'
+import { merchantPaymentService, type MerchantBalance, type MerchantAnalytics } from '@/services/payment.service'
 import { useAuth } from '@/store/auth-context'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { RevenueTrendsChart } from '@/components/charts/RevenueTrendsChart'
@@ -15,7 +15,6 @@ export function UserDashboard() {
   const [data, setData] = useState<UserDashboardData | null>(null)
   const [balance, setBalance] = useState<MerchantBalance | null>(null)
   const [analytics, setAnalytics] = useState<MerchantAnalytics | null>(null)
-  const [trends, setTrends] = useState<PaymentTrend[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
 
@@ -25,16 +24,14 @@ export function UserDashboard() {
 
   const loadData = async () => {
     try {
-      const [dashboardData, balanceData, analyticsData, trendsData] = await Promise.all([
+      const [dashboardData, balanceData, analyticsData] = await Promise.all([
         userService.getDashboard(),
         user?.merchantId ? merchantPaymentService.getMerchantBalance(user.merchantId) : Promise.resolve(null),
         user?.merchantId ? merchantPaymentService.getMerchantAnalytics(user.merchantId) : Promise.resolve(null),
-        user?.merchantId ? merchantPaymentService.getPaymentTrends(user.merchantId, 7) : Promise.resolve([]),
       ])
       setData(dashboardData)
       setBalance(balanceData)
       setAnalytics(analyticsData)
-      setTrends(trendsData)
     } catch (error) {
       console.error('Failed to load dashboard:', error)
     } finally {

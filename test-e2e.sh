@@ -16,6 +16,7 @@ NC='\033[0m'
 
 BASE_URL="${BASE_URL:-http://localhost:8080}"
 AUTH_TOKEN=""
+REFRESH_TOKEN=""
 
 log_test() { echo -e "${CYAN}[TEST]${NC} $1"; }
 log_pass() { echo -e "  ${GREEN}[PASS]${NC} $1"; }
@@ -73,9 +74,9 @@ test_auth() {
     
     # Register
     log_test "User Registration"
-    response=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/auth/register" \
+    response=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/v1/auth/register" \
         -H "Content-Type: application/json" \
-        -d "{\"email\":\"${email}\",\"password\":\"Test@123456\",\"fullName\":\"Test User\"}" 2>/dev/null)
+        -d "{\"email\":\"${email}\",\"password\":\"Test@123456\",\"firstName\":\"Test\",\"lastName\":\"User\"}" 2>/dev/null)
     
     http_code=$(echo "$response" | tail -1)
     body=$(echo "$response" | head -n -1)
@@ -88,7 +89,7 @@ test_auth() {
     
     # Login
     log_test "User Login"
-    response=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/auth/login" \
+    response=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/v1/auth/login" \
         -H "Content-Type: application/json" \
         -d "{\"email\":\"${email}\",\"password\":\"Test@123456\"}" 2>/dev/null)
     
@@ -97,6 +98,7 @@ test_auth() {
     
     if [[ "$http_code" == "200" ]]; then
         AUTH_TOKEN=$(echo "$body" | grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "")
+        REFRESH_TOKEN=$(echo "$body" | grep -o '"refreshToken":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "")
         if [[ -n "$AUTH_TOKEN" ]]; then
             log_pass "Login successful, token obtained"
         else
@@ -106,21 +108,22 @@ test_auth() {
         log_fail "Login failed (HTTP $http_code)"
     fi
     
-    # Get Profile
-    log_test "Get User Profile"
-    if [[ -n "$AUTH_TOKEN" ]]; then
-        response=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/auth/profile" \
-            -H "Authorization: Bearer ${AUTH_TOKEN}" 2>/dev/null)
+    # Refresh token
+    log_test "Refresh Token"
+    if [[ -n "$REFRESH_TOKEN" ]]; then
+        response=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/v1/auth/refresh" \
+            -H "Content-Type: application/json" \
+            -d "{\"refreshToken\":\"${REFRESH_TOKEN}\"}" 2>/dev/null)
         
         http_code=$(echo "$response" | tail -1)
         
         if [[ "$http_code" == "200" ]]; then
-            log_pass "Profile retrieved"
+            log_pass "Refresh successful"
         else
-            log_fail "Profile fetch failed (HTTP $http_code)"
+            log_fail "Refresh failed (HTTP $http_code)"
         fi
     else
-        log_fail "No auth token available"
+        log_fail "No refresh token available"
     fi
 }
 
@@ -137,7 +140,7 @@ test_orders() {
     
     # Create Order
     log_test "Create Order"
-    response=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/orders" \
+    response=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/v1/orders" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${AUTH_TOKEN}" \
         -d '{"items":[{"productId":"PROD-001","productName":"Test Product","quantity":1,"unitPrice":99.99}],"currency":"USD"}' 2>/dev/null)
@@ -155,7 +158,7 @@ test_orders() {
     # Get Order
     if [[ -n "$ORDER_ID" ]]; then
         log_test "Get Order"
-        response=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/orders/${ORDER_ID}" \
+        response=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/v1/orders/${ORDER_ID}" \
             -H "Authorization: Bearer ${AUTH_TOKEN}" 2>/dev/null)
         
         http_code=$(echo "$response" | tail -1)
@@ -169,7 +172,7 @@ test_orders() {
     
     # List Orders
     log_test "List Orders"
-    response=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/orders" \
+    response=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/v1/orders" \
         -H "Authorization: Bearer ${AUTH_TOKEN}" 2>/dev/null)
     
     http_code=$(echo "$response" | tail -1)
@@ -194,7 +197,7 @@ test_payments() {
     
     # List Payments
     log_test "List Payments"
-    response=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/payments" \
+    response=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/v1/payments" \
         -H "Authorization: Bearer ${AUTH_TOKEN}" 2>/dev/null)
     
     http_code=$(echo "$response" | tail -1)

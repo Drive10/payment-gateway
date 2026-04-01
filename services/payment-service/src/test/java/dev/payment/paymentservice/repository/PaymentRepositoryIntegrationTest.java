@@ -245,6 +245,7 @@ class PaymentRepositoryIntegrationTest {
         payment.setTransactionMode(TransactionMode.TEST);
         payment.setSimulated(false);
         payment.setCheckoutUrl("https://checkout.example.com");
+        payment.setMerchantId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
         return payment;
     }
 }

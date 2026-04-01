@@ -52,7 +52,7 @@ public class LedgerEntry {
     @Column(length = 500)
     private String description;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "json")
     private String metadata;
 
     @Column(name = "created_at", nullable = false, updatable = false)

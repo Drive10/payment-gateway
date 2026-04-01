@@ -45,26 +45,23 @@ jobs:
 
       - name: Build service
         run: |
-          cd services/${{ matrix.service }}
-          mvn clean compile -q
+          ./mvnw -q -pl services/${{ matrix.service }} -am clean compile
 
       - name: Run tests
         run: |
-          cd services/${{ matrix.service }}
-          mvn test -q || true
+          ./mvnw -q -pl services/${{ matrix.service }} -am test
 
       - name: Package service
         run: |
-          cd services/${{ matrix.service }}
-          mvn package -DskipTests -q
+          ./mvnw -q -pl services/${{ matrix.service }} -am package -DskipTests
           echo "PACKAGED=true" >> $GITHUB_ENV
 
       - name: Build Docker image
         if: env.PACKAGED == 'true'
         run: |
-          cd services/${{ matrix.service }}
           docker build \
-            -f Dockerfile \
+            -f Dockerfile.build \
+            --build-arg SERVICE_PATH=services/${{ matrix.service }} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }} \
             .
           docker tag \
@@ -174,7 +171,7 @@ jobs:
         run: npm run check
 
       - name: Run tests
-        run: npm test -- --coverage --watchAll=false || true
+        run: npm test -- --coverage --watchAll=false
 
       - name: Build Docker image
         run: docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:latest .

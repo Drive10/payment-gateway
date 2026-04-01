@@ -74,6 +74,7 @@ build_all() {
 run_service() {
     local service=$1
     local port
+    local module
     
     case "$service" in
         config)    port=8888 ;;
@@ -88,16 +89,20 @@ run_service() {
         analytics) port=8089 ;;
         merchant)  port=8090 ;;
         dispute)   port=8091 ;;
-        gateway)   port=8080 ;;
+        gateway)   port=8080; module="api-gateway" ;;
         *)
             log_error "Unknown service: $service"
             echo "Available: config, auth, order, payment, notification, webhook, simulator, settlement, risk, analytics, merchant, dispute, gateway"
             exit 1
             ;;
     esac
+
+    if [[ -z "$module" ]]; then
+        module="${service}-service"
+    fi
     
     log_info "Starting $service service on port $port..."
-    cd "services/${service}-service"
+    cd "services/${module}"
     mvn spring-boot:run -Dspring-boot.run.profiles=local
 }
 

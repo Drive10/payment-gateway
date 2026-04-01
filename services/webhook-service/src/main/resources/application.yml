@@ -7,9 +7,9 @@ spring:
     name: webhook-service
 
   datasource:
-    url: jdbc:postgresql://postgres:5432/webhookdb
-    username: webhook
-    password: webhookpass
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:webhookdb}
+    username: ${DB_USERNAME:webhook}
+    password: ${DB_PASSWORD:webhookpass}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -33,7 +33,7 @@ management:
 
 application:
   payment-service:
-    url: ${PAYMENT_SERVICE_URL:http://payment-service:8084}
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
   webhook:
     signature:
       secret: ${WEBHOOK_SIGNATURE_SECRET:dev-webhook-secret}

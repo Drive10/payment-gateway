@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { detectCardBrand, formatCardNumber, formatExpiry, isValidCardNumber } from "../lib/payment";
 
 const cardBrands = {

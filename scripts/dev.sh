@@ -191,7 +191,7 @@ payment-local() {
   SPRING_PROFILES_ACTIVE=local ./mvnw -pl services/payment-service -am spring-boot:run
 }
 
-local() {
+local_mode() {
   step "Starting Full Local Development"
   cd "$REPO_ROOT"
   echo "Starting PostgreSQL, Kafka, Redis via Docker..."
@@ -204,7 +204,7 @@ local() {
   PAYMENT_PID=$!
   
   echo ""
-  echo "payment-service starting on port 8084 (PID: $PAYMENT_PID)"
+  echo "payment-service starting on port 8083 (PID: $PAYMENT_PID)"
   echo "Press Ctrl+C to stop all services"
   
   wait $PAYMENT_PID
@@ -251,7 +251,7 @@ status() {
   echo ""
   echo "Local ports:"
   if has_cmd lsof; then
-    lsof -i :8080 -i :8084 -i :3000 -i :5433 -i :9092 -i :6379 2>/dev/null | grep LISTEN || echo "  No local services detected"
+    lsof -i :8080 -i :8083 -i :3000 -i :5433 -i :9092 -i :6379 2>/dev/null | grep LISTEN || echo "  No local services detected"
   fi
 }
 
@@ -279,7 +279,7 @@ case "$COMMAND" in
   infra-down) infra-down ;;
   docker) docker ;;
   hybrid) hybrid ;;
-  local) local ;;
+  local) local_mode ;;
   build) build ;;
   build-service) build-service ;;
   down) down ;;

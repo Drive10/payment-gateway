@@ -153,63 +153,6 @@ export default function Checkout() {
     );
   }
 
-  const handleChange = (field, value) => {
-    setValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined }));
-  };
-
-  const pay = async () => {
-    if (method === "card") {
-      const nextErrors = validateCardForm(values);
-      if (Object.keys(nextErrors).length > 0) {
-        setErrors(nextErrors);
-        return;
-      }
-    }
-
-    setSubmitting(true);
-    setSubmitError("");
-
-    try {
-      const payload = paymentLinkData ? {
-        paymentLinkRef: paymentLinkData.paymentLinkId,
-        method: method,
-        transactionMode,
-        ...(method === "card" ? {
-          card: {
-            number: values.cardNumber.replace(/\s/g, ""),
-            expiryMonth: values.expiry.split("/")[0],
-            expiryYear: values.expiry.split("/")[1],
-            cvv: values.cvv,
-            cardholderName: values.cardholder
-          }
-        } : {})
-      } : {
-        amount: PAYMENT_AMOUNT,
-        currency: "USD",
-        method,
-        transactionMode,
-        ...(method === "card" ? {
-          card: {
-            number: values.cardNumber.replace(/\s/g, ""),
-            expiryMonth: values.expiry.split("/")[0],
-            expiryYear: values.expiry.split("/")[1],
-            cvv: values.cvv,
-            cardholderName: values.cardholder
-          }
-        } : {}),
-        note: PAYMENT_NOTE
-      };
-
-      const checkout = await startCheckout(payload);
-      navigate("/processing", { state: { checkout } });
-    } catch (error) {
-      setSubmitError(error.message || "Payment failed. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const disabled =
     submitting ||
     (method === "card" &&
