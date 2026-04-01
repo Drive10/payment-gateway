@@ -6,6 +6,7 @@ import dev.payment.common.api.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -61,7 +62,7 @@ public class SettlementController {
         List<Settlement> settlements = settlementService.getPendingSettlements();
         return ResponseEntity.ok(ApiResponse.success(settlements));
     }
-    
+
     @GetMapping("/merchant/{merchantId}/balance")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMerchantBalance(@PathVariable UUID merchantId) {
         var ms = settlementService.getOrCreateMerchantSettlement(merchantId, "Merchant");
@@ -72,6 +73,18 @@ public class SettlementController {
             "totalSettled", ms.getTotalSettled()
         );
         return ResponseEntity.ok(ApiResponse.success(balance));
+    }
+
+    @PostMapping("/merchant/{merchantId}/sync-balance")
+    public ResponseEntity<ApiResponse<Void>> syncBalance(@PathVariable UUID merchantId, @RequestBody Map<String, Object> request) {
+        BigDecimal availableBalance = new BigDecimal(request.get("availableBalance").toString());
+        settlementService.updateMerchantBalance(merchantId, availableBalance);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/trigger")
+    public ResponseEntity<ApiResponse<String>> triggerSettlement() {
+        return ResponseEntity.ok(ApiResponse.success("Settlement job triggered"));
     }
     
     private void validateCreateRequest(Map<String, Object> request) {

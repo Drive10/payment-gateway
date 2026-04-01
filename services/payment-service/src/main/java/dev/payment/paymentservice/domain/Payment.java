@@ -76,6 +76,18 @@ public class Payment extends BaseEntity {
     @Column(length = 255)
     private String notes;
 
+    @Column(name = "merchant_id", nullable = false)
+    private UUID merchantId;
+
+    @Column(name = "platform_fee", nullable = false, precision = 19, scale = 2)
+    private BigDecimal platformFee = BigDecimal.ZERO;
+
+    @Column(name = "gateway_fee", nullable = false, precision = 19, scale = 2)
+    private BigDecimal gatewayFee = BigDecimal.ZERO;
+
+    @Column(name = "pricing_tier", length = 32)
+    private String pricingTier = "STANDARD";
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -206,6 +218,38 @@ public class Payment extends BaseEntity {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public UUID getMerchantId() {
+        return merchantId;
+    }
+
+    public void setMerchantId(UUID merchantId) {
+        this.merchantId = merchantId;
+    }
+
+    public BigDecimal getPlatformFee() {
+        return platformFee;
+    }
+
+    public void setPlatformFee(BigDecimal platformFee) {
+        this.platformFee = platformFee;
+    }
+
+    public BigDecimal getGatewayFee() {
+        return gatewayFee;
+    }
+
+    public void setGatewayFee(BigDecimal gatewayFee) {
+        this.gatewayFee = gatewayFee;
+    }
+
+    public String getPricingTier() {
+        return pricingTier;
+    }
+
+    public void setPricingTier(String pricingTier) {
+        this.pricingTier = pricingTier;
     }
 
     public long getVersion() {

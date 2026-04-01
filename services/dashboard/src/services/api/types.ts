@@ -116,3 +116,27 @@ export interface UserPayment {
   method: string
   date: string
 }
+
+export interface MerchantBalance {
+  availableBalance: number
+  pendingBalance: number
+  totalBalance: number
+  currency: string
+}
+
+export interface MerchantAnalytics {
+  totalRevenue: number
+  totalFees: number
+  totalRefunds: number
+  netRevenue: number
+  totalPayments: number
+  successCount: number
+  failedCount: number
+  successRate: number
+}
+
+export interface PaymentTrend {
+  date: string
+  revenue: number
+  count: number
+}

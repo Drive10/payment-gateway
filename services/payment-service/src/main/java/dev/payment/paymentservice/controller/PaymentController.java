@@ -11,8 +11,11 @@ import dev.payment.paymentservice.dto.request.CreateRefundRequest;
 import dev.payment.paymentservice.dto.response.PaymentLinkResponse;
 import dev.payment.paymentservice.dto.response.PaymentResponse;
 import dev.payment.paymentservice.dto.response.RefundResponse;
+import dev.payment.paymentservice.dto.response.MerchantBalanceResponse;
+import dev.payment.paymentservice.dto.response.PaymentDetailResponse;
 import dev.payment.paymentservice.exception.ApiException;
 import dev.payment.paymentservice.service.AuthService;
+import dev.payment.paymentservice.service.LedgerService;
 import dev.payment.paymentservice.service.PaymentLinkService;
 import dev.payment.paymentservice.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +38,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -45,11 +50,13 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final PaymentLinkService paymentLinkService;
     private final AuthService authService;
+    private final LedgerService ledgerService;
 
-    public PaymentController(PaymentService paymentService, PaymentLinkService paymentLinkService, AuthService authService) {
+    public PaymentController(PaymentService paymentService, PaymentLinkService paymentLinkService, AuthService authService, LedgerService ledgerService) {
         this.paymentService = paymentService;
         this.paymentLinkService = paymentLinkService;
         this.authService = authService;
+        this.ledgerService = ledgerService;
     }
 
     // ===== Payment Link Endpoints (Authenticated - Dashboard) =====
@@ -135,5 +142,32 @@ public class PaymentController {
     public ApiResponse<PaymentResponse> getPayment(@PathVariable UUID paymentId, Authentication authentication) {
         User actor = authService.getCurrentUser(authentication.getName());
         return ApiResponse.success(paymentService.getPayment(paymentId, actor, false));
+    }
+
+    @GetMapping("/{paymentId}/detail")
+    public ApiResponse<PaymentDetailResponse> getPaymentDetail(@PathVariable UUID paymentId, Authentication authentication) {
+        User actor = authService.getCurrentUser(authentication.getName());
+        return ApiResponse.success(paymentService.getPaymentDetail(paymentId, actor, false));
+    }
+
+    @GetMapping("/balance/{merchantId}")
+    public ApiResponse<MerchantBalanceResponse> getMerchantBalance(@PathVariable UUID merchantId) {
+        java.math.BigDecimal available = ledgerService.getMerchantBalance(merchantId);
+        java.math.BigDecimal pending = ledgerService.getMerchantReceivable(merchantId);
+        java.math.BigDecimal total = available.add(pending);
+        return ApiResponse.success(new MerchantBalanceResponse(available, pending, total, "INR"));
+    }
+
+    @GetMapping("/analytics/{merchantId}")
+    public ApiResponse<Map<String, Object>> getMerchantAnalytics(@PathVariable UUID merchantId) {
+        return ApiResponse.success(paymentService.getMerchantAnalytics(merchantId));
+    }
+
+    @GetMapping("/analytics/{merchantId}/trends")
+    public ApiResponse<List<Map<String, Object>>> getPaymentTrends(
+            @PathVariable UUID merchantId,
+            @RequestParam(defaultValue = "30") int days
+    ) {
+        return ApiResponse.success(paymentService.getPaymentTrends(merchantId, days));
     }
 }

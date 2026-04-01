@@ -175,3 +175,42 @@ class PaymentApi {
 }
 
 export const paymentApi = new PaymentApi()
+
+// Merchant-specific methods
+export interface MerchantBalance {
+  availableBalance: number
+  pendingBalance: number
+  totalBalance: number
+  currency: string
+}
+
+export interface MerchantAnalytics {
+  totalRevenue: number
+  totalFees: number
+  totalRefunds: number
+  netRevenue: number
+  totalPayments: number
+  successCount: number
+  failedCount: number
+  successRate: number
+}
+
+export interface PaymentTrend {
+  date: string
+  revenue: number
+  count: number
+}
+
+export const merchantPaymentService = {
+  async getMerchantBalance(merchantId: string): Promise<MerchantBalance> {
+    return apiClient.get<MerchantBalance>(`/payments/balance/${merchantId}`)
+  },
+
+  async getMerchantAnalytics(merchantId: string): Promise<MerchantAnalytics> {
+    return apiClient.get<MerchantAnalytics>(`/payments/analytics/${merchantId}`)
+  },
+
+  async getPaymentTrends(merchantId: string, days: number = 30): Promise<PaymentTrend[]> {
+    return apiClient.get<PaymentTrend[]>(`/payments/analytics/${merchantId}/trends?days=${days}`)
+  }
+}

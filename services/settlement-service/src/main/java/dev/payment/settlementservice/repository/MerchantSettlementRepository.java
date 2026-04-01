@@ -3,6 +3,9 @@ package dev.payment.settlementservice.repository;
 import dev.payment.settlementservice.entity.MerchantSettlement;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,4 +15,6 @@ public interface MerchantSettlementRepository extends JpaRepository<MerchantSett
     Optional<MerchantSettlement> findByMerchantId(UUID merchantId);
     
     boolean existsByMerchantId(UUID merchantId);
+
+    List<MerchantSettlement> findByAutoSettleTrueAndCurrentBalanceGreaterThanEqual(BigDecimal minimumAmount);
 }

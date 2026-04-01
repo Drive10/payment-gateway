@@ -14,6 +14,7 @@ import { AdminDebugger } from './pages/admin/Debugger'
 import { UserDashboard } from './pages/user/Dashboard'
 import { UserPayments } from './pages/user/Payments'
 import { UserOrders } from './pages/user/Orders'
+import { PaymentDetail } from './pages/user/PaymentDetail'
 import { LoginPage } from './pages/LoginPage'
 import { Skeleton } from './components/ui/skeleton'
 
@@ -50,6 +51,7 @@ function App() {
           <Route element={<UserLayout />}>
             <Route path="/user" element={<UserDashboard />} />
             <Route path="/user/payments" element={<UserPayments />} />
+            <Route path="/user/payments/:id" element={<PaymentDetail />} />
             <Route path="/user/orders" element={<UserOrders />} />
           </Route>
         </Route>

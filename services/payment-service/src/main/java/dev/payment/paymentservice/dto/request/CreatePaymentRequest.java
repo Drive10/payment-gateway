@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public record CreatePaymentRequest(
         @NotNull UUID orderId,
+        @NotNull UUID merchantId,
         @NotNull PaymentMethod method,
         @NotBlank @Size(max = 32) String provider,
         TransactionMode transactionMode,

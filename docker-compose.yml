@@ -131,6 +131,30 @@ services:
     networks:
       - fintech-network
 
+  mongodb:
+    profiles: ["services", "infra"]
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.50"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fintech-network
+
   auth-service:
     profiles: ["services"]
     build:
@@ -678,7 +702,164 @@ services:
 
 volumes:
   postgres_data:
+  mongodb_data:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data:
+  jaeger_data:
+  minio_data:
+  loki_data:
+  cassandra_data:
 
 networks:
   fintech-network:
     name: fintech-network
+
+---
+# Observability Stack (production-ready)
+services:
+  prometheus:
+    profiles: ["observability"]
+    image: prom/prometheus:v2.51
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+    networks:
+      - fintech-network
+
+  grafana:
+    profiles: ["observability"]
+    image: grafana/grafana:11
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - fintech-network
+
+  elasticsearch:
+    profiles: ["observability"]
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    networks:
+      - fintech-network
+
+  kibana:
+    profiles: ["observability"]
+    image: docker.elastic.co/kibana/kibana:8.13
+    container_name: kibana
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    restart: unless-stopped
+    depends_on:
+      - elasticsearch
+    networks:
+      - fintech-network
+
+---
+# Advanced Stack
+services:
+  jaeger:
+    profiles: ["advanced"]
+    image: jaegertracing/all-in-one:1.51
+    container_name: jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+      SPAN_STORAGE_TYPE: badger
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - jaeger_data:/var/lib/jaeger
+    restart: unless-stopped
+    networks:
+      - fintech-network
+
+  minio:
+    profiles: ["advanced"]
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+    networks:
+      - fintech-network
+
+  loki:
+    profiles: ["advanced"]
+    image: grafana/loki:3
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    restart: unless-stopped
+    networks:
+      - fintech-network
+
+  promtail:
+    profiles: ["advanced"]
+    image: grafana/promtail:3
+    container_name: promtail
+    volumes:
+      - ./docker/promtail:/etc/promtail:ro
+      - /var/log:/var/log
+    restart: unless-stopped
+    depends_on:
+      - loki
+    networks:
+      - fintech-network
+
+  cassandra:
+    profiles: ["advanced"]
+    image: cassandra:4.1
+    container_name: cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: fintech-cluster
+      CASSANDRA_DC: dc1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_START_NODES: 1
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    restart: unless-stopped
+    networks:
+      - fintech-network

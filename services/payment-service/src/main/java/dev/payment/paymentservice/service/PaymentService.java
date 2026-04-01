@@ -10,9 +10,11 @@ import dev.payment.paymentservice.domain.enums.RefundStatus;
 import dev.payment.paymentservice.domain.enums.TransactionMode;
 import dev.payment.paymentservice.domain.enums.TransactionStatus;
 import dev.payment.paymentservice.domain.enums.TransactionType;
+import dev.payment.paymentservice.dto.FeeCalculation;
 import dev.payment.paymentservice.dto.request.CapturePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreatePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreateRefundRequest;
+import dev.payment.paymentservice.dto.response.PaymentDetailResponse;
 import dev.payment.paymentservice.dto.response.PaymentResponse;
 import dev.payment.paymentservice.dto.response.RefundResponse;
 import dev.payment.paymentservice.dto.response.PaymentTransactionResponse;
@@ -32,6 +34,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -51,6 +56,8 @@ public class PaymentService {
     private final PaymentEventPublisher paymentEventPublisher;
     private final IdempotencyService idempotencyService;
     private final PaymentStateMachine paymentStateMachine;
+    private final FeeEngine feeEngine;
+    private final LedgerService ledgerService;
 
     public PaymentService(
             PaymentRepository paymentRepository,
@@ -61,7 +68,9 @@ public class PaymentService {
             PaymentProcessorClient paymentProcessorClient,
             PaymentEventPublisher paymentEventPublisher,
             IdempotencyService idempotencyService,
-            PaymentStateMachine paymentStateMachine
+            PaymentStateMachine paymentStateMachine,
+            FeeEngine feeEngine,
+            LedgerService ledgerService
     ) {
         this.paymentRepository = paymentRepository;
         this.paymentRefundRepository = paymentRefundRepository;
@@ -72,6 +81,8 @@ public class PaymentService {
         this.paymentEventPublisher = paymentEventPublisher;
         this.idempotencyService = idempotencyService;
         this.paymentStateMachine = paymentStateMachine;
+        this.feeEngine = feeEngine;
+        this.ledgerService = ledgerService;
     }
 
     @Transactional
@@ -96,6 +107,8 @@ public class PaymentService {
         payment.setTransactionMode(resolveMode(request.transactionMode()));
         payment.setIdempotencyKey(idempotencyKey);
         payment.setNotes(request.notes());
+        payment.setMerchantId(request.merchantId());
+        payment.setPricingTier("STANDARD");
 
         PaymentProcessorIntentResponse processorIntent = paymentProcessorClient.createIntent(payment, order.getOrderReference(), payment.getTransactionMode());
         payment.setProviderOrderId(processorIntent.providerOrderId());
@@ -141,8 +154,28 @@ public class PaymentService {
             payment.setProviderPaymentId(processorCapture.providerPaymentId());
             payment.setProviderSignature(processorCapture.providerSignature());
             payment.setSimulated(processorCapture.simulated());
+
+            FeeCalculation fees = feeEngine.calculateFees(
+                    payment.getMerchantId(),
+                    payment.getAmount(),
+                    payment.getPricingTier(),
+                    payment.getMethod().name()
+            );
+            payment.setPlatformFee(fees.platformFee());
+            payment.setGatewayFee(fees.gatewayFee());
+
             paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
             paymentRepository.save(payment);
+
+            ledgerService.recordPayment(
+                    payment.getId(),
+                    payment.getId().toString(),
+                    payment.getMerchantId(),
+                    payment.getAmount(),
+                    payment.getPlatformFee(),
+                    payment.getGatewayFee(),
+                    payment.getCurrency()
+            );
 
             createTransaction(
                     payment,
@@ -234,6 +267,25 @@ public class PaymentService {
             orderService.markRefunded(payment.getOrder());
         }
 
+        FeeCalculation refundFees = feeEngine.calculateRefundFees(
+                payment.getMerchantId(),
+                payment.getAmount(),
+                request.amount(),
+                payment.getPricingTier()
+        );
+        BigDecimal refundedPlatformFee = refundFees.platformFee();
+
+        ledgerService.recordRefund(
+                refund.getId(),
+                refund.getRefundReference(),
+                payment.getId(),
+                payment.getId().toString(),
+                payment.getMerchantId(),
+                request.amount(),
+                refundedPlatformFee,
+                payment.getCurrency()
+        );
+
         auditService.record("PAYMENT_REFUNDED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Refund processed");
         paymentEventPublisher.publish("payment.refunded", payment, Map.of(
                 "actor", actor.getEmail(),
@@ -261,6 +313,13 @@ public class PaymentService {
 
     public PaymentResponse getPayment(UUID paymentId, User actor, boolean adminView) {
         return toResponse(getOwnedPayment(paymentId, actor, adminView));
+    }
+
+    public PaymentDetailResponse getPaymentDetail(UUID paymentId, User actor, boolean adminView) {
+        Payment payment = getOwnedPayment(paymentId, actor, adminView);
+        List<PaymentRefund> refunds = paymentRefundRepository.findByPaymentIdOrderByCreatedAtAsc(paymentId);
+        List<PaymentTransaction> transactions = paymentTransactionRepository.findByPaymentIdOrderByCreatedAtDesc(paymentId);
+        return PaymentDetailResponse.from(payment, refunds, transactions);
     }
 
     private Payment getOwnedPayment(UUID paymentId, User actor, boolean adminView) {
@@ -347,5 +406,50 @@ public class PaymentService {
                 refund.getReason(),
                 refund.getCreatedAt()
         );
+    }
+
+    public Map<String, Object> getMerchantAnalytics(UUID merchantId) {
+        BigDecimal totalRevenue = paymentRepository.sumCapturedAmountByMerchantId(merchantId);
+        BigDecimal totalFees = paymentRepository.sumPlatformFeeByMerchantId(merchantId);
+        BigDecimal totalRefunds = paymentRefundRepository.sumRefundedAmountByMerchantId(merchantId);
+        
+        long totalPayments = paymentRepository.countByMerchantId(merchantId);
+        long successCount = paymentRepository.countByMerchantIdAndStatus(merchantId, PaymentStatus.CAPTURED);
+        long failedCount = paymentRepository.countByMerchantIdAndStatus(merchantId, PaymentStatus.FAILED);
+        
+        BigDecimal netRevenue = totalRevenue.subtract(totalFees).subtract(totalRefunds);
+        double successRate = totalPayments > 0 ? (double) successCount / totalPayments * 100 : 0;
+        
+        return Map.of(
+                "totalRevenue", totalRevenue != null ? totalRevenue : BigDecimal.ZERO,
+                "totalFees", totalFees != null ? totalFees : BigDecimal.ZERO,
+                "totalRefunds", totalRefunds != null ? totalRefunds : BigDecimal.ZERO,
+                "netRevenue", netRevenue,
+                "totalPayments", totalPayments,
+                "successCount", successCount,
+                "failedCount", failedCount,
+                "successRate", Math.round(successRate * 100.0) / 100.0
+        );
+    }
+
+    public List<Map<String, Object>> getPaymentTrends(UUID merchantId, int days) {
+        List<Map<String, Object>> trends = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        
+        for (int i = days - 1; i >= 0; i--) {
+            LocalDateTime dayStart = now.minusDays(i).withHour(0).withMinute(0).withSecond(0);
+            LocalDateTime dayEnd = dayStart.plusDays(1);
+            
+            BigDecimal dayRevenue = paymentRepository.sumCapturedAmountByMerchantIdAndDateRange(merchantId, dayStart, dayEnd);
+            long dayCount = paymentRepository.countByMerchantIdAndDateRange(merchantId, dayStart, dayEnd);
+            
+            trends.add(Map.of(
+                    "date", dayStart.toLocalDate().toString(),
+                    "revenue", dayRevenue != null ? dayRevenue : BigDecimal.ZERO,
+                    "count", dayCount
+            ));
+        }
+        
+        return trends;
     }
 }

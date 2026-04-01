@@ -11,6 +11,7 @@ export interface User {
   fullName: string
   role: UserRole
   avatar?: string
+  merchantId?: string
 }
 
 interface AuthContextType {
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fullName: userData.fullName,
         role: userData.role,
         avatar: userData.avatar,
+        merchantId: userData.merchantId,
       }
 
       setUser(user)
