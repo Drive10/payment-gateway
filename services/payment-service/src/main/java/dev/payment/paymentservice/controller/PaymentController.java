@@ -5,12 +5,15 @@ import dev.payment.common.dto.PageResponse;
 import dev.payment.paymentservice.domain.User;
 import dev.payment.paymentservice.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.dto.request.CapturePaymentRequest;
+import dev.payment.paymentservice.dto.request.CreatePaymentLinkRequest;
 import dev.payment.paymentservice.dto.request.CreatePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreateRefundRequest;
+import dev.payment.paymentservice.dto.response.PaymentLinkResponse;
 import dev.payment.paymentservice.dto.response.PaymentResponse;
 import dev.payment.paymentservice.dto.response.RefundResponse;
 import dev.payment.paymentservice.exception.ApiException;
 import dev.payment.paymentservice.service.AuthService;
+import dev.payment.paymentservice.service.PaymentLinkService;
 import dev.payment.paymentservice.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -40,12 +43,43 @@ import java.util.UUID;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final PaymentLinkService paymentLinkService;
     private final AuthService authService;
 
-    public PaymentController(PaymentService paymentService, AuthService authService) {
+    public PaymentController(PaymentService paymentService, PaymentLinkService paymentLinkService, AuthService authService) {
         this.paymentService = paymentService;
+        this.paymentLinkService = paymentLinkService;
         this.authService = authService;
     }
+
+    // ===== Payment Link Endpoints (Authenticated - Dashboard) =====
+
+    @PostMapping("/links")
+    public ApiResponse<PaymentLinkResponse> createPaymentLink(
+            @Valid @RequestBody CreatePaymentLinkRequest request,
+            Authentication authentication
+    ) {
+        User actor = authService.getCurrentUser(authentication.getName());
+        return ApiResponse.success(paymentLinkService.createPaymentLink(request, actor));
+    }
+
+    @GetMapping("/links")
+    public ApiResponse<java.util.List<PaymentLinkResponse>> getPaymentLinks(
+            @RequestParam UUID merchantId,
+            Authentication authentication
+    ) {
+        authService.getCurrentUser(authentication.getName());
+        return ApiResponse.success(paymentLinkService.getMerchantPaymentLinks(merchantId));
+    }
+
+    // ===== Public Payment Link Endpoint (Frontend) =====
+
+    @GetMapping("/link/{referenceId}")
+    public ApiResponse<PaymentLinkResponse> getPublicPaymentLink(@PathVariable String referenceId) {
+        return ApiResponse.success(paymentLinkService.getPaymentLink(referenceId));
+    }
+
+    // ===== Existing Payment Endpoints =====
 
     @PostMapping
     public ApiResponse<PaymentResponse> createPayment(
@@ -71,28 +105,9 @@ public class PaymentController {
     }
 
     @PostMapping("/{paymentId}/refunds")
-    @Operation(summary = "Create a refund", description = "Supports partial and multiple refunds, enforces idempotency, and blocks over-refunding.")
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Refund accepted"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Missing idempotency key or invalid payload"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Refund would exceed captured amount")
-    })
     public ApiResponse<RefundResponse> refundPayment(
             @PathVariable UUID paymentId,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    description = "Refund request",
-                    content = @io.swagger.v3.oas.annotations.media.Content(
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "amount": 499.00,
-                                      "reason": "customer_request"
-                                    }
-                                    """)
-                    )
-            )
-            @Valid @org.springframework.web.bind.annotation.RequestBody CreateRefundRequest request,
-            @Parameter(description = "Idempotency key required for safe retries", example = "refund-checkout-1001")
+            @Valid @RequestBody CreateRefundRequest request,
             @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication authentication
     ) {

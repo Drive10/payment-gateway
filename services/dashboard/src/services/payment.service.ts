@@ -82,6 +82,35 @@ export interface ProviderStats {
   totalVolume: number
 }
 
+// Payment Link types
+export interface PaymentLink {
+  paymentLinkId: string
+  paymentLinkUrl: string
+  amount: number
+  currency: string
+  status: string
+  createdAt: string
+  expiresAt: string
+  description?: string
+  customer?: {
+    name?: string
+    email?: string
+    phone?: string
+  }
+}
+
+export interface CreatePaymentLinkRequest {
+  merchantId: string
+  amount: number
+  currency: string
+  description?: string
+  customerName?: string
+  customerEmail?: string
+  customerPhone?: string
+  successUrl?: string
+  cancelUrl?: string
+}
+
 class PaymentApi {
   async getPayments(filters?: PaymentFilters): Promise<PaginatedResponse<Payment>> {
     return apiClient.get<PaginatedResponse<Payment>>('/payments', filters as Record<string, unknown>)
@@ -97,6 +126,15 @@ class PaymentApi {
 
   async createPayment(request: CreatePaymentRequest): Promise<Payment> {
     return apiClient.post<Payment>('/payments', request)
+  }
+
+  // Payment Link methods
+  async createPaymentLink(request: CreatePaymentLinkRequest): Promise<PaymentLink> {
+    return apiClient.post<PaymentLink>('/payments/links', request)
+  }
+
+  async getPaymentLinks(merchantId: string): Promise<PaymentLink[]> {
+    return apiClient.get<PaymentLink[]>(`/payments/links?merchantId=${merchantId}`)
   }
 
   async capturePayment(paymentId: string): Promise<Payment> {

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import CardForm from "../components/CardForm";
 import UpiQR from "../components/UpiQR";
 import {
@@ -11,6 +11,8 @@ import {
   startCheckout,
   validateCardForm,
 } from "../lib/payment";
+
+const API_BASE_URL = window.__ENV__?.API_BASE_URL || "http://localhost:8080";
 
 const initialForm = {
   cardNumber: "",
@@ -41,13 +43,42 @@ const paymentMethods = [
 ];
 
 export default function Checkout() {
+  const [searchParams] = useSearchParams();
   const [method, setMethod] = useState("card");
   const [values, setValues] = useState(initialForm);
   const [transactionMode, setTransactionMode] = useState(TRANSACTION_MODES.PRODUCTION);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [paymentLinkData, setPaymentLinkData] = useState(null);
+  const [loadingLink, setLoadingLink] = useState(false);
   const navigate = useNavigate();
+
+  // Check for payment link reference in URL
+  useEffect(() => {
+    const referenceId = searchParams.get("ref");
+    if (referenceId) {
+      loadPaymentLink(referenceId);
+    }
+  }, [searchParams]);
+
+  const loadPaymentLink = async (referenceId) => {
+    setLoadingLink(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/payments/link/${referenceId}`);
+      const data = await response.json();
+      if (data.success && data.data) {
+        setPaymentLinkData(data.data);
+      } else {
+        setSubmitError("Invalid or expired payment link");
+      }
+    } catch (error) {
+      console.error("Failed to load payment link:", error);
+      setSubmitError("Failed to load payment details");
+    } finally {
+      setLoadingLink(false);
+    }
+  };
 
   const handleChange = (field, value) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -63,18 +94,117 @@ export default function Checkout() {
       }
     }
 
+    setSubmitting(true);
+    setSubmitError("");
+
     try {
-      setSubmitting(true);
-      setSubmitError("");
-      const checkout = await startCheckout({
+      // If we have a payment link, include the reference
+      const payload = paymentLinkData ? {
+        paymentLinkRef: paymentLinkData.paymentLinkId,
+        method: method,
+        card: method === "card" ? {
+          number: values.cardNumber.replace(/\s/g, ""),
+          expiryMonth: values.expiry.split("/")[0],
+          expiryYear: values.expiry.split("/")[1],
+          cvv: values.cvv,
+          cardholderName: values.cardholder
+        } : undefined
+      } : {
         amount: PAYMENT_AMOUNT,
-        method,
-        cardholder: values.cardholder,
+        currency: "USD",
+        method: method,
+        card: method === "card" ? {
+          number: values.cardNumber.replace(/\s/g, ""),
+          expiryMonth: values.expiry.split("/")[0],
+          expiryYear: values.expiry.split("/")[1],
+          cvv: values.cvv,
+          cardholderName: values.cardholder
+        } : undefined,
+        note: PAYMENT_NOTE
+      };
+
+      await startCheckout(payload);
+      navigate("/processing");
+    } catch (error) {
+      setSubmitError(error.message || "Payment failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Show loading while fetching payment link
+  if (loadingLink) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  // Show error if payment link invalid
+  if (searchParams.get("ref") && !paymentLinkData && !loadingLink) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Invalid Payment Link</h1>
+          <p className="text-slate-600">This payment link is invalid or has expired.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleChange = (field, value) => {
+    setValues((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
+  const pay = async () => {
+    if (method === "card") {
+      const nextErrors = validateCardForm(values);
+      if (Object.keys(nextErrors).length > 0) {
+        setErrors(nextErrors);
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const payload = paymentLinkData ? {
+        paymentLinkRef: paymentLinkData.paymentLinkId,
+        method: method,
         transactionMode,
-      });
+        ...(method === "card" ? {
+          card: {
+            number: values.cardNumber.replace(/\s/g, ""),
+            expiryMonth: values.expiry.split("/")[0],
+            expiryYear: values.expiry.split("/")[1],
+            cvv: values.cvv,
+            cardholderName: values.cardholder
+          }
+        } : {})
+      } : {
+        amount: PAYMENT_AMOUNT,
+        currency: "USD",
+        method,
+        transactionMode,
+        ...(method === "card" ? {
+          card: {
+            number: values.cardNumber.replace(/\s/g, ""),
+            expiryMonth: values.expiry.split("/")[0],
+            expiryYear: values.expiry.split("/")[1],
+            cvv: values.cvv,
+            cardholderName: values.cardholder
+          }
+        } : {}),
+        note: PAYMENT_NOTE
+      };
+
+      const checkout = await startCheckout(payload);
       navigate("/processing", { state: { checkout } });
     } catch (error) {
-      setSubmitError(error.message || "Unable to start payment.");
+      setSubmitError(error.message || "Payment failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -129,7 +259,12 @@ export default function Checkout() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-slate-500">Total Amount</p>
-                    <p className="text-3xl font-bold text-slate-900">{formatCurrency(PAYMENT_AMOUNT)}</p>
+                    <p className="text-3xl font-bold text-slate-900">
+                      {paymentLinkData 
+                        ? `${paymentLinkData.currency || 'USD'} ${paymentLinkData.amount?.toFixed(2)}`
+                        : formatCurrency(PAYMENT_AMOUNT)
+                      }
+                    </p>
                   </div>
                 </div>
               </div>
