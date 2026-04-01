@@ -11,11 +11,8 @@ COPY . .
 RUN npm run build
 
 
-# ---------- RUN STAGE ----------
-FROM nginx:alpine
-
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-EXPOSE 3001
-
-CMD ["nginx", "-g", "daemon off;"]
+# ---------- OUTPUT ----------
+# Static files mounted by reverse-proxy
+FROM scratch AS output
+COPY --from=builder /app/dist/index.html /index.html
+COPY --from=builder /app/dist/assets /assets

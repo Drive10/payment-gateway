@@ -73,10 +73,10 @@ management:
 
 application:
   order-service:
-    url: ${ORDER_SERVICE_URL:http://localhost:8082}
+    url: ${ORDER_SERVICE_URL:http://order-service:8082}
 
   payment-service:
-    url: ${PAYMENT_SERVICE_URL:http://payment-service:8084}
+    url: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
 
   kafka:
     topic:

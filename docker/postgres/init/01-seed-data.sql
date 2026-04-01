@@ -1,9 +1,11 @@
 -- Seed data for authdb (auth-service)
--- Users
-INSERT INTO users (id, email, password_hash, name, role, status, created_at, updated_at) VALUES
-    ('11111111-1111-1111-1111-111111111111', 'admin@payment.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqE3p0Z7V8V0Z9qo8uLOickgx2ZMR', 'Admin User', 'ADMIN', 'ACTIVE', NOW(), NOW()),
-    ('22222222-2222-2222-2222-222222222222', 'demo@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqE3p0Z7V8V0Z9qo8uLOickgx2ZMR', 'Demo User', 'USER', 'ACTIVE', NOW(), NOW()),
-    ('33333333-3333-3333-3333-333333333333', 'merchant@store.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqE3p0Z7V8V0Z9qo8uLOickgx2ZMR', 'Store Merchant', 'MERCHANT', 'ACTIVE', NOW(), NOW())
+\c authdb;
+
+-- Users (password: password123)
+INSERT INTO users (id, email, password_hash, first_name, last_name, phone, enabled, created_at, updated_at) VALUES
+    ('11111111-1111-1111-1111-111111111111', 'admin@payment.com', '$2a$10$NGJNp3tXgrOvPI09WicJr.FZbwHvUuh6W1AvBtCGFppwQ.tR8eBmK', 'Admin', 'User', NULL, true, NOW(), NOW()),
+    ('22222222-2222-2222-2222-222222222222', 'demo@example.com', '$2a$10$NGJNp3tXgrOvPI09WicJr.FZbwHvUuh6W1AvBtCGFppwQ.tR8eBmK', 'Demo', 'User', NULL, true, NOW(), NOW()),
+    ('33333333-3333-3333-3333-333333333333', 'merchant@store.com', '$2a$10$NGJNp3tXgrOvPI09WicJr.FZbwHvUuh6W1AvBtCGFppwQ.tR8eBmK', 'Store', 'Merchant', NULL, true, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Sessions
@@ -18,6 +20,7 @@ INSERT INTO api_keys (id, user_id, key_prefix, key_hash, name, permissions, rate
 ON CONFLICT (id) DO NOTHING;
 
 -- Feature Flags (for featureflagsdb)
+\c postgres;
 INSERT INTO feature_flags (key, description, enabled, rollout_percentage) VALUES
     ('new_payment_flow', 'Enable new payment processing flow', false, 0),
     ('enhanced_reporting', 'Enable enhanced analytics and reporting', true, 100),

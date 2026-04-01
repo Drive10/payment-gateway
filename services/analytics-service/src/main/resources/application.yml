@@ -5,9 +5,9 @@ spring:
   application:
     name: analytics-service
   datasource:
-    url: jdbc:postgresql://postgres:5432/analytics
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/analyticsdb
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

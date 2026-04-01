@@ -33,6 +33,7 @@ out/
 
 # Eclipse IDE
 .classpath
+.factorypath
 .project
 .settings/
 

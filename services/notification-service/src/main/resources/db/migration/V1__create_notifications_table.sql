@@ -7,10 +7,14 @@ CREATE TABLE IF NOT EXISTS notifications (
     subject VARCHAR(500),
     content TEXT,
     status VARCHAR(20) NOT NULL,
+    retry_count INTEGER DEFAULT 0,
+    last_error TEXT,
+    payload TEXT,
+    event_type VARCHAR(50),
     sent_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX idx_notifications_status ON notifications(status);
-CREATE INDEX idx_notifications_type ON notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);

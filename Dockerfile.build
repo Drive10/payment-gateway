@@ -9,7 +9,7 @@ COPY services/ ./services/
 ARG SERVICE_PATH
 RUN mvn -q -DskipTests -pl ${SERVICE_PATH} -am package
 
-FROM eclipse-temurin:21-jre-slim
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 ARG SERVICE_PATH
 COPY --from=build /workspace/${SERVICE_PATH}/target/*.jar /app/app.jar

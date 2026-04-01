@@ -446,6 +446,9 @@ services:
       DB_USERNAME: ${RISK_DB_USER}
       DB_PASSWORD: ${RISK_DB_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "8088:8088"
     restart: unless-stopped
@@ -458,6 +461,8 @@ services:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8088/actuator/health || exit 1"]
@@ -636,152 +641,42 @@ services:
     networks:
       - fintech-network
 
+  # Frontend - build only, static files served by reverse-proxy
   frontend:
     profiles: ["services"]
     build:
       context: ./services/frontend
-    ports:
-      - "3000:80"
-    depends_on:
-      api-gateway:
-        condition: service_started
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-          cpus: "0.25"
+      target: builder
+    volumes:
+      - ./services/frontend/dist:/app/dist
     networks:
       - fintech-network
 
+  # Dashboard - build only, static files served by reverse-proxy
   dashboard:
     profiles: ["services"]
     build:
       context: ./services/dashboard
-    ports:
-      - "3001:3001"
+      target: builder
     environment:
-      VITE_API_URL: http://localhost:8080
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-          cpus: "0.25"
-    networks:
-      - fintech-network
-
-  prometheus:
-    profiles: ["observability"]
-    image: prom/prometheus:v2.54.1
-    container_name: prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.enable-lifecycle'
-    ports:
-      - "9090:9090"
+      VITE_API_URL: /api/v1
     volumes:
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "0.50"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:9090/-/healthy || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
+      - ./services/dashboard/dist:/app/dist
     networks:
       - fintech-network
 
-  grafana:
-    profiles: ["observability"]
-    image: grafana/grafana:11.4.0
-    container_name: grafana
+  # Unified Nginx reverse-proxy - serves all frontends + routes API
+  reverse-proxy:
+    profiles: ["services"]
+    build:
+      context: ./nginx
     ports:
-      - "3002:3000"
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
-      GF_USERS_ALLOW_SIGN_UP: "false"
+      - "80:80"
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-          cpus: "0.25"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000/api/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-    networks:
-      - fintech-network
-
-  jaeger:
-    profiles: ["observability"]
-    image: jaegertracing/all-in-one:1.62
-    container_name: jaeger
-    ports:
-      - "16686:16686"
-      - "4317:4317"
-      - "4318:4318"
-      - "14268:14268"
-    environment:
-      COLLECTOR_OTLP_ENABLED: "true"
-      SPAN_STORAGE_TYPE: badger
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "0.50"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:16687/ || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-    networks:
-      - fintech-network
-
-  loki:
-    profiles: ["observability"]
-    image: grafana/loki:3.2.0
-    container_name: loki
-    ports:
-      - "3100:3100"
-    volumes:
-      - loki_data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "0.50"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3100/ready || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-    networks:
-      - fintech-network
-
-  promtail:
-    profiles: ["observability"]
-    image: grafana/promtail:3.2.0
-    container_name: promtail
-    volumes:
-      - ./docker/promtail/promtail.yml:/etc/promtail/config.yml:ro
-      - /var/log:/var/log:ro
-    command: -config.file=/etc/promtail/config.yml
+      - ./services/frontend/dist:/usr/share/nginx/html/frontend:ro
+      - ./services/dashboard/dist:/usr/share/nginx/html/dashboard:ro
+    depends_on:
+      - api-gateway
     restart: unless-stopped
     deploy:
       resources:
@@ -790,34 +685,6 @@ services:
           cpus: "0.25"
     networks:
       - fintech-network
-
-  kowl:
-    profiles: ["observability"]
-    image: quay.io/cloudhut/kowl:master
-    container_name: kowl
-    ports:
-      - "8097:8080"
-    environment:
-      KAFKA_BROKERS: kafka:29092
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-          cpus: "0.25"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-    networks:
-      - fintech-network
-
-volumes:
-  postgres_data:
-  prometheus_data:
-  grafana_data:
-  loki_data:
 
 networks:
   fintech-network:

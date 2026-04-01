@@ -15,6 +15,8 @@ RUN npm run build
 FROM nginx:alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx/nginx.conf.template /etc/nginx/conf.d/nginx.conf.template
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-CMD ["/bin/sh", "-c", "envsubst '$API_GATEWAY_UPSTREAM' < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
