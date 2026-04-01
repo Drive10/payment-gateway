@@ -616,8 +616,6 @@ services:
         condition: service_healthy
       order-service:
         condition: service_healthy
-      payment-service:
-        condition: service_healthy
       merchant-service:
         condition: service_healthy
       dispute-service:
