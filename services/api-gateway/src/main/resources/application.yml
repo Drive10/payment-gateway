@@ -21,9 +21,9 @@ spring:
       timeout: 2000ms
       lettuce:
         pool:
-          max-active: 16
-          max-idle: 8
-          min-idle: 2
+          max-active: 50
+          max-idle: 20
+          min-idle: 5
           max-wait: 1000ms
 
   cloud:
