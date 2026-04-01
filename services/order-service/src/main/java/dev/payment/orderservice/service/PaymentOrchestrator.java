@@ -2,39 +2,45 @@ package dev.payment.orderservice.service;
 
 import dev.payment.orderservice.dto.InitiatePaymentRequest;
 import dev.payment.orderservice.dto.InitiatePaymentResponse;
-import dev.payment.orderservice.entity.Order;
+import dev.payment.orderservice.dto.OrderResponse;
 import dev.payment.orderservice.entity.OrderStatus;
 import dev.payment.orderservice.exception.OrderException;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
 
 @Service
 public class PaymentOrchestrator {
 
-    private final WebClient webClient;
+    private WebClient webClient;
     private final OrderService orderService;
 
     @Value("${application.payment-service.url}")
     private String paymentServiceUrl;
 
-    public PaymentOrchestrator(WebClient.Builder webClientBuilder, OrderService orderService) {
-        this.webClient = webClientBuilder.baseUrl(paymentServiceUrl).build();
+    public PaymentOrchestrator(OrderService orderService) {
         this.orderService = orderService;
     }
 
+    @PostConstruct
+    public void init() {
+        this.webClient = WebClient.builder().baseUrl(paymentServiceUrl).build();
+    }
+
     public InitiatePaymentResponse initiatePayment(InitiatePaymentRequest request) {
-        Order order = orderService.getOrder(request.orderId()).id() != null ? null : null;
-        
-        if (!order.getAmount().equals(request.amount()) || !order.getCurrency().equals(request.currency())) {
+        OrderResponse order = orderService.getOrder(request.orderId());
+
+        if (!order.amount().equals(request.amount()) || !order.currency().equals(request.currency())) {
             throw new OrderException("Order amount or currency mismatch");
         }
 
-        if (order.getStatus() != OrderStatus.PENDING) {
+        if (order.status() != OrderStatus.PENDING) {
             throw new OrderException("Order is not in PENDING status");
         }
 

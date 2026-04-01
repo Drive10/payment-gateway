@@ -84,7 +84,11 @@ public class SettlementController {
 
     @PostMapping("/trigger")
     public ResponseEntity<ApiResponse<String>> triggerSettlement() {
-        return ResponseEntity.ok(ApiResponse.success("Settlement job triggered"));
+        List<Settlement> pending = settlementService.getPendingSettlements();
+        for (Settlement settlement : pending) {
+            settlementService.processSettlement(settlement.getId());
+        }
+        return ResponseEntity.ok(ApiResponse.success("Settlement job triggered, processed " + pending.size() + " settlements"));
     }
     
     private void validateCreateRequest(Map<String, Object> request) {

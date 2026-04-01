@@ -267,6 +267,7 @@ services:
       JAVA_OPTS: "-XX:+UseZGC -XX:MaxRAMPercentage=75.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom"
     ports:
       - "8083:8083"
+    restart: unless-stopped
     deploy:
       resources:
         limits:

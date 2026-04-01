@@ -111,7 +111,7 @@ class JwtServiceTest {
         User user = createTestUser();
         String token = jwtService.generateAccessToken(user);
 
-        String tokenType = jwtService.extractClaim(token, claims -> claims.get("type", String.class));
+        String tokenType = jwtService.extractClaim(token, claims -> claims.get("token_type", String.class));
 
         assertEquals("access", tokenType);
     }

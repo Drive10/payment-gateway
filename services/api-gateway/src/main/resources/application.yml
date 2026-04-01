@@ -176,4 +176,4 @@ application:
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET_B64:q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=}
+    secret-key: ${JWT_SECRET_B64}

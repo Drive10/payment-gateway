@@ -106,7 +106,7 @@ public class RazorpayWebhookService {
         payment.setProviderPaymentId(entity.id());
         paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
         paymentRepository.save(payment);
-        paymentService.createSystemTransaction(payment, dev.payment.paymentservice.domain.enums.TransactionType.WEBHOOK_PROCESSED,
+        paymentService.createSystemTransaction(payment, dev.payment.paymentservice.domain.enums.TransactionType.PAYMENT,
                 dev.payment.paymentservice.domain.enums.TransactionStatus.SUCCESS,
                 "Webhook marked payment captured", entity.id(), payment.getAmount());
         orderService.markPaid(payment.getOrder());
@@ -143,7 +143,7 @@ public class RazorpayWebhookService {
                 ? PaymentStatus.REFUNDED
                 : PaymentStatus.PARTIALLY_REFUNDED);
         paymentRepository.save(payment);
-        paymentService.createSystemTransaction(payment, dev.payment.paymentservice.domain.enums.TransactionType.WEBHOOK_PROCESSED,
+        paymentService.createSystemTransaction(payment, dev.payment.paymentservice.domain.enums.TransactionType.REFUND,
                 dev.payment.paymentservice.domain.enums.TransactionStatus.SUCCESS,
                 "Webhook processed refund", entity.id(), refundAmount);
         if (payment.getStatus() == PaymentStatus.REFUNDED) {

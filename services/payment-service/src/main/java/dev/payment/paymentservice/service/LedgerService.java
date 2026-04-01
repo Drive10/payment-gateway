@@ -92,8 +92,9 @@ public class LedgerService {
         merchantReceivable.setBalance(merchantReceivable.getBalance().add(netAmount));
 
         // 3. Credit Platform Fee
+        LedgerAccount platformFeeAccount = null;
         if (platformFee.compareTo(BigDecimal.ZERO) > 0) {
-            LedgerAccount platformFeeAccount = getOrCreatePlatformAccount(LedgerAccountType.PLATFORM_FEE, currency);
+            platformFeeAccount = getOrCreatePlatformAccount(LedgerAccountType.PLATFORM_FEE, currency);
             LedgerEntry creditFee = createEntry(
                     UUID.randomUUID().toString(),
                     paymentIdStr,
@@ -110,8 +111,9 @@ public class LedgerService {
         }
 
         // 4. Credit Gateway Fee
+        LedgerAccount gatewayFeeAccount = null;
         if (gatewayFee.compareTo(BigDecimal.ZERO) > 0) {
-            LedgerAccount gatewayFeeAccount = getOrCreatePlatformAccount(LedgerAccountType.PLATFORM_GATEWAY_FEE, currency);
+            gatewayFeeAccount = getOrCreatePlatformAccount(LedgerAccountType.PLATFORM_GATEWAY_FEE, currency);
             LedgerEntry creditGatewayFee = createEntry(
                     UUID.randomUUID().toString(),
                     paymentIdStr,
@@ -131,6 +133,12 @@ public class LedgerService {
         entryRepository.saveAll(entries);
         accountRepository.save(customerEscrow);
         accountRepository.save(merchantReceivable);
+        if (platformFeeAccount != null) {
+            accountRepository.save(platformFeeAccount);
+        }
+        if (gatewayFeeAccount != null) {
+            accountRepository.save(gatewayFeeAccount);
+        }
     }
 
     /**
@@ -176,8 +184,9 @@ public class LedgerService {
         customerEscrow.setBalance(customerEscrow.getBalance().subtract(refundAmount));
 
         // 3. Debit Platform Fee (reverse fee income)
+        LedgerAccount platformFeeAccount = null;
         if (refundedFee.compareTo(BigDecimal.ZERO) > 0) {
-            LedgerAccount platformFeeAccount = getOrCreatePlatformAccount(LedgerAccountType.PLATFORM_FEE, currency);
+            platformFeeAccount = getOrCreatePlatformAccount(LedgerAccountType.PLATFORM_FEE, currency);
             LedgerEntry debitFee = createEntry(
                     UUID.randomUUID().toString(),
                     refundIdStr,
@@ -196,6 +205,9 @@ public class LedgerService {
         entryRepository.saveAll(entries);
         accountRepository.save(merchantReceivable);
         accountRepository.save(customerEscrow);
+        if (platformFeeAccount != null) {
+            accountRepository.save(platformFeeAccount);
+        }
     }
 
     /**

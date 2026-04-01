@@ -38,7 +38,7 @@ public class SettlementService {
         settlement.setMerchantName(merchantName);
         settlement.setPeriodStart(periodStart);
         settlement.setPeriodEnd(periodEnd);
-        settlement.setSettlementReference("STL-" + System.currentTimeMillis());
+        settlement.setSettlementReference("STL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         settlement.setStatus(Settlement.SettlementStatus.PENDING);
         
         return settlementRepository.save(settlement);

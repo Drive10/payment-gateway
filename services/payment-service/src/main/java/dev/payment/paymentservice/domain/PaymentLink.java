@@ -52,7 +52,7 @@ public class PaymentLink {
     private String cancelUrl;
 
     @Column(name = "created_by")
-    private UUID createdBy;
+    private Long createdBy;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -70,7 +70,7 @@ public class PaymentLink {
 
     public PaymentLink(UUID merchantId, Double amount, String currency, String description,
                        String customerName, String customerEmail, String customerPhone,
-                       String successUrl, String cancelUrl, UUID createdBy) {
+                       String successUrl, String cancelUrl, Long createdBy) {
         this.referenceId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         this.merchantId = merchantId;
         this.amount = amount;
@@ -124,8 +124,8 @@ public class PaymentLink {
     public String getCancelUrl() { return cancelUrl; }
     public void setCancelUrl(String cancelUrl) { this.cancelUrl = cancelUrl; }
 
-    public UUID getCreatedBy() { return createdBy; }
-    public void setCreatedBy(UUID createdBy) { this.createdBy = createdBy; }
+    public Long getCreatedBy() { return createdBy; }
+    public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
