@@ -27,7 +27,7 @@ public class UserService {
     }
 
     @Transactional
-    public User createUser(String email, String password, String firstName, String lastName) {
+    public User createUser(String email, String password, String firstName, String lastName, String role) {
         if (userRepository.existsByEmail(email)) {
             throw new AuthException("Email already exists", "EMAIL_EXISTS");
         }
@@ -39,8 +39,12 @@ public class UserService {
         user.setLastName(lastName);
         user.setEnabled(true);
 
-        Optional<Role> defaultRole = roleRepository.findByName("USER");
-        defaultRole.ifPresent(user::addRole);
+        String roleName = (role != null && !role.isBlank()) ? role : "USER";
+        Optional<Role> userRole = roleRepository.findByName(roleName);
+        userRole.ifPresentOrElse(
+                user::addRole,
+                () -> roleRepository.findByName("USER").ifPresent(user::addRole)
+        );
 
         return userRepository.save(user);
     }

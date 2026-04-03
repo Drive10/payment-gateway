@@ -16,7 +16,8 @@
 .PHONY: help dev-infra dev-stop dev-build dev-run \
         docker-up docker-up-obs docker-down docker-status docker-logs \
         test-health test-auth test-orders test-payments test-all \
-        hybrid clean setup bootstrap doctor smoke verify
+        hybrid clean setup bootstrap doctor smoke verify \
+        dev:seed dev:tail dev:test dev:health
 
 # Detect OS
 UNAME_S := $(shell uname -s 2>/dev/null || echo Windows)
@@ -49,14 +50,26 @@ help: ## Show this help
 	@echo ""
 	@echo "$(YELLOW)Payment Gateway - Available Commands$(NC)"
 	@echo ""
-	@echo "$(CYAN)Development Mode$(NC)"
-	@echo "  make dev-infra              Start infrastructure (Postgres, Redis, Kafka)"
-	@echo "  make dev-stop               Stop infrastructure"
-	@echo "  make dev-build              Build all services with Maven"
-	@echo "  make dev-run service=<name> Run a specific service locally"
+	@echo "$(CYAN)Hybrid Dev (Recommended)$(NC)"
+	@echo "  make dev:start              Start infra + gateway + frontends in Docker"
+	@echo "  make dev:stop               Stop hybrid dev environment"
+	@echo "  make dev:restart            Restart hybrid dev environment"
+	@echo "  make dev:status             Show Docker + local service status"
+	@echo "  make dev:run SERVICE=<name> Run a service locally with hot-reload"
+	@echo "  make dev:build SERVICE=<name> Build a specific service"
+	@echo "  make dev:logs SERVICE=<name> Follow Docker service logs"
+	@echo "  make dev:db DB=<name>       Open psql to a database"
+	@echo "  make dev:redis              Open redis-cli"
+	@echo "  make dev:kafka-topics       List Kafka topics"
 	@echo ""
-	@echo "$(CYAN)Docker Mode$(NC)"
-	@echo "  make docker-up              Start all services in Docker"
+	@echo "$(CYAN)Dev Tools$(NC)"
+	@echo "  make dev:seed               Seed demo data (users, orders, payments)"
+	@echo "  make dev:tail SERVICES='x y' Multi-service color log viewer"
+	@echo "  make dev:test CMD=<cmd>     API test shortcuts (login, order, e2e)"
+	@echo "  make dev:health             Check all service health"
+	@echo ""
+	@echo "$(CYAN)Full Docker Mode$(NC)"
+	@echo "  make docker-up              Start ALL services in Docker"
 	@echo "  make docker-up-obs          Start with observability stack"
 	@echo "  make docker-down            Stop all services"
 	@echo "  make docker-status          Show service status"
@@ -68,14 +81,6 @@ help: ## Show this help
 	@echo "  make test-orders            Test order endpoints"
 	@echo "  make test-payments          Test payment endpoints"
 	@echo "  make test-all               Run all E2E tests"
-	@echo ""
-	@echo "$(CYAN)Hybrid Scenarios$(NC)"
-	@echo "  make hybrid scenario=infra-only"
-	@echo "  make hybrid scenario=mixed"
-	@echo "  make hybrid scenario=network-partition"
-	@echo "  make hybrid scenario=service-restart"
-	@echo "  make hybrid scenario=db-failover"
-	@echo "  make hybrid scenario=kafka-lag"
 	@echo ""
 	@echo "$(CYAN)Utilities$(NC)"
 	@echo "  make clean                  Clean up Docker resources"
@@ -116,41 +121,113 @@ else
 endif
 
 # ============================================================================
-# Development Mode
+# Hybrid Development Mode (Infra in Docker, Services on localhost)
 # ============================================================================
 
-dev-infra: ## Start infrastructure services for local development
-	@echo "$(CYAN)Starting infrastructure...$(NC)"
-ifeq ($(DETECTED_OS),windows)
-	powershell -ExecutionPolicy Bypass -File run-dev.ps1 -StartInfra
-else
-	./run-dev.sh --start-infra
-endif
+dev:start: ## Start infra + gateway + frontends in Docker (services run locally)
+	@echo "$(CYAN)Starting hybrid dev environment...$(NC)"
+	docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
+	@echo "$(GREEN)Infra ready. Run services with: make dev:run SERVICE=payment-service$(NC)"
 
-dev-stop: ## Stop infrastructure services
-	@echo "$(CYAN)Stopping infrastructure...$(NC)"
-ifeq ($(DETECTED_OS),windows)
-	powershell -ExecutionPolicy Bypass -File run-dev.ps1 -StopInfra
-else
-	./run-dev.sh --stop-infra
-endif
+dev:stop: ## Stop hybrid dev environment
+	@echo "$(CYAN)Stopping hybrid dev environment...$(NC)"
+	docker compose -f docker-compose.dev.yml --env-file .env.dev down
+	@echo "$(GREEN)Stopped.$(NC)"
 
-dev-build: ## Build all services with Maven
+dev:restart: dev:stop dev:start ## Restart hybrid dev environment
+
+dev:status: ## Show hybrid dev status
+	@echo "$(CYAN)Docker services:$(NC)"
+	@docker compose -f docker-compose.dev.yml --env-file .env.dev ps 2>/dev/null || echo "  Not running"
+	@echo ""
+	@echo "$(CYAN)Local services (Maven):$(NC)"
+	@for svc in auth-service order-service payment-service notification-service webhook-service simulator-service settlement-service risk-service analytics-service merchant-service dispute-service; do \
+		port=$$(echo $$svc | sed 's/-service//; s/auth/8081/; s/order/8082/; s/payment/8083/; s/notification/8084/; s/webhook/8085/; s/simulator/8086/; s/settlement/8087/; s/risk/8088/; s/analytics/8089/; s/merchant/8090/; s/dispute/8091/'); \
+		if curl -s --connect-timeout 1 http://localhost:$$port/actuator/health >/dev/null 2>&1; then \
+			echo "  $(GREEN)●$(NC) $$svc (port $$port)"; \
+		else \
+			echo "  $(RED)○$(NC) $$svc (port $$port)"; \
+		fi; \
+	done
+
+dev:run: ## Run a service locally (usage: make dev:run SERVICE=payment-service)
+	@if [ -z "$(SERVICE)" ]; then \
+		echo "$(RED)Error: Specify service (make dev:run SERVICE=payment-service)$(NC)"; \
+		echo "$(YELLOW)Available: auth-service, order-service, payment-service, notification-service,$(NC)"; \
+		echo "$(YELLOW)           webhook-service, simulator-service, settlement-service, risk-service,$(NC)"; \
+		echo "$(YELLOW)           analytics-service, merchant-service, dispute-service$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(CYAN)Starting $(SERVICE) locally...$(NC)"
+	@cd services/$(SERVICE) && \
+		SPRING_PROFILES_ACTIVE=local \
+		DB_HOST=localhost \
+		DB_PORT=5433 \
+		KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
+		REDIS_HOST=localhost \
+		REDIS_PORT=6379 \
+		REDIS_PASSWORD=redis-dev-pass \
+		AUTH_SERVICE_URL=http://localhost:8081 \
+		ORDER_SERVICE_URL=http://localhost:8082 \
+		PAYMENT_SERVICE_URL=http://localhost:8083 \
+		NOTIFICATION_SERVICE_URL=http://localhost:8084 \
+		WEBHOOK_SERVICE_URL=http://localhost:8085 \
+		SIMULATOR_SERVICE_URL=http://localhost:8086 \
+		SETTLEMENT_SERVICE_URL=http://localhost:8087 \
+		RISK_SERVICE_URL=http://localhost:8088 \
+		ANALYTICS_SERVICE_URL=http://localhost:8089 \
+		MERCHANT_SERVICE_URL=http://localhost:8090 \
+		DISPUTE_SERVICE_URL=http://localhost:8091 \
+		JWT_SECRET_B64=dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk \
+		GATEWAY_INTERNAL_SECRET=dev-gateway-internal-secret \
+		mvn spring-boot:run
+
+dev:build: ## Build a specific service (usage: make dev:build SERVICE=payment-service)
+	@if [ -z "$(SERVICE)" ]; then \
+		echo "$(RED)Error: Specify service (make dev:build SERVICE=payment-service)$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(CYAN)Building $(SERVICE)...$(NC)"
+	mvn -B -q -DskipTests -pl services/$(SERVICE) -am package
+	@echo "$(GREEN)$(SERVICE) built!$(NC)"
+
+dev:logs: ## Follow logs for a Docker service (usage: make dev:logs SERVICE=api-gateway)
+	docker compose -f docker-compose.dev.yml --env-file .env.dev logs -f $(SERVICE)
+
+dev:db: ## Open psql to a database (usage: make dev:db DB=paymentdb)
+	docker compose -f docker-compose.dev.yml --env-file .env.dev exec postgres psql -U payment -d $(DB)
+
+dev:redis: ## Open redis-cli
+	docker compose -f docker-compose.dev.yml --env-file .env.dev exec redis redis-cli -a redis-dev-pass
+
+dev:kafka-topics: ## List Kafka topics
+	docker compose -f docker-compose.dev.yml --env-file .env.dev exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+dev:seed: ## Seed demo data (users, orders, payments)
+	@./dev/seed.sh
+
+dev:tail: ## Multi-service log viewer (usage: make dev:tail SERVICES="payment-service auth-service")
+	@./dev/tail.sh $(SERVICES)
+
+dev:test: ## API test shortcuts (usage: make dev:test CMD=login)
+	@./dev/test.sh $(CMD)
+
+dev:health: ## Check all service health
+	@./dev/test.sh health
+
+# ============================================================================
+# Legacy Development Mode (compatibility)
+# ============================================================================
+
+dev-infra: dev:start ## Start infrastructure (alias)
+dev-stop: dev:stop ## Stop infrastructure (alias)
+
+dev-build-all: ## Build all services with Maven
 	@echo "$(CYAN)Building all services...$(NC)"
 	mvn clean package -DskipTests
 	@echo "$(GREEN)Build complete!$(NC)"
 
-dev-run: ## Run a specific service (usage: make dev-run service=auth)
-	@if [ -z "$(service)" ]; then \
-		echo "$(RED)Error: Please specify a service (e.g., make dev-run service=auth)$(NC)"; \
-		exit 1; \
-	fi
-	@echo "$(CYAN)Starting $(service) service...$(NC)"
-ifeq ($(DETECTED_OS),windows)
-	powershell -ExecutionPolicy Bypass -File run-dev.ps1 -Service $(service)
-else
-	./run-dev.sh --service $(service)
-endif
+dev-run: dev:run ## Run a service (alias)
 
 # ============================================================================
 # Docker Mode

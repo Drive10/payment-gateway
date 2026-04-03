@@ -1,13 +1,25 @@
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /workspace
+
+# Layer 1: Parent pom (rarely changes)
 COPY pom.xml .
 RUN mvn -q -N install -DskipTests -Dmaven.repo.local=/root/.m2/repository
+
+# Layer 2: Common lib (changes occasionally)
 COPY libs/common/pom.xml libs/common/
 COPY libs/common/src libs/common/src
 RUN mvn -q -N -f libs/common/pom.xml install -DskipTests -Dmaven.repo.local=/root/.m2/repository
-COPY services/ ./services/
+
+# Layer 3: Service poms + dependency download (changes when deps change)
 ARG SERVICE_PATH
-RUN mvn -q -DskipTests -pl ${SERVICE_PATH} -am clean package -Dmaven.repo.local=/root/.m2/repository
+COPY ${SERVICE_PATH}/pom.xml ${SERVICE_PATH}/pom.xml
+RUN mvn -q dependency:go-offline -pl ${SERVICE_PATH} -am -Dmaven.repo.local=/root/.m2/repository || true
+
+# Layer 4: Source code (changes frequently — this is the hot path)
+COPY ${SERVICE_PATH}/src ${SERVICE_PATH}/src
+RUN mvn -q -DskipTests -pl ${SERVICE_PATH} -am package -Dmaven.repo.local=/root/.m2/repository
+
+# Extract JAR
 RUN set -eux; \
     artifact="$(find "/workspace/${SERVICE_PATH}/target" -maxdepth 1 -type f -name '*-exec.jar' | head -n 1)"; \
     if [ -z "$artifact" ]; then \

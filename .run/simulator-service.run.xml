@@ -1,0 +1,23 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="simulator-service" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="simulator-service" />
+    <option name="MAIN_CLASS_NAME" value="dev.payment.simulatorservice.SimulatorServiceApplication" />
+    <option name="VM_PARAMETERS" value="-XX:+UseZGC -XX:+ZGenerational" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="dev.payment.simulatorservice.SimulatorServiceApplication" />
+    <envs>
+      <env name="SPRING_PROFILES_ACTIVE" value="local" />
+      <env name="DB_HOST" value="localhost" />
+      <env name="DB_PORT" value="5433" />
+      <env name="KAFKA_BOOTSTRAP_SERVERS" value="localhost:9092" />
+      <env name="REDIS_HOST" value="localhost" />
+      <env name="REDIS_PORT" value="6379" />
+      <env name="REDIS_PASSWORD" value="redis-dev-pass" />
+      <env name="JWT_SECRET_B64" value="dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk" />
+      <env name="GATEWAY_INTERNAL_SECRET" value="dev-gateway-internal-secret" />
+      <env name="SERVER_PORT" value="8086" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

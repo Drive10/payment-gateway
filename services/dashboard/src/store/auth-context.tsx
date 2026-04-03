@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { ApiError } from '@/services/api/client'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
+const API_BASE_URL = '/api/v1'
 
 export type UserRole = 'ADMIN' | 'USER'
 

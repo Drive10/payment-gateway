@@ -1,0 +1,27 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="payment-service" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="payment-service" />
+    <option name="MAIN_CLASS_NAME" value="dev.payment.paymentservice.Application" />
+    <option name="VM_PARAMETERS" value="-XX:+UseZGC -XX:+ZGenerational" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="dev.payment.paymentservice.Application" />
+    <envs>
+      <env name="SPRING_PROFILES_ACTIVE" value="local" />
+      <env name="DB_HOST" value="localhost" />
+      <env name="DB_PORT" value="5433" />
+      <env name="KAFKA_BOOTSTRAP_SERVERS" value="localhost:9092" />
+      <env name="REDIS_HOST" value="localhost" />
+      <env name="REDIS_PORT" value="6379" />
+      <env name="REDIS_PASSWORD" value="redis-dev-pass" />
+      <env name="JWT_SECRET_B64" value="dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk" />
+      <env name="GATEWAY_INTERNAL_SECRET" value="dev-gateway-internal-secret" />
+      <env name="SERVER_PORT" value="8083" />
+      <env name="SIMULATOR_SERVICE_URL" value="http://localhost:8086" />
+      <env name="ORDER_SERVICE_URL" value="http://localhost:8082" />
+      <env name="NOTIFICATION_SERVICE_URL" value="http://localhost:8084" />
+      <env name="APPLICATION_GATEWAY_TRUST_ENABLED" value="false" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

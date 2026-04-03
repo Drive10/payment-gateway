@@ -68,11 +68,12 @@ class AuthServiceTest {
                 "test@example.com",
                 "password123",
                 "John",
-                "Doe"
+                "Doe",
+                "USER"
         );
         User user = createTestUser();
 
-        when(userService.createUser(anyString(), anyString(), anyString(), anyString())).thenReturn(user);
+        when(userService.createUser(anyString(), anyString(), anyString(), anyString(), any())).thenReturn(user);
         when(jwtService.generateAccessToken(any(User.class))).thenReturn("accessToken");
         when(jwtService.generateRefreshToken(any(User.class))).thenReturn("refreshToken");
         when(jwtService.getAccessTokenExpiration()).thenReturn(3600L);
@@ -85,7 +86,7 @@ class AuthServiceTest {
         assertEquals("Bearer", response.tokenType());
         assertEquals(3600L, response.expiresIn());
         assertNotNull(response.user());
-        verify(userService).createUser("test@example.com", "password123", "John", "Doe");
+        verify(userService).createUser("test@example.com", "password123", "John", "Doe", "USER");
     }
 
     @Test

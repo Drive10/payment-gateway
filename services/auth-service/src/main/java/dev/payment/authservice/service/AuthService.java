@@ -31,7 +31,8 @@ public class AuthService {
                 request.email(),
                 request.password(),
                 request.firstName(),
-                request.lastName()
+                request.lastName(),
+                request.role()
         );
 
         String accessToken = jwtService.generateAccessToken(user);

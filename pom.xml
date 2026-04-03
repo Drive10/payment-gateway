@@ -38,6 +38,16 @@
         <resilience4j.version>2.2.0</resilience4j.version>
     </properties>
 
+    <!-- Spring DevTools for hot-reload during local development -->
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
