@@ -43,8 +43,8 @@ public class Order extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     public UUID getId() {

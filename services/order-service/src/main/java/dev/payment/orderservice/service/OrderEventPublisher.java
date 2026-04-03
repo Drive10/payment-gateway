@@ -29,34 +29,32 @@ public class OrderEventPublisher {
     }
 
     public void publishOrderCreated(Order order) {
-        Map<String, Object> event = Map.of(
-                "eventId", UUID.randomUUID(),
-                "eventVersion", "1.0",
-                "eventType", "ORDER_CREATED",
-                "orderId", order.getId(),
-                "userId", order.getUserId(),
-                "amount", order.getAmount(),
-                "currency", order.getCurrency(),
-                "status", order.getStatus().name(),
-                "occurredAt", Instant.now()
-        );
+        Map<String, Object> event = new java.util.HashMap<>();
+        event.put("eventId", UUID.randomUUID());
+        event.put("eventVersion", "1.0");
+        event.put("eventType", "ORDER_CREATED");
+        event.put("orderId", order.getId());
+        event.put("userId", order.getUserId());
+        event.put("amount", order.getAmount());
+        event.put("currency", order.getCurrency());
+        event.put("status", order.getStatus().name());
+        event.put("occurredAt", Instant.now());
 
         sendEvent(order.getId().toString(), event);
     }
 
     public void publishOrderStatusChanged(Order order, OrderStatus oldStatus, OrderStatus newStatus) {
-        Map<String, Object> event = Map.of(
-                "eventId", UUID.randomUUID(),
-                "eventVersion", "1.0",
-                "eventType", "ORDER_STATUS_CHANGED",
-                "orderId", order.getId(),
-                "userId", order.getUserId(),
-                "oldStatus", oldStatus.name(),
-                "newStatus", newStatus.name(),
-                "amount", order.getAmount(),
-                "currency", order.getCurrency(),
-                "occurredAt", Instant.now()
-        );
+        Map<String, Object> event = new java.util.HashMap<>();
+        event.put("eventId", UUID.randomUUID());
+        event.put("eventVersion", "1.0");
+        event.put("eventType", "ORDER_STATUS_CHANGED");
+        event.put("orderId", order.getId());
+        event.put("userId", order.getUserId());
+        event.put("oldStatus", oldStatus.name());
+        event.put("newStatus", newStatus.name());
+        event.put("amount", order.getAmount());
+        event.put("currency", order.getCurrency());
+        event.put("occurredAt", Instant.now());
 
         sendEvent(order.getId().toString(), event);
     }

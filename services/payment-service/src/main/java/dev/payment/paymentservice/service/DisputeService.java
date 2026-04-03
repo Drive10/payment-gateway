@@ -137,7 +137,20 @@ public class DisputeService {
     }
 
     public Page<Dispute> getMerchantDisputes(UUID merchantId, Dispute.DisputeStatus status, Pageable pageable) {
-        return disputeRepository.findByMerchantId(merchantId, pageable);
+        if (merchantId == null) {
+            return status != null
+                    ? disputeRepository.findByStatus(status, pageable)
+                    : disputeRepository.findAll(pageable);
+        }
+        return status != null
+                ? disputeRepository.findByMerchantIdAndStatus(merchantId, status, pageable)
+                : disputeRepository.findByMerchantId(merchantId, pageable);
+    }
+
+    public Page<Dispute> getAllDisputes(Dispute.DisputeStatus status, Pageable pageable) {
+        return status != null
+                ? disputeRepository.findByStatus(status, pageable)
+                : disputeRepository.findAll(pageable);
     }
 
     public Optional<Dispute> getDispute(UUID disputeId) {
@@ -157,7 +170,8 @@ public class DisputeService {
     }
 
     public BigDecimal getDisputedAmount(UUID merchantId) {
-        return disputeRepository.findByMerchantIdAndStatus(merchantId, Dispute.DisputeStatus.OPEN)
+        return disputeRepository.findByMerchantIdAndStatus(merchantId, Dispute.DisputeStatus.OPEN, Pageable.unpaged())
+                .getContent()
                 .stream()
                 .map(Dispute::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

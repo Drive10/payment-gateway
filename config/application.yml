@@ -1,23 +1,31 @@
 services:
   payment:
-    url: ${PAYMENT_SERVICE_URL:http://localhost:8084}
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
   auth:
     url: ${AUTH_SERVICE_URL:http://localhost:8081}
-  ledger:
-    url: ${LEDGER_SERVICE_URL:http://localhost:8082}
+  order:
+    url: ${ORDER_SERVICE_URL:http://localhost:8082}
   notification:
-    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
-  risk:
-    url: ${RISK_SERVICE_URL:http://localhost:8085}
-  settlement:
-    url: ${SETTLEMENT_SERVICE_URL:http://localhost:8086}
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+  webhook:
+    url: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
   simulator:
-    url: ${SIMULATOR_SERVICE_URL:http://localhost:8087}
+    url: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+  settlement:
+    url: ${SETTLEMENT_SERVICE_URL:http://localhost:8087}
+  risk:
+    url: ${RISK_SERVICE_URL:http://localhost:8088}
+  analytics:
+    url: ${ANALYTICS_SERVICE_URL:http://localhost:8089}
+  merchant:
+    url: ${MERCHANT_SERVICE_URL:http://localhost:8090}
+  dispute:
+    url: ${DISPUTE_SERVICE_URL:http://localhost:8091}
 
 spring:
   datasource:
     username: ${DB_USERNAME:${POSTGRES_USER:payment}}
-    password: ${DB_PASSWORD:${POSTGRES_PASSWORD:paymentpass}}
+    password: ${DB_PASSWORD:${POSTGRES_PASSWORD:pg-dev-password}}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   data:

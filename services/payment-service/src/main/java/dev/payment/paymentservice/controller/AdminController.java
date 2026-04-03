@@ -36,20 +36,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -63,7 +49,14 @@ public class AdminController {
     private final FeeConfigService feeConfigService;
     private final DisputeService disputeService;
 
-    public AdminController(PaymentService paymentService, OrderService orderService, AuditService auditService, AuthService authService, FeeConfigService feeConfigService, DisputeService disputeService) {
+    public AdminController(
+            PaymentService paymentService,
+            OrderService orderService,
+            AuditService auditService,
+            AuthService authService,
+            FeeConfigService feeConfigService,
+            DisputeService disputeService
+    ) {
         this.paymentService = paymentService;
         this.orderService = orderService;
         this.auditService = auditService;
@@ -151,19 +144,27 @@ public class AdminController {
         authService.getCurrentUser(authentication.getName());
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
         Dispute.DisputeStatus disputeStatus = status != null ? Dispute.DisputeStatus.valueOf(status) : null;
-        Page<Dispute> disputes = disputeService.getMerchantDisputes(null, disputeStatus, pageable);
+        Page<Dispute> disputes = disputeService.getAllDisputes(disputeStatus, pageable);
         return ApiResponse.success(PageResponse.from(disputes));
     }
 
     @PostMapping("/disputes/{disputeId}/accept")
-    public ApiResponse<Dispute> acceptDispute(@PathVariable UUID disputeId, @RequestBody Map<String, String> request, Authentication authentication) {
+    public ApiResponse<Dispute> acceptDispute(
+            @PathVariable UUID disputeId,
+            @RequestBody Map<String, String> request,
+            Authentication authentication
+    ) {
         authService.getCurrentUser(authentication.getName());
         String notes = request.get("notes");
         return ApiResponse.success(disputeService.acceptDispute(disputeId, notes));
     }
 
     @PostMapping("/disputes/{disputeId}/reject")
-    public ApiResponse<Dispute> rejectDispute(@PathVariable UUID disputeId, @RequestBody Map<String, String> request, Authentication authentication) {
+    public ApiResponse<Dispute> rejectDispute(
+            @PathVariable UUID disputeId,
+            @RequestBody Map<String, String> request,
+            Authentication authentication
+    ) {
         authService.getCurrentUser(authentication.getName());
         String notes = request.get("notes");
         return ApiResponse.success(disputeService.rejectDispute(disputeId, notes));

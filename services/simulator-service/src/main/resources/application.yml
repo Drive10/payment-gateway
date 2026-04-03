@@ -5,30 +5,34 @@ spring:
   profiles:
     default: local
 
-webhook:
-  service-url: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
-  simulator-success-rate: ${SIMULATOR_SUCCESS_RATE:90}
-  simulator-mode: ${SIMULATOR_MODE:random}
-
----
-spring:
-  config:
-    activate:
-      on-profile: default
   application:
     name: simulator-service
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:simulatordb}
     username: ${DB_USERNAME:simulator}
-    password: ${DB_PASSWORD:simulatorpass}
+    password: ${DB_PASSWORD:${POSTGRES_PASSWORD:pg-dev-password}}
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
         format_sql: false
+
+  flyway:
+    enabled: false
+    baseline-on-migrate: true
+    out-of-order: true
+    ignore-missing-migrations: true
+    ignore-pending-migrations: true
+
+webhook:
+  service-url: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
+  simulator-success-rate: ${SIMULATOR_SUCCESS_RATE:90}
+  simulator-mode: ${SIMULATOR_MODE:random}
 
 management:
   endpoints:

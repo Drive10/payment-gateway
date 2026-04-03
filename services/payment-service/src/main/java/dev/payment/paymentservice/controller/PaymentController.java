@@ -43,7 +43,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/payments")
+@RequestMapping("/payments")
 @Tag(name = "Payments")
 public class PaymentController {
 

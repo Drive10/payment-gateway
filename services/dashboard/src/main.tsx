@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { ToastProviderWrapper } from './hooks/useToast'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
+import { AuthProvider } from './store/auth-context'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -21,7 +22,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ToastProviderWrapper>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </ToastProviderWrapper>
       </QueryClientProvider>
     </ErrorBoundary>

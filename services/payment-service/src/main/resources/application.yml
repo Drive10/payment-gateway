@@ -41,6 +41,7 @@ spring:
     open-in-view: false
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: false
         jdbc:
           batch_size: 20
@@ -48,7 +49,7 @@ spring:
         order_updates: true
         generate_statistics: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -80,6 +81,13 @@ spring:
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=300s
 
+  flyway:
+    enabled: false
+    baseline-on-migrate: true
+    out-of-order: true
+    ignore-missing-migrations: true
+    ignore-pending-migrations: true
+
 management:
   endpoints:
     web:
@@ -97,7 +105,7 @@ application:
 
   security:
     jwt:
-      secret-key: ${JWT_SECRET_B64:q8V3YkT9Z3xkY2FhZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=}
+      secret-key: ${JWT_SECRET_B64:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk}
       expiration-seconds: 3600
       refresh-expiration-seconds: 2592000
 

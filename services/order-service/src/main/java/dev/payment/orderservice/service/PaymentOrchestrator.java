@@ -46,7 +46,7 @@ public class PaymentOrchestrator {
 
         try {
             InitiatePaymentResponse response = webClient.post()
-                    .uri("/api/v1/payments")
+                    .uri("/payments")
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(InitiatePaymentResponse.class)

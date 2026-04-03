@@ -62,6 +62,15 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    @SuppressWarnings("unchecked")
+    public List<String> extractRoles(String token) {
+        Object roles = extractClaim(token, claims -> claims.get("roles"));
+        if (roles instanceof List) {
+            return (List<String>) roles;
+        }
+        return List.of();
+    }
+
     public boolean isTokenValid(String token, UserDetails userDetails) {
         return extractUsername(token).equals(userDetails.getUsername()) && !isExpired(token);
     }

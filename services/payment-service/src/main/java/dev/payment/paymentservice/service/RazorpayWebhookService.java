@@ -109,7 +109,7 @@ public class RazorpayWebhookService {
         paymentService.createSystemTransaction(payment, dev.payment.paymentservice.domain.enums.TransactionType.PAYMENT,
                 dev.payment.paymentservice.domain.enums.TransactionStatus.SUCCESS,
                 "Webhook marked payment captured", entity.id(), payment.getAmount());
-        orderService.markPaid(payment.getOrder());
+        orderService.markPaid(payment.getOrderId(), "ORD-UNKNOWN");
         auditService.record("RAZORPAY_WEBHOOK_CAPTURED", "system", "PAYMENT", payment.getId().toString(), "Webhook marked payment captured");
         paymentEventPublisher.publish("payment.webhook.captured", payment, Map.of("providerPaymentId", entity.id()));
     }
@@ -147,7 +147,7 @@ public class RazorpayWebhookService {
                 dev.payment.paymentservice.domain.enums.TransactionStatus.SUCCESS,
                 "Webhook processed refund", entity.id(), refundAmount);
         if (payment.getStatus() == PaymentStatus.REFUNDED) {
-            orderService.markRefunded(payment.getOrder());
+            orderService.markRefunded(payment.getOrderId(), "ORD-UNKNOWN");
         }
         auditService.record("RAZORPAY_WEBHOOK_REFUND", "system", "PAYMENT", payment.getId().toString(), "Webhook processed refund");
         paymentEventPublisher.publish("payment.webhook.refund_processed", payment, Map.of(

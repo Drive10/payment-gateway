@@ -8,7 +8,9 @@ export const TRANSACTION_MODES = {
   TEST: "TEST",
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api/v1";
+// Optional merchantId override for environments where the order API doesn't return it
+const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm the platform is running and try again.";
 const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
@@ -49,9 +51,12 @@ function createCorrelationId(prefix) {
 
 function buildCustomerIdentity() {
   const sessionKey = getSessionKey();
+  const firstName = "Nova";
+  const lastName = "Demo";
   return {
     email: `nova.${sessionKey}@example.com`,
-    fullName: "Nova Demo Customer",
+    firstName,
+    lastName,
     password: `Nova${sessionKey}1234`,
   };
 }
@@ -86,12 +91,14 @@ async function apiRequest(path, options = {}) {
   const payload = await response.json().catch(() => null);
 
   if (!response.ok || payload?.success === false) {
+    const code = payload?.error?.code;
     const message =
       payload?.error?.message ||
       payload?.message ||
       (typeof payload?.error === "string" ? payload.error : null) ||
       DEFAULT_ERROR_MESSAGE;
-    throw new Error(message);
+    const finalMessage = code ? `[${code}] ${message}` : message;
+    throw new Error(finalMessage);
   }
 
   return payload?.data;
@@ -121,7 +128,10 @@ async function ensureAccessToken() {
 
   return {
     token: auth.accessToken,
-    customer,
+    customer: {
+      ...customer,
+      id: auth.user?.id,
+    },
   };
 }
 
@@ -150,9 +160,20 @@ export async function startCheckout({
       amount,
       currency: "INR",
       description: "Nova commerce checkout purchase",
+      userId: customer?.id,
     }),
   });
 
+  // Debug: log the payment payload that will be sent to the gateway
+  console.debug("Payments payload prepare", {
+    orderId: order.id,
+    method: method === "upi" ? "UPI" : "CARD",
+    provider,
+    transactionMode,
+    notes: null,
+  });
+
+  const merchantIdToSend = order?.merchantId ?? DEFAULT_MERCHANT_ID;
   const payment = await apiRequest("/v1/payments", {
     method: "POST",
     headers: {
@@ -162,13 +183,14 @@ export async function startCheckout({
     },
     body: JSON.stringify({
       orderId: order.id,
+      merchantId: merchantIdToSend,
       method: method === "upi" ? "UPI" : "CARD",
       provider,
       transactionMode,
-      notes:
-        method === "upi"
-          ? "Customer selected UPI"
-          : `Cardholder: ${cardholder.trim() || customer.fullName}`,
+        notes:
+          method === "upi"
+            ? "Customer selected UPI"
+            : `Cardholder: ${ (cardholder.trim() || [customer?.firstName, customer?.lastName].filter(Boolean).join(" ")).trim() }`,
     }),
   });
 

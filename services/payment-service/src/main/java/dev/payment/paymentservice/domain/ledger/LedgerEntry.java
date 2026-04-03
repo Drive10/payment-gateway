@@ -3,6 +3,8 @@ package dev.payment.paymentservice.domain.ledger;
 import dev.payment.paymentservice.domain.enums.LedgerEntryType;
 import dev.payment.paymentservice.domain.enums.LedgerTransactionType;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -52,7 +54,8 @@ public class LedgerEntry {
     @Column(length = 500)
     private String description;
 
-    @Column(columnDefinition = "json")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", columnDefinition = "jsonb")
     private String metadata;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -73,6 +76,7 @@ public class LedgerEntry {
         this.referenceType = referenceType;
         this.referenceId = referenceId;
         this.description = description;
+        this.metadata = "{}";
         this.createdAt = Instant.now();
     }
 

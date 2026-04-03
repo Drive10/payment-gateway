@@ -29,8 +29,8 @@ spring:
   cloud:
     gateway:
       httpclient:
-        connect-timeout: 2000
-        response-timeout: 5s
+        connect-timeout: 5000
+        response-timeout: 30s
       default-filters:
         - PreserveHostHeader
       routes:
@@ -49,11 +49,16 @@ spring:
           uri: ${ORDER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/v1/orders/**
+          filters:
+            - StripPrefix=2
 
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/v1/payments/**,/api/v1/admin/**
+          filters:
+            - StripPrefix=2
+            - AddRequestHeader=X-Gateway-Token,dev-gateway-internal-secret
 
         - id: webhook-service
           uri: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
@@ -74,20 +79,6 @@ spring:
           uri: ${DISPUTE_SERVICE_URL:http://localhost:8091}
           predicates:
             - Path=/api/v1/disputes/**
-
-        - id: swagger-ui
-          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
-          predicates:
-            - Path=/swagger-ui/**,/swagger-ui.html
-          filters:
-            - StripPrefix=0
-
-        - id: openapi-docs
-          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
-          predicates:
-            - Path=/v3/api-docs/**
-          filters:
-            - StripPrefix=1
 
         - id: internal-auth
           uri: ${AUTH_SERVICE_URL:http://localhost:8081}

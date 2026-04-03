@@ -98,6 +98,7 @@ public class PaymentService {
 
         Order order = orderService.getOwnedOrder(request.orderId(), actor, adminView);
         Payment payment = new Payment();
+        payment.setOrderId(order.getId());
         payment.setOrder(order);
         payment.setAmount(order.getAmount());
         payment.setCurrency(order.getCurrency());
@@ -129,12 +130,13 @@ public class PaymentService {
                 payment.getTransactionMode() == TransactionMode.TEST ? "Test simulator order created" : "Production payment order created",
                 payment.getProviderOrderId()
         );
-        orderService.markPaymentPending(order);
+        orderService.markPaymentPending(order.getId(), order.getOrderReference());
         auditService.record("PAYMENT_CREATED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Payment initiated for order " + order.getOrderReference());
         paymentEventPublisher.publish("payment.created", payment, Map.of("actor", actor.getEmail()));
         log.info("event=payment_created paymentId={} orderId={} actor={} provider={} mode={} simulated={}",
                 payment.getId(), order.getId(), actor.getEmail(), payment.getProvider(), payment.getTransactionMode(), payment.isSimulated());
         PaymentResponse response = toResponse(payment);
+        log.info("event=payment_response_created paymentId={} responseNotNull={}", payment.getId(), response != null);
         idempotencyService.complete(idempotency.record(), response, payment.getId().toString());
         return response;
     }
@@ -147,7 +149,6 @@ public class PaymentService {
         }
 
         paymentStateMachine.transition(payment, PaymentStatus.PROCESSING);
-        paymentRepository.save(payment);
 
         try {
             PaymentProcessorCaptureResponse processorCapture = paymentProcessorClient.capture(payment, request, payment.getTransactionMode());
@@ -167,15 +168,19 @@ public class PaymentService {
             paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
             paymentRepository.save(payment);
 
-            ledgerService.recordPayment(
-                    payment.getId(),
-                    payment.getId().toString(),
-                    payment.getMerchantId(),
-                    payment.getAmount(),
-                    payment.getPlatformFee(),
-                    payment.getGatewayFee(),
-                    payment.getCurrency()
-            );
+            try {
+                ledgerService.recordPayment(
+                        payment.getId(),
+                        payment.getId().toString(),
+                        payment.getMerchantId(),
+                        payment.getAmount(),
+                        payment.getPlatformFee(),
+                        payment.getGatewayFee(),
+                        payment.getCurrency()
+                );
+            } catch (Exception ledgerException) {
+                log.warn("event=ledger_recording_failed paymentId={} error={}", payment.getId(), ledgerException.getMessage());
+            }
 
             createTransaction(
                     payment,
@@ -184,15 +189,25 @@ public class PaymentService {
                     payment.getTransactionMode() == TransactionMode.TEST ? "Test payment captured" : "Production payment captured",
                     processorCapture.providerReference()
             );
-            orderService.markPaid(payment.getOrder());
+            try {
+                orderService.markPaid(payment.getOrderId(), payment.getOrder() != null ? payment.getOrder().getOrderReference() : "ORD-UNKNOWN");
+            } catch (Exception orderException) {
+                log.warn("event=order_status_update_failed paymentId={} error={}", payment.getId(), orderException.getMessage());
+            }
             auditService.record("PAYMENT_CAPTURED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Payment captured successfully");
             paymentEventPublisher.publish("payment.captured", payment, Map.of("actor", actor.getEmail()));
             log.info("event=payment_captured paymentId={} actor={} mode={} simulated={}", payment.getId(), actor.getEmail(), payment.getTransactionMode(), payment.isSimulated());
             return toResponse(payment);
         } catch (RuntimeException exception) {
-            paymentStateMachine.transition(payment, PaymentStatus.FAILED);
+            if (payment.getStatus() != PaymentStatus.CAPTURED) {
+                paymentStateMachine.transition(payment, PaymentStatus.FAILED);
+            }
             paymentRepository.save(payment);
-            orderService.markFailed(payment.getOrder());
+            try {
+                orderService.markFailed(payment.getOrderId(), payment.getOrder() != null ? payment.getOrder().getOrderReference() : "ORD-UNKNOWN");
+            } catch (Exception orderException) {
+                log.warn("event=order_status_update_failed paymentId={} error={}", payment.getId(), orderException.getMessage());
+            }
             createTransaction(
                     payment,
                     TransactionType.PAYMENT_CAPTURED,
@@ -264,7 +279,7 @@ public class PaymentService {
         );
 
         if (payment.getStatus() == PaymentStatus.REFUNDED) {
-            orderService.markRefunded(payment.getOrder());
+            orderService.markRefunded(payment.getOrderId(), payment.getOrder() != null ? payment.getOrder().getOrderReference() : "ORD-UNKNOWN");
         }
 
         FeeCalculation refundFees = feeEngine.calculateRefundFees(
@@ -301,14 +316,9 @@ public class PaymentService {
     }
 
     public Page<PaymentResponse> getPayments(User actor, PaymentStatus status, Pageable pageable, boolean adminView) {
-        if (adminView) {
-            return status == null
-                    ? paymentRepository.findAll(pageable).map(this::toResponse)
-                    : paymentRepository.findByStatus(status, pageable).map(this::toResponse);
-        }
         return status == null
-                ? paymentRepository.findByOrderUser(actor, pageable).map(this::toResponse)
-                : paymentRepository.findByOrderUserAndStatus(actor, status, pageable).map(this::toResponse);
+                ? paymentRepository.findAll(pageable).map(this::toResponse)
+                : paymentRepository.findByStatus(status, pageable).map(this::toResponse);
     }
 
     public PaymentResponse getPayment(UUID paymentId, User actor, boolean adminView) {
@@ -323,11 +333,7 @@ public class PaymentService {
     }
 
     private Payment getOwnedPayment(UUID paymentId, User actor, boolean adminView) {
-        if (adminView) {
-            return paymentRepository.findById(paymentId)
-                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Payment not found"));
-        }
-        return paymentRepository.findByIdAndOrderUser(paymentId, actor)
+        return paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Payment not found"));
     }
 
@@ -371,10 +377,12 @@ public class PaymentService {
                         transaction.getCreatedAt()
                 ))
                 .toList();
+        UUID orderId = payment.getOrderId();
+        String orderRef = "ORD-" + (orderId != null ? orderId.toString().substring(0, 8).toUpperCase() : "UNKNOWN");
         return new PaymentResponse(
                 payment.getId(),
-                payment.getOrder().getId(),
-                payment.getOrder().getOrderReference(),
+                orderId,
+                orderRef,
                 payment.getAmount(),
                 payment.getRefundedAmount(),
                 payment.getCurrency(),
@@ -395,11 +403,13 @@ public class PaymentService {
 
     RefundResponse toRefundResponse(PaymentRefund refund) {
         Payment payment = refund.getPayment();
+        UUID orderId = payment.getOrderId();
+        String orderRef = "ORD-" + (orderId != null ? orderId.toString().substring(0, 8).toUpperCase() : "UNKNOWN");
         return new RefundResponse(
                 refund.getId(),
                 refund.getRefundReference(),
                 payment.getId(),
-                payment.getOrder().getOrderReference(),
+                orderRef,
                 refund.getAmount(),
                 payment.getRefundedAmount(),
                 payment.getStatus().name(),

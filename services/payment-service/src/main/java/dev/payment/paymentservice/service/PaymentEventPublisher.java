@@ -35,13 +35,16 @@ public class PaymentEventPublisher {
             eventMetadata.putAll(metadata);
         }
 
+        UUID orderId = payment.getOrderId();
+        String orderRef = orderId != null ? "ORD-" + orderId.toString().substring(0, 8).toUpperCase() : "ORD-UNKNOWN";
+
         PaymentEventMessage message = new PaymentEventMessage(
                 UUID.randomUUID(),
                 EVENT_SCHEMA_VERSION,
                 eventType,
                 payment.getId(),
-                payment.getOrder().getId(),
-                payment.getOrder().getOrderReference(),
+                orderId,
+                orderRef,
                 payment.getProvider(),
                 payment.getStatus().name(),
                 payment.getTransactionMode().name(),

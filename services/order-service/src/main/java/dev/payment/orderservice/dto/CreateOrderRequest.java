@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public record CreateOrderRequest(
-        @NotNull UUID userId,
+        UUID userId,
         @NotNull @DecimalMin(value = "0.01") BigDecimal amount,
         @NotBlank @Pattern(regexp = "^[A-Z]{3}$") String currency,
         @Size(max = 255) String description,

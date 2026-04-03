@@ -101,7 +101,7 @@ public class WebhookService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<ForwardWebhookRequest> httpRequest = new HttpEntity<>(request, headers);
 
-            String url = paymentServiceUrl + "/api/v1/internal/webhooks";
+            String url = paymentServiceUrl + "/api/v1/webhooks/razorpay";
             restTemplate.postForEntity(url, httpRequest, Void.class);
 
             log.info("Forwarded webhook event {} to payment service", event.getId());

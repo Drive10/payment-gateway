@@ -42,7 +42,7 @@ public class OrderService {
     public OrderResponse createOrder(CreateOrderRequest request, User user) {
         Order order = new Order();
         order.setUser(user);
-        order.setExternalReference(request.externalReference());
+        order.setExternalReference(request.externalReference() != null ? request.externalReference() : "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         order.setAmount(request.amount());
         order.setCurrency(request.currency());
         order.setDescription(request.description());
@@ -67,49 +67,36 @@ public class OrderService {
     }
 
     public Order getOwnedOrder(UUID orderId, User user, boolean adminView) {
-        if (adminView) {
-            return orderRepository.findById(orderId)
-                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Order not found"));
-        }
-        return orderRepository.findByIdAndUser(orderId, user)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Order not found"));
+        return orderServiceClient.getOrderById(orderId);
     }
 
     @Transactional
-    public void markPaymentPending(Order order) {
-        order.setStatus(OrderStatus.PAYMENT_PENDING);
-        orderRepository.save(order);
-        notifyOrderStatusChange(order, "PAYMENT_PENDING");
+    public void markPaid(UUID orderId, String orderReference) {
+        notifyOrderStatusChange(orderId, orderReference, "PAID");
     }
 
     @Transactional
-    public void markPaid(Order order) {
-        order.setStatus(OrderStatus.PAID);
-        orderRepository.save(order);
-        notifyOrderStatusChange(order, "PAID");
+    public void markFailed(UUID orderId, String orderReference) {
+        notifyOrderStatusChange(orderId, orderReference, "FAILED");
     }
 
     @Transactional
-    public void markFailed(Order order) {
-        order.setStatus(OrderStatus.FAILED);
-        orderRepository.save(order);
-        notifyOrderStatusChange(order, "FAILED");
+    public void markRefunded(UUID orderId, String orderReference) {
+        notifyOrderStatusChange(orderId, orderReference, "REFUNDED");
     }
 
     @Transactional
-    public void markRefunded(Order order) {
-        order.setStatus(OrderStatus.REFUNDED);
-        orderRepository.save(order);
-        notifyOrderStatusChange(order, "REFUNDED");
+    public void markPaymentPending(UUID orderId, String orderReference) {
+        notifyOrderStatusChange(orderId, orderReference, "PAYMENT_PENDING");
     }
 
-    private void notifyOrderStatusChange(Order order, String status) {
+    private void notifyOrderStatusChange(UUID orderId, String orderReference, String status) {
         try {
-            orderServiceClient.updateOrderStatus(order.getOrderReference(), status);
-            log.info("event=order_status_notified orderId={} status={}", order.getId(), status);
+            orderServiceClient.updateOrderStatus(orderReference, status);
+            log.info("event=order_status_notified orderId={} status={}", orderId, status);
         } catch (Exception e) {
             log.warn("event=order_status_notify_failed orderId={} status={} error={}",
-                    order.getId(), status, e.getMessage());
+                    orderId, status, e.getMessage());
         }
     }
 

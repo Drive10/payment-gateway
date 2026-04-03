@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,26 +21,25 @@ public class PaymentStatusListener {
         this.orderService = orderService;
     }
 
-    @KafkaListener(topics = "${application.kafka.topic.payment-events:payment.status.updated}", groupId = "order-service")
-    public void onPaymentStatusUpdated(Map<String, Object> event) {
+    @KafkaListener(topics = "${application.kafka.topic.payment-events:payment.events}", groupId = "order-service")
+    public void onPaymentEvent(Map<String, Object> event) {
         try {
             String eventType = (String) event.get("eventType");
-            if (!"PAYMENT_STATUS_UPDATED".equals(eventType)) {
+            if (eventType == null) {
+                log.warn("Received payment event without eventType");
                 return;
             }
 
             UUID orderId = parseUUID(event.get("orderId"));
-            String paymentStatus = (String) event.get("paymentStatus");
-
             if (orderId == null) {
-                log.warn("Received payment event without orderId");
+                log.warn("Received payment event without orderId: {}", eventType);
                 return;
             }
 
-            OrderStatus newOrderStatus = mapPaymentStatusToOrderStatus(paymentStatus);
+            OrderStatus newOrderStatus = mapEventTypeToOrderStatus(eventType);
             if (newOrderStatus != null) {
                 orderService.updateOrderStatus(orderId, newOrderStatus);
-                log.info("Updated order {} status to {}", orderId, newOrderStatus);
+                log.info("Updated order {} status to {} from event {}", orderId, newOrderStatus, eventType);
             }
         } catch (Exception e) {
             log.error("Error processing payment status event", e);
@@ -62,15 +60,11 @@ public class PaymentStatusListener {
         }
     }
 
-    private OrderStatus mapPaymentStatusToOrderStatus(String paymentStatus) {
-        if (paymentStatus == null) {
-            return null;
-        }
-        return switch (paymentStatus.toUpperCase()) {
-            case "SUCCESS", "CAPTURED", "COMPLETED" -> OrderStatus.PAID;
-            case "FAILED" -> OrderStatus.FAILED;
-            case "CANCELLED" -> OrderStatus.CANCELLED;
-            case "EXPIRED" -> OrderStatus.EXPIRED;
+    private OrderStatus mapEventTypeToOrderStatus(String eventType) {
+        return switch (eventType.toUpperCase()) {
+            case "PAYMENT.CAPTURED", "PAYMENT.WEBHOOK.CAPTURED" -> OrderStatus.PAID;
+            case "PAYMENT.FAILED", "PAYMENT.WEBHOOK.FAILED" -> OrderStatus.FAILED;
+            case "PAYMENT.REFUNDED", "PAYMENT.WEBHOOK.REFUND_PROCESSED" -> OrderStatus.REFUNDED;
             default -> null;
         };
     }

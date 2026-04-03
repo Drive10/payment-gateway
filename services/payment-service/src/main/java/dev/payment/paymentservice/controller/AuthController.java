@@ -2,7 +2,7 @@ package dev.payment.paymentservice.controller;
 
 import dev.payment.common.api.ApiResponse;
 import dev.payment.paymentservice.dto.request.LoginRequest;
-import dev.payment.paymentservice.dto.request.RefreshTokenRequest;
+import dev.payment.paymentservice.dto.request.SyncUserRequest;
 import dev.payment.paymentservice.dto.request.RegisterRequest;
 import dev.payment.paymentservice.dto.response.AuthResponse;
 import dev.payment.paymentservice.dto.response.UserResponse;
@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/auth")
-@Tag(name = "Authentication")
+@RequestMapping("/internal/platform/auth")
+@Tag(name = "Internal Authentication", description = "Internal authentication endpoints for service-to-service communication")
 public class AuthController {
 
     private final AuthService authService;
@@ -25,18 +25,8 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/register")
-    public ApiResponse<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ApiResponse.success(authService.register(request));
-    }
-
-    @PostMapping("/login")
-    public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ApiResponse.success(authService.login(request));
-    }
-
-    @PostMapping("/refresh")
-    public ApiResponse<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        return ApiResponse.success(authService.refresh(request));
+    @PostMapping("/sync")
+    public ApiResponse<UserResponse> syncUser(@Valid @RequestBody SyncUserRequest request) {
+        return ApiResponse.success(authService.syncUser(request.email()));
     }
 }

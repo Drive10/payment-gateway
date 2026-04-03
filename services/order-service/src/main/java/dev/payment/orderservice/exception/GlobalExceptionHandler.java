@@ -3,6 +3,8 @@ package dev.payment.orderservice.exception;
 import dev.payment.common.api.ApiResponse;
 import dev.payment.common.api.ErrorDetails;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -14,6 +16,8 @@ import java.util.Map;
 
 @RestControllerAdvice(basePackages = "dev.payment.orderservice.controller")
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(OrderException.class)
     public ResponseEntity<ApiResponse<Void>> handleOrderException(OrderException exception) {
@@ -39,6 +43,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception exception) {
+        log.error("Unhandled exception in order-service", exception);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.failure(new ErrorDetails("INTERNAL_ERROR", "Unexpected server error", null)));
     }

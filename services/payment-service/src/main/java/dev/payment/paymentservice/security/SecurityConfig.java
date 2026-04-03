@@ -20,16 +20,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final GatewayTrustFilter gatewayTrustFilter;
     private final ApplicationUserDetailsService userDetailsService;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            GatewayTrustFilter gatewayTrustFilter,
             ApplicationUserDetailsService userDetailsService
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-        this.gatewayTrustFilter = gatewayTrustFilter;
         this.userDetailsService = userDetailsService;
     }
 
@@ -44,17 +41,18 @@ public class SecurityConfig {
                                 "/actuator/prometheus",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/api/v1/auth/**",
-                                "/api/v1/webhooks/**"
+                                "/swagger-ui.html"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
+                        .requestMatchers("/api/v1/webhooks/**").permitAll()
+                        .requestMatchers("/payments/**").permitAll()
+                        .requestMatchers("/orders/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(gatewayTrustFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(jwtAuthenticationFilter, GatewayTrustFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

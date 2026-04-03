@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/orders")
+@RequestMapping("/orders")
 @Tag(name = "Orders")
 public class OrderController {
 

@@ -96,7 +96,7 @@ public class PaymentStatusListener {
                     payment.setProviderPaymentId(message.providerPaymentId());
                     paymentRepository.save(payment);
                 }
-                orderService.markPaid(payment.getOrder());
+                orderService.markPaid(payment.getOrderId(), "ORD-UNKNOWN");
                 auditService.record("WEBHOOK_CAPTURED", "system", "PAYMENT", payment.getId().toString(),
                         "Webhook marked payment captured: " + message.providerPaymentId());
                 paymentEventPublisher.publish("payment.webhook.captured", payment, Map.of(
@@ -105,7 +105,7 @@ public class PaymentStatusListener {
                 ));
             }
             case FAILED -> {
-                orderService.markFailed(payment.getOrder());
+                orderService.markFailed(payment.getOrderId(), "ORD-UNKNOWN");
                 auditService.record("WEBHOOK_FAILED", "system", "PAYMENT", payment.getId().toString(),
                         "Webhook marked payment failed");
                 paymentEventPublisher.publish("payment.webhook.failed", payment, Map.of(
@@ -120,7 +120,7 @@ public class PaymentStatusListener {
                     paymentRepository.save(payment);
                 }
                 if (newStatus == PaymentStatus.REFUNDED) {
-                    orderService.markRefunded(payment.getOrder());
+                    orderService.markRefunded(payment.getOrderId(), "ORD-UNKNOWN");
                 }
                 auditService.record("WEBHOOK_REFUND", "system", "PAYMENT", payment.getId().toString(),
                         "Webhook processed refund");

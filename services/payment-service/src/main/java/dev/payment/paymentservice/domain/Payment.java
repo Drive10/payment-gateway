@@ -4,10 +4,12 @@ import dev.payment.paymentservice.domain.enums.PaymentMethod;
 import dev.payment.paymentservice.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.domain.enums.TransactionMode;
 import jakarta.persistence.Column;
+import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -27,9 +29,12 @@ public class Payment extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "order_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true, cascade = {})
+    @JoinColumn(name = "order_id", nullable = true, insertable = false, updatable = false, foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private Order order;
+
+    @Column(name = "order_id")
+    private UUID orderId;
 
     @Column(name = "provider_order_id", nullable = false, unique = true, length = 64)
     private String providerOrderId;
@@ -106,6 +111,17 @@ public class Payment extends BaseEntity {
 
     public void setOrder(Order order) {
         this.order = order;
+        if (order != null) {
+            this.orderId = order.getId();
+        }
+    }
+
+    public UUID getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(UUID orderId) {
+        this.orderId = orderId;
     }
 
     public String getProviderOrderId() {
