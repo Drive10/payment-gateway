@@ -16,14 +16,14 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
         format_sql: false
 
   flyway:
-    enabled: false
+    enabled: true
     baseline-on-migrate: true
     out-of-order: true
     ignore-missing-migrations: true

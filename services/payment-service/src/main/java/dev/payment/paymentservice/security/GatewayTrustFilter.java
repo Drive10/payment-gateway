@@ -39,7 +39,7 @@ public class GatewayTrustFilter extends OncePerRequestFilter {
     public GatewayTrustFilter(
             ObjectMapper objectMapper,
             @Value("${application.gateway-trust.enabled:true}") boolean enabled,
-            @Value("${application.gateway-trust.internal-secret:dev-gateway-internal-secret}") String expectedSecret
+            @Value("${application.gateway-trust.internal-secret") String expectedSecret
     ) {
         this.objectMapper = objectMapper;
         this.enabled = enabled;

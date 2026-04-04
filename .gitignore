@@ -55,4 +55,5 @@ loki_data/
 *.bak
 *.swp
 *~
-coverage/
+coverage/.env.dev
+.idea/

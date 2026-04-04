@@ -6,7 +6,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/paymentdb
     username: payment
-    password: ${DB_PASSWORD:${POSTGRES_PASSWORD:pg-dev-password}}
+    password: ${DB_PASSWORD}
 
   kafka:
     bootstrap-servers: localhost:9092

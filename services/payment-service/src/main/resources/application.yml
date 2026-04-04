@@ -49,7 +49,7 @@ spring:
         order_updates: true
         generate_statistics: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -82,7 +82,7 @@ spring:
       spec: maximumSize=1000,expireAfterWrite=300s
 
   flyway:
-    enabled: false
+    enabled: true
     baseline-on-migrate: true
     out-of-order: true
     ignore-missing-migrations: true
@@ -96,11 +96,11 @@ management:
   metrics:
     export:
       prometheus:
-        enabled: false
+        enabled: true
 
 application:
   gateway-trust:
-    enabled: false
+    enabled: true
     internal-secret: ${GATEWAY_INTERNAL_SECRET}
 
   security:
@@ -139,7 +139,7 @@ application:
     relay-delay-ms: 2000
 
   reconciliation:
-    enabled: false
+    enabled: true
     batch-size: 50
     lookback: PT6H
 
