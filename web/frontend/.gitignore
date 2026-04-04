@@ -33,3 +33,6 @@ coverage/
 
 # misc
 *.local
+# Playwright
+test-results/
+playwright-report/
