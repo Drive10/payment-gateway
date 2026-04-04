@@ -21,8 +21,10 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/user'} replace />
+  const hasRole = (role: UserRole) => user?.roles?.includes(role) || user?.role === role
+
+  if (allowedRoles && !allowedRoles.some(role => hasRole(role))) {
+    return <Navigate to={hasRole('ADMIN') ? '/admin' : '/user'} replace />
   }
 
   return <Outlet />

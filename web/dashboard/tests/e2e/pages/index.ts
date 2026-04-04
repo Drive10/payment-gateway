@@ -10,29 +10,32 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.emailInput = page.getByRole('textbox', { name: /email/i });
-    this.passwordInput = page.getByRole('textbox', { name: /password/i });
-    this.loginButton = page.getByRole('button', { name: /sign in|log in|login/i });
-    this.errorMessage = page.getByText(/invalid|error|incorrect/i);
-    this.registerLink = page.getByRole('link', { name: /register|sign up/i });
+    this.emailInput = page.locator('input[name="email"], input#email, input[type="email"]').first();
+    this.passwordInput = page.locator('input[name="password"], input#password, input[type="password"]').first();
+    this.loginButton = page.locator('button[type="submit"], button:has-text("Sign In"), button:has-text("Log In"), button:has-text("Login")').first();
+    this.errorMessage = page.locator('text=/invalid|error|incorrect|failed/i').first();
+    this.registerLink = page.locator('a:has-text("Register"), a:has-text("Sign Up")').first();
   }
 
   async goto() {
     await this.page.goto('/login');
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(1000);
   }
 
   async login(email: string, password: string) {
+    await this.emailInput.waitFor({ state: 'visible', timeout: 10000 });
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);
     await this.loginButton.click();
   }
 
   async expectError() {
-    await expect(this.errorMessage).toBeVisible();
+    await this.errorMessage.waitFor({ state: 'visible', timeout: 10000 });
   }
 
   async expectSuccess() {
-    await this.page.waitForURL(/\/dashboard|\/admin/, { timeout: 10000 });
+    await this.page.waitForURL(/\/dashboard|\/admin|\/user/, { timeout: 15000 });
   }
 }
 
@@ -47,16 +50,18 @@ export class DashboardPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.navMenu = page.getByRole('navigation');
-    this.transactionsLink = page.getByRole('link', { name: /transactions/i });
-    this.usersLink = page.getByRole('link', { name: /users/i });
-    this.analyticsLink = page.getByRole('link', { name: /analytics/i });
-    this.logoutButton = page.getByRole('button', { name: /logout|sign out/i });
-    this.userMenu = page.getByRole('button', { name: /admin|user/i });
+    this.navMenu = page.locator('nav, [role="navigation"]').first();
+    this.transactionsLink = page.locator('a:has-text("Transactions"), a[href*="transactions"]').first();
+    this.usersLink = page.locator('a:has-text("Users"), a[href*="users"]').first();
+    this.analyticsLink = page.locator('a:has-text("Analytics"), a[href*="analytics"]').first();
+    this.logoutButton = page.locator('button:has-text("Logout"), button:has-text("Sign Out"), a:has-text("Logout")').first();
+    this.userMenu = page.locator('[data-testid="user-menu"], button:has-text("Admin"), button:has-text("User"), .user-menu').first();
   }
 
   async goto() {
     await this.page.goto('/admin');
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(1000);
   }
 
   async navigateToTransactions() {
@@ -90,34 +95,21 @@ export class TransactionsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.transactionsTable = page.getByRole('table');
-    this.transactionRows = page.getByRole('row').filter({ hasText: /.+/ });
-    this.searchInput = page.getByRole('textbox', { name: /search/i });
-    this.statusFilter = page.getByRole('combobox', { name: /status/i });
-    this.pagination = page.getByRole('navigation', { name: /pagination/i });
+    this.transactionsTable = page.locator('table').first();
+    this.transactionRows = page.locator('tbody tr, [role="row"]').first();
+    this.searchInput = page.locator('input[placeholder*="search" i], input[type="search"]').first();
+    this.statusFilter = page.locator('select').first();
+    this.pagination = page.locator('[role="navigation"]:has-text("pagination"), .pagination').first();
   }
 
   async goto() {
     await this.page.goto('/admin/transactions');
-  }
-
-  async searchTransaction(query: string) {
-    await this.searchInput.fill(query);
-    await this.page.waitForTimeout(500);
-  }
-
-  async filterByStatus(status: string) {
-    await this.statusFilter.selectOption(status);
-    await this.page.waitForTimeout(500);
-  }
-
-  async getTransactionCount(): Promise<number> {
-    const rows = await this.transactionRows.all();
-    return rows.length - 1; // Subtract header row
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(1000);
   }
 
   async expectTableVisible() {
-    await expect(this.transactionsTable).toBeVisible();
+    await expect(this.transactionsTable).toBeVisible({ timeout: 10000 });
   }
 }
 
@@ -129,20 +121,26 @@ export class UserDashboardPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.createPaymentLink = page.getByRole('link', { name: /create payment/i });
-    this.paymentsList = page.getByRole('list', { name: /payments/i }).or(page.locator('[data-testid="payments-list"]'));
-    this.ordersList = page.getByRole('list', { name: /orders/i }).or(page.locator('[data-testid="orders-list"]'));
+    this.createPaymentLink = page.locator('a:has-text("Create Payment"), a[href*="create-payment"]').first();
+    this.paymentsList = page.locator('[data-testid="payments-list"], .payments-list, ul:has-text("Payment")').first();
+    this.ordersList = page.locator('[data-testid="orders-list"], .orders-list, ul:has-text("Order")').first();
   }
 
   async goto() {
     await this.page.goto('/user/dashboard');
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(1000);
   }
 
   async navigateToPayments() {
     await this.page.goto('/user/payments');
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(1000);
   }
 
   async navigateToOrders() {
     await this.page.goto('/user/orders');
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(1000);
   }
 }

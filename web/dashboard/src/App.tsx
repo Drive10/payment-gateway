@@ -29,10 +29,12 @@ function App() {
     )
   }
 
+  const isAdmin = user?.roles?.includes('ADMIN') || user?.role === 'ADMIN'
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/user'} /> : <LoginPage />} />
+        <Route path="/login" element={user ? <Navigate to={isAdmin ? '/admin' : '/user'} /> : <LoginPage />} />
         
         <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
           <Route element={<AdminLayout />}>
@@ -56,7 +58,7 @@ function App() {
           </Route>
         </Route>
 
-        <Route path="/" element={<Navigate to={user ? (user.role === 'ADMIN' ? '/admin' : '/user') : '/login'} />} />
+        <Route path="/" element={<Navigate to={user ? (isAdmin ? '/admin' : '/user') : '/login'} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>

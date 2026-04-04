@@ -10,6 +10,7 @@ export interface User {
   email: string
   fullName: string
   role: UserRole
+  roles: UserRole[]
   avatar?: string
   merchantId?: string
 }
@@ -66,11 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json()
       const { accessToken: authToken, user: userData } = data
 
+      const roles: UserRole[] = userData.roles || [userData.role || 'USER']
+
       const user: User = {
         id: userData.id,
         email: userData.email,
         fullName: userData.fullName,
-        role: userData.role,
+        role: roles.includes('ADMIN') ? 'ADMIN' : roles[0],
+        roles,
         avatar: userData.avatar,
         merchantId: userData.merchantId,
       }

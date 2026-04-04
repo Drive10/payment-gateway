@@ -1,5 +1,4 @@
 package dev.payment.authservice.entity;
-import lombok.Data;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,10 +10,10 @@ import jakarta.persistence.Table;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "roles")
-@Data
 public class Role {
 
     @Id
@@ -33,17 +32,16 @@ public class Role {
     public Role() {
     }
 
-    public Role(Long id, String name, String description) {
-        this.id = id;
+    public Role(String name, String description) {
         this.name = name;
         this.description = description;
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
