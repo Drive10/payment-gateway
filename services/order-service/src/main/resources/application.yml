@@ -14,7 +14,7 @@ spring:
       minimum-idle: 2
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     open-in-view: false
     show-sql: false
   flyway:
@@ -49,3 +49,6 @@ application:
       order-events: order.events
   payment-service:
     url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+
+# Kafka consumer
+spring.kafka.consumer.group-id: order-service
