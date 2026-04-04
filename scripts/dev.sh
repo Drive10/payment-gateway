@@ -1,599 +1,403 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# PayFlow Smart Dev Environment Manager
+# Usage: ./scripts/dev.sh [command] [options]
+# Examples:
+#   ./scripts/dev.sh up              # Start everything (infra + services + web)
+#   ./scripts/dev.sh up --local      # Infra in Docker, services locally (hot reload)
+#   ./scripts/dev.sh up --docker     # Everything in Docker
+#   ./scripts/dev.sh status          # Show status of all services
+#   ./scripts/dev.sh logs payment    # Tail payment-service logs
+#   ./scripts/dev.sh down            # Stop everything
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FRONTEND_DIR="$REPO_ROOT/web/frontend"
-DASHBOARD_DIR="$REPO_ROOT/web/dashboard"
-COMMAND="${1:-help}"
-TARGET="${2:-}"
-INFRA_SERVICES=(
-  vault
-  redis
-  config-service
-  kafka
-  postgres
-  mongodb
-)
-CORE_BACKEND_SERVICES=(
-  auth-service
-  order-service
-  notification-service
-  webhook-service
-  simulator-service
-  settlement-service
-)
-EXTENDED_BACKEND_SERVICES=(
-  risk-service
-  analytics-service
-  merchant-service
-  dispute-service
-)
-HYBRID_EDGE_SERVICES=(
-  api-gateway
-  frontend
-  dashboard
-)
-FULL_ONLY_SERVICES=(
-  payment-service
-)
-HYBRID_SERVICES=(
-  vault
-  redis
-  config-service
-  kafka
-  postgres
-  mongodb
-  auth-service
-  order-service
-  notification-service
-  webhook-service
-  simulator-service
-  settlement-service
-  risk-service
-  analytics-service
-  merchant-service
-  dispute-service
-  api-gateway
-  frontend
-  dashboard
+COMPOSE_FILE="$REPO_ROOT/docker-compose.dev.yml"
+ENV_FILE="$REPO_ROOT/.env.dev"
+LOG_DIR="/tmp/payflow"
+PID_DIR="$LOG_DIR/pids"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# Service definitions: name|port|docker_port_offset
+declare -a BACKEND_SERVICES=(
+  "auth-service|8081"
+  "order-service|8082"
+  "payment-service|8083"
+  "notification-service|8084"
+  "analytics-service|8085"
+  "simulator-service|8086"
 )
 
-step() {
-  echo
-  echo "==> $1"
-}
+INFRA_SERVICES=("postgres" "redis" "kafka")
+DOCKER_SERVICES=("api-gateway" "dashboard" "frontend")
 
-has_cmd() {
-  command -v "$1" >/dev/null 2>&1
-}
+# Helpers
+log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_ok()      { echo -e "${GREEN}[OK]${NC} $1"; }
+log_warn()    { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_err()     { echo -e "${RED}[ERR]${NC} $1"; }
+log_header()  { echo -e "\n${CYAN}=== $1 ===${NC}"; }
 
-require_cmd() {
-  local name="$1"
-  local hint="$2"
-  if ! has_cmd "$name"; then
-    echo "$name is not available. $hint" >&2
+mkdir -p "$LOG_DIR" "$PID_DIR"
+
+# ── Prerequisites ──────────────────────────────────────────────
+require_docker() {
+  if ! docker info >/dev/null 2>&1; then
+    log_err "Docker is not running. Start Docker Desktop first."
     exit 1
   fi
 }
 
-repo_cmd() {
-  (
-    cd "$REPO_ROOT"
-    "$@"
-  )
-}
-
-ui_cmd() {
-  local dir="$1"
-  shift
-  (
-    cd "$dir"
-    "$@"
-  )
-}
-
-ensure_ui_dependencies() {
-  local dir="$1"
-  if [[ ! -d "$dir/node_modules" ]]; then
-    ui_cmd "$dir" npm ci
+require_maven() {
+  if ! command -v mvn >/dev/null 2>&1; then
+    log_err "Maven is not installed."
+    exit 1
   fi
 }
 
-load_dotenv() {
-  local env_file="$REPO_ROOT/.env"
-  if [[ ! -f "$env_file" ]]; then
-    return
+require_node() {
+  if ! command -v node >/dev/null 2>&1; then
+    log_err "Node.js is not installed."
+    exit 1
   fi
-
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    [[ -z "${line// }" ]] && continue
-    [[ "$line" =~ ^[[:space:]]*# ]] && continue
-    [[ "$line" != *"="* ]] && continue
-
-    local key="${line%%=*}"
-    local value="${line#*=}"
-    key="${key#"${key%%[![:space:]]*}"}"
-    key="${key%"${key##*[![:space:]]}"}"
-    value="${value%$'\r'}"
-
-    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
-      value="${value:1:${#value}-2}"
-    elif [[ "$value" == \'*\' ]]; then
-      value="${value:1:${#value}-2}"
-    fi
-
-    if [[ -z "${!key:-}" ]]; then
-      export "$key=$value"
-    fi
-  done < "$env_file"
 }
 
-compose_service_state() {
-  local service="$1"
-  local container_id=""
-  container_id="$(cd "$REPO_ROOT" && docker compose ps -q "$service" 2>/dev/null | head -n 1 || true)"
-  if [[ -z "$container_id" ]]; then
-    echo "$service|missing|missing"
-    return
-  fi
-
-  local inspect=""
-  inspect="$(docker inspect --format '{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id" 2>/dev/null | head -n 1 || true)"
-  if [[ -z "$inspect" ]]; then
-    echo "$service|unknown|unknown"
-    return
-  fi
-
-  echo "$service|$inspect"
-}
-
-wait_for_services() {
-  local timeout_seconds="${1:-1200}"
-  shift
-  local services=("$@")
-  local deadline=$((SECONDS + timeout_seconds))
-  local last_summary=""
-
-  while (( SECONDS < deadline )); do
-    local pending=()
-    for service in "${services[@]}"; do
-      IFS='|' read -r _ state health <<<"$(compose_service_state "$service")"
-      if [[ "$state" != "running" ]]; then
-        pending+=("$service ($state)")
-        continue
+# ── Infrastructure ─────────────────────────────────────────────
+infra_start() {
+  require_docker
+  log_info "Starting infrastructure (Postgres, Redis, Kafka)..."
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d "${INFRA_SERVICES[@]}"
+  log_info "Waiting for infrastructure health checks..."
+  for svc in "${INFRA_SERVICES[@]}"; do
+    local retries=0
+    while [ $retries -lt 30 ]; do
+      if docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps "$svc" 2>/dev/null | grep -qi "healthy\|Up"; then
+        log_ok "$svc is running"
+        break
       fi
-      if [[ "$health" == "healthy" || "$health" == "none" ]]; then
-        continue
-      fi
-      pending+=("$service ($health)")
+      retries=$((retries + 1))
+      sleep 2
     done
-
-    if (( ${#pending[@]} == 0 )); then
-      return
+    if [ $retries -eq 30 ]; then
+      log_err "$svc failed to start"
     fi
-
-    local summary="${pending[*]}"
-    if [[ "$summary" != "$last_summary" ]]; then
-      echo "Waiting for: ${pending[*]}"
-      last_summary="$summary"
-    fi
-    sleep 15
   done
-
-  echo "Timed out waiting for Docker services: ${services[*]}" >&2
-  exit 1
 }
 
-start_compose_wave() {
-  local timeout_seconds="$1"
-  local build_flag="$2"
-  local remove_orphans_flag="$3"
-  local payment_service_url="$4"
-  shift 4
-
-  local profiles=()
-  while [[ "${1:-}" == profile:* ]]; do
-    profiles+=("${1#profile:}")
-    shift
-  done
-
-  local services=("$@")
-  local args=(compose)
-  local profile
-  for profile in "${profiles[@]}"; do
-    args+=(--profile "$profile")
-  done
-  args+=(up -d)
-  if [[ "$build_flag" == "true" ]]; then
-    args+=(--build)
-  fi
-  if [[ "$remove_orphans_flag" == "true" ]]; then
-    args+=(--remove-orphans)
-  fi
-  args+=("${services[@]}")
-
-  (
-    if [[ -n "$payment_service_url" ]]; then
-      export PAYMENT_SERVICE_URL="$payment_service_url"
-    fi
-    cd "$REPO_ROOT"
-    docker "${args[@]}"
-  )
-
-  wait_for_services "$timeout_seconds" "${services[@]}"
+infra_stop() {
+  log_info "Stopping infrastructure..."
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down 2>/dev/null || true
+  log_ok "Infrastructure stopped"
 }
 
-show_help() {
-  cat <<'EOF'
-Usage: ./scripts/dev.sh <command> [service-name]
-
-Commands:
-  bootstrap       Prepare local defaults and install UI dependencies when Node is available
-  doctor          Validate Java, Maven wrapper, Docker, and optional Node/npm
-  infra           Start Docker infrastructure only
-  hybrid          Start Docker platform except payment-service
-  full            Start the full Docker stack
-  docker          Alias for full
-  local           Start infra and run payment-service locally
-  build           Build all backend services
-  build-service   Build a single backend service
-  status          Show the current Docker status
-  down            Stop the active Docker stack
-  service-local   Run a single backend service locally (example: service-local payment-service)
-  payment-local   Alias for service-local payment-service
-  frontend-check  Run frontend and dashboard quality checks
-  smoke           Run compose validation, backend smoke tests, and UI builds
-  test-all        Run verify plus UI checks
-  verify          Run backend verification
-  compose-check   Validate infra, full, and hybrid Docker rendering
-  help            Show this help
-EOF
+# ── Docker Services ────────────────────────────────────────────
+docker_start() {
+  require_docker
+  log_info "Starting Docker services (API Gateway, Dashboard, Frontend)..."
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d "${DOCKER_SERVICES[@]}"
+  log_ok "Docker services started"
 }
 
-bootstrap() {
-  step "Preparing local workspace"
-  if [[ ! -f "$REPO_ROOT/.env" && -f "$REPO_ROOT/.env.example" ]]; then
-    cp "$REPO_ROOT/.env.example" "$REPO_ROOT/.env"
-    echo "Created .env from .env.example"
-  elif [[ -f "$REPO_ROOT/.env" ]]; then
-    echo ".env already exists"
-  fi
-
-  if has_cmd node && has_cmd npm; then
-    step "Installing UI dependencies"
-    ensure_ui_dependencies "$FRONTEND_DIR"
-    ensure_ui_dependencies "$DASHBOARD_DIR"
-  else
-    echo "Skipping UI dependency install because node/npm are not available."
-  fi
+docker_stop() {
+  log_info "Stopping Docker services..."
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" stop "${DOCKER_SERVICES[@]}" 2>/dev/null || true
+  log_ok "Docker services stopped"
 }
 
-doctor() {
-  step "Checking local toolchain"
-  local failed=0
-
-  if has_cmd java; then
-    echo "java       OK"
-  else
-    echo "java       MISSING"
-    failed=1
-  fi
-
-  if has_cmd docker; then
-    echo "docker     OK"
-    if docker info >/dev/null 2>&1; then
-      echo "dockerd    OK"
-    else
-      echo "dockerd    NOT RUNNING"
-      failed=1
-    fi
-  else
-    echo "docker     MISSING"
-    failed=1
-  fi
-
-  if has_cmd node; then
-    echo "node       OK"
-  else
-    echo "node       OPTIONAL"
-  fi
-
-  if has_cmd npm; then
-    echo "npm        OK"
-  else
-    echo "npm        OPTIONAL"
-  fi
-
-  if [[ -f "$REPO_ROOT/.env" ]]; then
-    echo ".env       OK"
-  else
-    echo ".env       MISSING"
-  fi
-
-  if [[ "$failed" -ne 0 ]]; then
-    exit 1
-  fi
-}
-
-infra() {
-  require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Starting Docker infrastructure"
-  start_compose_wave 600 false true "" profile:infra "${INFRA_SERVICES[@]}"
-  echo "Infrastructure is ready."
-}
-
-full() {
-  require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Starting full Docker stack"
-  start_compose_wave 600 false true "" profile:services profile:full "${INFRA_SERVICES[@]}"
-  start_compose_wave 900 true false "" profile:services profile:full "${CORE_BACKEND_SERVICES[@]}"
-  start_compose_wave 1200 true false "" profile:services profile:full "${FULL_ONLY_SERVICES[@]}"
-  start_compose_wave 1200 true false "" profile:services profile:full "${EXTENDED_BACKEND_SERVICES[@]}"
-  start_compose_wave 900 true false "" profile:services profile:full "${HYBRID_EDGE_SERVICES[@]}"
-  echo "Frontend:  http://localhost:3000"
-  echo "Dashboard: http://localhost:3001"
-  echo "Gateway:   http://localhost:8080"
-}
-
-hybrid() {
-  require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Starting hybrid Docker stack without payment-service"
-  local hybrid_payment_url="http://host.docker.internal:8083"
-  start_compose_wave 600 false true "$hybrid_payment_url" profile:services "${INFRA_SERVICES[@]}"
-  start_compose_wave 900 true false "$hybrid_payment_url" profile:services "${CORE_BACKEND_SERVICES[@]}"
-  start_compose_wave 1200 true false "$hybrid_payment_url" profile:services "${EXTENDED_BACKEND_SERVICES[@]}"
-  start_compose_wave 900 true false "$hybrid_payment_url" profile:services "${HYBRID_EDGE_SERVICES[@]}"
-  echo "Docker services are up without payment-service."
-  echo "Run local payment-service with: ./scripts/dev.sh payment-local"
-}
-
-local_mode() {
-  infra
-  echo "Starting payment-service locally..."
-  service_local "payment-service"
-}
-
-build() {
-  step "Building backend services"
-  repo_cmd ./mvnw clean package -DskipTests
-}
-
-build_service() {
-  local service="${1:-payment-service}"
-  step "Building $service"
-  repo_cmd ./mvnw clean package -DskipTests -pl "services/$service" -am
-}
-
-status() {
-  step "Service Status"
-  repo_cmd docker compose ps
-}
-
-down() {
-  require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Stopping Docker stack"
-  repo_cmd docker compose --profile services --profile full --profile infra --profile observability --profile advanced down --remove-orphans
-}
-
-service_local() {
-  local service_name="${1:-}"
-  if [[ -z "$service_name" ]]; then
-    echo "Provide a service name, for example: ./scripts/dev.sh service-local payment-service" >&2
-    exit 1
-  fi
-
-  local service_dir="$REPO_ROOT/services/$service_name"
-  if [[ ! -d "$service_dir" ]]; then
-    echo "Unknown service: $service_name" >&2
-    exit 1
-  fi
-  local service_pom="$service_dir/pom.xml"
-  if [[ ! -f "$service_pom" ]]; then
-    echo "Service pom.xml not found for $service_name" >&2
-    exit 1
-  fi
-
-  local profile=""
-  if [[ -f "$service_dir/src/main/resources/application-local.yml" ]]; then
-    profile="local"
-  elif [[ -f "$service_dir/src/main/resources/application-dev.yml" ]]; then
-    profile="dev"
-  fi
-
-  local target_port=""
-  case "$service_name" in
-    api-gateway) target_port="8080" ;;
-    auth-service) target_port="8081" ;;
-    order-service) target_port="8082" ;;
-    payment-service) target_port="8083" ;;
-    notification-service) target_port="8084" ;;
-    webhook-service) target_port="8085" ;;
-    simulator-service) target_port="8086" ;;
-    settlement-service) target_port="8087" ;;
-    risk-service) target_port="8088" ;;
-    analytics-service) target_port="8089" ;;
-    merchant-service) target_port="8090" ;;
-    dispute-service) target_port="8091" ;;
-    config-service) target_port="8888" ;;
-  esac
-
-  load_dotenv
+# ── Local Backend Services ─────────────────────────────────────
+setup_env() {
   export DB_HOST="${DB_HOST:-localhost}"
-  export POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
   export DB_PORT="${DB_PORT:-5433}"
-  export POSTGRES_PORT="${POSTGRES_PORT:-5433}"
   export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}"
   export REDIS_HOST="${REDIS_HOST:-localhost}"
   export REDIS_PORT="${REDIS_PORT:-6379}"
-  export WEBHOOK_SERVICE_URL="${WEBHOOK_SERVICE_URL:-http://localhost:8085}"
-  export ORDER_SERVICE_URL="${ORDER_SERVICE_URL:-http://localhost:8082}"
-  export PAYMENT_SERVICE_URL="${PAYMENT_SERVICE_URL:-http://localhost:8083}"
-  export SIMULATOR_SERVICE_URL="${SIMULATOR_SERVICE_URL:-http://localhost:8086}"
-  export AUTH_SERVICE_URL="${AUTH_SERVICE_URL:-http://localhost:8081}"
-  export MERCHANT_SERVICE_URL="${MERCHANT_SERVICE_URL:-http://localhost:8090}"
-  export DISPUTE_SERVICE_URL="${DISPUTE_SERVICE_URL:-http://localhost:8091}"
+  export REDIS_PASSWORD="${REDIS_PASSWORD:-redis-dev-pass}"
+  export JWT_SECRET_B64="${JWT_SECRET_B64:-$(openssl rand -base64 64 | tr -d '\n')}"
+  export GATEWAY_INTERNAL_SECRET="${GATEWAY_INTERNAL_SECRET:-dev-gateway-internal-secret}"
+}
 
-  case "$service_name" in
-    auth-service)
-      export DB_USERNAME="${DB_USERNAME:-${AUTH_DB_USER:-auth}}"
-      export DB_PASSWORD="${DB_PASSWORD:-${AUTH_DB_PASSWORD:-authpass}}"
-      export DB_NAME="${DB_NAME:-authdb}"
-      ;;
-    notification-service)
-      export DB_USERNAME="${DB_USERNAME:-${NOTIFICATION_DB_USER:-notification}}"
-      export DB_PASSWORD="${DB_PASSWORD:-${NOTIFICATION_DB_PASSWORD:-notificationpass}}"
-      export DB_NAME="${DB_NAME:-notificationdb}"
-      ;;
-    webhook-service)
-      export DB_USERNAME="${DB_USERNAME:-${WEBHOOK_DB_USER:-webhook}}"
-      export DB_PASSWORD="${DB_PASSWORD:-${WEBHOOK_DB_PASSWORD:-webhookpass}}"
-      export DB_NAME="${DB_NAME:-webhookdb}"
-      ;;
-    simulator-service)
-      export DB_USERNAME="${DB_USERNAME:-${SIMULATOR_DB_USER:-simulator}}"
-      export DB_PASSWORD="${DB_PASSWORD:-${SIMULATOR_DB_PASSWORD:-simulatorpass}}"
-      export DB_NAME="${DB_NAME:-simulatordb}"
-      ;;
-    settlement-service)
-      export DB_USERNAME="${DB_USERNAME:-${SETTLEMENT_DB_USER:-settlement}}"
-      export DB_PASSWORD="${DB_PASSWORD:-${SETTLEMENT_DB_PASSWORD:-settlementpass}}"
-      export DB_NAME="${DB_NAME:-settlementdb}"
-      ;;
-    risk-service)
-      export DB_USERNAME="${DB_USERNAME:-${RISK_DB_USER:-risk}}"
-      export DB_PASSWORD="${DB_PASSWORD:-${RISK_DB_PASSWORD:-riskpass}}"
-      export DB_NAME="${DB_NAME:-riskdb}"
-      ;;
-    analytics-service)
-      export DB_USERNAME="${DB_USERNAME:-${ANALYTICS_DB_USER:-analytics}}"
-      export DB_PASSWORD="${DB_PASSWORD:-${ANALYTICS_DB_PASSWORD:-analyticspass}}"
-      export DB_NAME="${DB_NAME:-analyticsdb}"
-      ;;
-    merchant-service)
-      export DB_USERNAME="${DB_USERNAME:-${MERCHANT_DB_USER:-merchant}}"
-      export DB_PASSWORD="${DB_PASSWORD:-${MERCHANT_DB_PASSWORD:-merchantpass}}"
-      export DB_NAME="${DB_NAME:-merchantdb}"
-      ;;
-    dispute-service)
-      export DB_USERNAME="${DB_USERNAME:-${DISPUTE_DB_USER:-dispute}}"
-      export DB_PASSWORD="${DB_PASSWORD:-${DISPUTE_DB_PASSWORD:-disputepass}}"
-      export DB_NAME="${DB_NAME:-disputedb}"
-      ;;
-    payment-service)
-      export DB_USERNAME="${DB_USERNAME:-${PAYMENT_DB_USER:-payment}}"
-      export DB_PASSWORD="${DB_PASSWORD:-${POSTGRES_PASSWORD:-${PAYMENT_DB_PASSWORD:-paymentpass}}}"
-      export DB_NAME="${DB_NAME:-paymentdb}"
-      ;;
-  esac
+start_local_service() {
+  local service=$1
+  local port=$2
+  local pid_file="$PID_DIR/$service.pid"
+  local log_file="$LOG_DIR/$service.log"
 
-  step "Running $service_name locally"
-  if has_cmd docker; then
-    local container_id=""
-    container_id="$(cd "$REPO_ROOT" && docker compose ps -q "$service_name" 2>/dev/null || true)"
-    if [[ -n "$container_id" ]]; then
-      echo "Stopping Docker container for $service_name so the local process can bind its port."
-      repo_cmd docker compose stop "$service_name" >/dev/null
+  # Kill existing if running
+  if [ -f "$pid_file" ]; then
+    local old_pid=$(cat "$pid_file")
+    if kill -0 "$old_pid" 2>/dev/null; then
+      kill "$old_pid" 2>/dev/null || true
+      sleep 1
+    fi
+    rm -f "$pid_file"
+  fi
+
+  # Kill anything on the port
+  if command -v lsof >/dev/null 2>&1; then
+    local existing_pid=$(lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null | head -1 || true)
+    if [ -n "$existing_pid" ]; then
+      kill "$existing_pid" 2>/dev/null || true
+      sleep 1
     fi
   fi
-  if [[ -n "$target_port" ]] && has_cmd lsof; then
-    while IFS= read -r pid; do
-      [[ -z "$pid" ]] && continue
-      local proc_name=""
-      proc_name="$(ps -p "$pid" -o comm= 2>/dev/null || true)"
-      if [[ "$proc_name" == *java* ]]; then
-        echo "Stopping stale local Java process on port $target_port before starting $service_name."
-        kill -9 "$pid" >/dev/null 2>&1 || true
-      fi
-    done < <(lsof -ti "tcp:$target_port" -sTCP:LISTEN 2>/dev/null || true)
+
+  log_info "Starting $service on port $port..."
+  nohup mvn -pl "services/$service" spring-boot:run -q -DskipTests \
+    -Dspring-boot.run.jvmArguments="-DDB_HOST=$DB_HOST -DDB_PORT=$DB_PORT -DDB_USERNAME=payment -DDB_PASSWORD=pg-dev-password -DKAFKA_BOOTSTRAP_SERVERS=$KAFKA_BOOTSTRAP_SERVERS -DREDIS_HOST=$REDIS_HOST -DREDIS_PORT=$REDIS_PORT -DREDIS_PASSWORD=$REDIS_PASSWORD -DJWT_SECRET_B64=$JWT_SECRET_B64 -DGATEWAY_INTERNAL_SECRET=$GATEWAY_INTERNAL_SECRET" \
+    > "$log_file" 2>&1 &
+
+  echo $! > "$pid_file"
+  log_ok "$service started (PID: $!, port: $port)"
+}
+
+stop_local_service() {
+  local service=$1
+  local pid_file="$PID_DIR/$service.pid"
+
+  if [ -f "$pid_file" ]; then
+    local pid=$(cat "$pid_file")
+    if kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+      log_ok "$service stopped (PID: $pid)"
+    fi
+    rm -f "$pid_file"
+  else
+    pkill -f "$service" 2>/dev/null && log_ok "$service stopped" || log_warn "$service was not running"
   fi
-  (
-    cd "$REPO_ROOT"
-    if [[ -n "$profile" ]]; then
-      SPRING_PROFILES_ACTIVE="$profile" ./mvnw -f "$service_pom" clean spring-boot:run "-Dspring-boot.run.profiles=$profile"
+}
+
+services_start_local() {
+  require_maven
+  setup_env
+  log_info "Starting all backend services locally (hot reload enabled)..."
+  for entry in "${BACKEND_SERVICES[@]}"; do
+    IFS='|' read -r service port <<< "$entry"
+    start_local_service "$service" "$port"
+    sleep 2
+  done
+  log_info "All services starting... wait 60s for full startup"
+}
+
+services_stop_local() {
+  log_info "Stopping all backend services..."
+  for entry in "${BACKEND_SERVICES[@]}"; do
+    IFS='|' read -r service port <<< "$entry"
+    stop_local_service "$service"
+  done
+  log_ok "All backend services stopped"
+}
+
+# ── Web Apps ───────────────────────────────────────────────────
+web_start() {
+  require_node
+  log_info "Starting web applications (Vite dev servers)..."
+
+  # Dashboard
+  cd "$REPO_ROOT/web/dashboard"
+  nohup npm run dev > "$LOG_DIR/dashboard.log" 2>&1 &
+  echo $! > "$PID_DIR/dashboard.pid"
+  log_ok "Dashboard started (PID: $!, http://localhost:5173)"
+
+  # Frontend
+  cd "$REPO_ROOT/web/frontend"
+  nohup npm run dev > "$LOG_DIR/frontend.log" 2>&1 &
+  echo $! > "$PID_DIR/frontend.pid"
+  log_ok "Frontend started (PID: $!, http://localhost:5174)"
+
+  cd "$REPO_ROOT"
+}
+
+web_stop() {
+  log_info "Stopping web applications..."
+  for app in dashboard frontend; do
+    local pid_file="$PID_DIR/$app.pid"
+    if [ -f "$pid_file" ]; then
+      kill $(cat "$pid_file") 2>/dev/null && log_ok "$app stopped" || log_warn "$app was not running"
+      rm -f "$pid_file"
+    fi
+  done
+}
+
+# ── Status ─────────────────────────────────────────────────────
+show_status() {
+  log_header "Infrastructure (Docker)"
+  require_docker
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || log_warn "Docker not running"
+
+  log_header "Backend Services"
+  for entry in "${BACKEND_SERVICES[@]}"; do
+    IFS='|' read -r service port <<< "$entry"
+    local pid_file="$PID_DIR/$service.pid"
+    if [ -f "$pid_file" ] && kill -0 $(cat "$pid_file") 2>/dev/null; then
+      echo -e "  ${GREEN}✅${NC} $service (port $port, PID: $(cat "$pid_file"), local)"
+    elif curl -s --connect-timeout 1 http://localhost:$port/actuator/health >/dev/null 2>&1; then
+      echo -e "  ${GREEN}✅${NC} $service (port $port, running)"
     else
-      ./mvnw -f "$service_pom" clean spring-boot:run
+      echo -e "  ${RED}❌${NC} $service (port $port, stopped)"
     fi
-  )
+  done
+
+  log_header "Docker Services"
+  for svc in "${DOCKER_SERVICES[@]}"; do
+    if docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps "$svc" 2>/dev/null | grep -qi "up"; then
+      echo -e "  ${GREEN}✅${NC} $svc"
+    else
+      echo -e "  ${RED}❌${NC} $svc"
+    fi
+  done
+
+  log_header "Web Applications"
+  for app in dashboard frontend; do
+    local pid_file="$PID_DIR/$app.pid"
+    if [ -f "$pid_file" ] && kill -0 $(cat "$pid_file") 2>/dev/null; then
+      local port=$([ "$app" = "dashboard" ] && echo "5173" || echo "5174")
+      echo -e "  ${GREEN}✅${NC} $app (http://localhost:$port, PID: $(cat "$pid_file"))"
+    else
+      echo -e "  ${RED}❌${NC} $app (stopped)"
+    fi
+  done
+  echo ""
 }
 
-frontend_check() {
-  require_cmd node "Install Node.js 22 and add it to PATH."
-  require_cmd npm "Install Node.js and npm before working on the frontend."
-
-  step "Running frontend checks"
-  ensure_ui_dependencies "$FRONTEND_DIR"
-  ui_cmd "$FRONTEND_DIR" npm run check
-
-  step "Running dashboard checks"
-  ensure_ui_dependencies "$DASHBOARD_DIR"
-  ui_cmd "$DASHBOARD_DIR" npm run lint
-  ui_cmd "$DASHBOARD_DIR" npm run build
-}
-
-verify() {
-  step "Running backend verification"
-  repo_cmd ./mvnw -q verify
-}
-
-compose_check() {
-  require_cmd docker "Install Docker Desktop and ensure the daemon is running."
-  step "Validating compose rendering"
-  repo_cmd docker compose --profile infra config >/dev/null
-  repo_cmd docker compose --profile services config >/dev/null
-  repo_cmd docker compose --profile services --profile full config >/dev/null
-  (
-    export PAYMENT_SERVICE_URL="http://host.docker.internal:8083"
-    cd "$REPO_ROOT"
-    docker compose --profile services config >/dev/null
-  )
-}
-
-smoke() {
-  step "Running smoke checks"
-  compose_check
-  repo_cmd ./mvnw -q -pl services/payment-service,services/api-gateway -am test
-
-  if has_cmd node && has_cmd npm; then
-    frontend_check
+# ── Logs ───────────────────────────────────────────────────────
+show_logs() {
+  local target=${1:-all}
+  if [ "$target" = "all" ]; then
+    tail -f $LOG_DIR/*.log 2>/dev/null || log_warn "No logs available"
   else
-    echo "Skipping UI checks because node/npm are not available."
+    tail -f "$LOG_DIR/$target.log" 2>/dev/null || log_warn "No logs for $target"
   fi
 }
 
-test_all() {
-  step "Running full verification"
-  compose_check
-  verify
-
-  if has_cmd node && has_cmd npm; then
-    frontend_check
-  else
-    echo "Skipping UI checks because node/npm are not available."
-  fi
+# ── Seed Data ──────────────────────────────────────────────────
+seed_data() {
+  log_info "Seeding test data..."
+  curl -s -X POST http://localhost:8080/api/v1/auth/register \
+    -H "Content-Type: application/json" \
+    -d '{"email":"admin@payflow.com","password":"Test@1234","firstName":"Admin","lastName":"User"}' | jq . >/dev/null 2>&1
+  log_ok "Admin user created (admin@payflow.com / Test@1234)"
 }
 
-case "$COMMAND" in
-  bootstrap) bootstrap ;;
-  doctor) doctor ;;
-  infra) infra ;;
-  docker) full ;;
-  hybrid) hybrid ;;
-  local) local_mode ;;
-  build) build ;;
-  build-service) build_service "$TARGET" ;;
-  full) full ;;
-  status) status ;;
-  down) down ;;
-  service-local) service_local "$TARGET" ;;
-  payment-local) service_local "payment-service" ;;
-  frontend-check) frontend_check ;;
-  smoke) smoke ;;
-  test-all) test_all ;;
-  verify) verify ;;
-  compose-check) compose_check ;;
-  help) show_help ;;
-  *)
-    show_help
-    exit 1
+# ── Clean ──────────────────────────────────────────────────────
+clean_all() {
+  log_warn "Stopping everything..."
+  services_stop_local
+  web_stop
+  infra_stop
+  rm -rf "$LOG_DIR"
+  log_ok "Everything cleaned"
+}
+
+# ── Help ───────────────────────────────────────────────────────
+show_help() {
+  cat <<EOF
+${CYAN}PayFlow Smart Dev Environment Manager${NC}
+
+${BLUE}Quick Start:${NC}
+  ./scripts/dev.sh up              Start everything (infra Docker + services local + web)
+  ./scripts/dev.sh up --docker     Start everything in Docker
+  ./scripts/dev.sh status          Show status of all services
+  ./scripts/dev.sh down            Stop everything
+
+${BLUE}Infrastructure:${NC}
+  infra:start      Start Postgres, Redis, Kafka in Docker
+  infra:stop       Stop infrastructure
+
+${BLUE}Backend Services (local with hot reload):${NC}
+  services:start   Start all 6 backend services locally
+  services:stop    Stop all backend services
+  service:start <name>  Start single service (e.g., payment-service)
+  service:stop <name>   Stop single service
+  service:logs <name>   Tail service logs
+
+${BLUE}Web Apps:${NC}
+  web:start        Start dashboard (5173) and frontend (5174)
+  web:stop         Stop web applications
+
+${BLUE}Management:${NC}
+  status           Show status of all services
+  logs [name]      Show logs (all or specific)
+  seed             Seed admin user and test data
+  rebuild          Rebuild all services
+  clean            Stop everything and remove logs
+  help             Show this help
+
+${BLUE}Examples:${NC}
+  # Full local dev (recommended for development)
+  ./scripts/dev.sh up
+
+  # Full Docker (recommended for testing)
+  ./scripts/dev.sh up --docker
+
+  # Just infrastructure + one service
+  ./scripts/dev.sh infra:start
+  ./scripts/dev.sh service:start payment-service
+
+  # Check status and tail logs
+  ./scripts/dev.sh status
+  ./scripts/dev.sh logs payment-service
+EOF
+}
+
+# ── Main ───────────────────────────────────────────────────────
+MODE="${2:-}"
+
+case "${1:-help}" in
+  up)
+    if [ "$MODE" = "--docker" ]; then
+      require_docker
+      infra_start
+      docker_start
+    else
+      require_docker
+      infra_start
+      services_start_local
+      docker_start
+      web_start
+    fi
+    sleep 5
+    show_status
     ;;
+  infra:start) infra_start ;;
+  infra:stop) infra_stop ;;
+  services:start) services_start_local ;;
+  services:stop) services_stop_local ;;
+  service:start)
+    require_maven
+    setup_env
+    for entry in "${BACKEND_SERVICES[@]}"; do
+      IFS='|' read -r service port <<< "$entry"
+      if [ "$MODE" = "$service" ]; then
+        start_local_service "$service" "$port"
+        break
+      fi
+    done
+    ;;
+  service:stop)
+    for entry in "${BACKEND_SERVICES[@]}"; do
+      IFS='|' read -r service port <<< "$entry"
+      if [ "$MODE" = "$service" ]; then
+        stop_local_service "$service"
+        break
+      fi
+    done
+    ;;
+  service:logs)
+    show_logs "$MODE"
+    ;;
+  web:start) web_start ;;
+  web:stop) web_stop ;;
+  status) show_status ;;
+  logs) show_logs "$MODE" ;;
+  seed) seed_data ;;
+  rebuild) require_maven; mvn clean package -DskipTests -q && log_ok "All services rebuilt" ;;
+  down|clean) clean_all ;;
+  help|*) show_help ;;
 esac
