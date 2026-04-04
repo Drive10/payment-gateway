@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('[Auth] Login attempt for:', email);
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
@@ -55,6 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         body: JSON.stringify({ email, password }),
       })
+
+      console.log('[Auth] Login response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
@@ -65,9 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json()
+      console.log('[Auth] Login response data:', JSON.stringify(data).substring(0, 200));
       const { accessToken: authToken, user: userData } = data
 
       const roles: UserRole[] = userData.roles || [userData.role || 'USER']
+      console.log('[Auth] Roles:', roles);
 
       const user: User = {
         id: userData.id,
@@ -78,11 +83,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatar: userData.avatar,
         merchantId: userData.merchantId,
       }
+      console.log('[Auth] Created user object:', JSON.stringify(user));
 
       setUser(user)
       setToken(authToken)
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ user, accessToken: authToken }))
+      console.log('[Auth] Login successful, stored to localStorage');
     } catch (error) {
+      console.error('[Auth] Login error:', error);
       if (error instanceof ApiError) {
         throw error
       }
