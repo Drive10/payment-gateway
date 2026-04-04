@@ -1,370 +1,260 @@
-# Fintech Payment Gateway
+# PayFlow — Enterprise Payment Gateway
 
-**Enterprise-grade microservices payment platform with Java 21, Spring Boot 3.3, Kafka, and React**
+> A production-grade, cloud-native payment processing platform built with Spring Boot 3, Kafka, PostgreSQL, and React. Designed for high-throughput, low-latency payment orchestration with real-time analytics, multi-currency support, and enterprise-grade security.
 
-[![Java](https://img.shields.io/badge/Java-21-ED8B00?style=flat-square&logo=openjdk)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?style=flat-square&logo=spring)](https://spring.io/projects/spring-boot)
-[![Kafka](https://img.shields.io/badge/Apache%20Kafka-3.8-231F20?style=flat-square&logo=apachekafka)](https://kafka.apache.org/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)](https://react.dev/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3-6DB33F?logo=springboot&logoColor=white)
+![Kafka](https://img.shields.io/badge/Apache_Kafka-3.7-231F20?logo=apachekafka&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          Client Layer                               │
+│  ┌──────────────────┐              ┌──────────────────────────┐    │
+│  │   Checkout UI    │              │   Admin Dashboard (React) │    │
+│  │  (web/frontend)  │              │   (web/dashboard)         │    │
+│  └────────┬─────────┘              └────────────┬─────────────┘    │
+└───────────┼─────────────────────────────────────┼──────────────────┘
+            │                                     │
+            ▼                                     ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        API Gateway (Spring Cloud)                   │
+│  ┌─────────────┐ ┌──────────────┐ ┌──────────────┐ ┌────────────┐ │
+│  │ JWT Auth    │ │ Rate Limiting│ │ CORS Policy  │ │ Request    │ │
+│  │ Validation  │ │ (Redis)      │ │ Security     │ │ Validation │ │
+│  └─────────────┘ └──────────────┘ └──────────────┘ └────────────┘ │
+└───────────────────────────┬───────────────────────────────────────┘
+                            │
+            ┌───────────────┼───────────────┐
+            ▼               ▼               ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+│ Auth Service │  │Order Service │  │ Payment Service  │
+│              │  │              │  │                  │
+│ • JWT Auth   │  │ • Orders     │  │ • Stripe/Razorpay│
+│ • OAuth2     │  │ • Merchants  │  │ • Webhooks       │
+│ • RBAC       │  │ • API Keys   │  │ • Settlements    │
+│ • Sessions   │  │ • KYC        │  │ • Disputes       │
+└──────┬───────┘  └──────┬───────┘  └────────┬─────────┘
+       │                 │                    │
+       ▼                 ▼                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     Event-Driven Messaging (Kafka)                  │
+│  order.events │ payment.events │ webhook.updates │ payment.status   │
+└───────────────────────────┬─────────────────────────────────────────┘
+                            │
+            ┌───────────────┼───────────────┐
+            ▼               ▼               ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+│ Notification │  │ Analytics    │  │ Simulator Service│
+│ Service      │  │ Service      │  │                  │
+│              │  │              │  │ • Payment Sim    │
+│ • Email/SMS  │  │ • Risk Score │  │ • Load Testing   │
+│ • Push       │  │ • Settlements│  │ • Demo Mode      │
+│ • Webhooks   │  │ • Disputes   │  │ • Mock Providers │
+│ • Flags      │  │ • Reports    │  │                  │
+└──────────────┘  └──────────────┘  └──────────────────┘
+```
+
+## Services
+
+| Service | Port | Description | Tech |
+|---------|------|-------------|------|
+| **api-gateway** | 8080 | Central routing, auth, rate limiting | Spring Cloud Gateway |
+| **auth-service** | 8081 | JWT auth, OAuth2, RBAC, sessions | Spring Security |
+| **order-service** | 8082 | Order management, merchants, KYC, API keys | Spring Data JPA |
+| **payment-service** | 8083 | Payment orchestration, Stripe, Razorpay | Spring Boot |
+| **notification-service** | 8084 | Email, SMS, push, webhooks, feature flags | Kafka, Redis |
+| **analytics-service** | 8085 | Risk scoring, settlements, disputes, reports | Kafka, JPA |
+| **simulator-service** | 8086 | Payment simulation, load testing, demo mode | Spring Boot |
+
+## Features
+
+### Payment Processing
+- **Multi-Provider**: Stripe, Razorpay, PayPal integration
+- **Multi-Currency**: 150+ currencies with real-time conversion
+- **Smart Routing**: Automatic provider selection based on cost/success rate
+- **Idempotency**: Guaranteed exactly-once processing
+- **Retry Logic**: Exponential backoff with circuit breaker
+
+### Security
+- **JWT Authentication**: HS512 signed tokens with refresh flow
+- **RBAC**: Admin, Merchant, User roles with method-level security
+- **Rate Limiting**: Token bucket algorithm via Redis
+- **API Keys**: HMAC-signed keys for merchant integrations
+- **PCI DSS**: Card data never touches our servers (tokenization)
+- **Secrets Management**: Zero hardcoded secrets
+
+### Real-Time
+- **Event Streaming**: Kafka for all payment state changes
+- **WebSocket**: Live payment status updates to dashboard
+- **Webhooks**: Configurable event delivery to merchant endpoints
+- **Feature Flags**: Runtime toggling without restarts
+
+### Analytics & Monitoring
+- **Risk Scoring**: Real-time fraud detection
+- **Settlement Engine**: Automated merchant payouts
+- **Dispute Management**: Chargeback tracking and resolution
+- **Revenue Reports**: Multi-dimensional analytics
 
 ## Quick Start
 
+### Prerequisites
+- Java 21+
+- Docker & Docker Compose
+- Node.js 22+ (for web apps)
+- Maven 3.9+
+
+### Run with Docker (Recommended)
 ```bash
-# One-command startup
-git clone https://github.com/your-org/payment-gateway.git
-cd payment-gateway
-./scripts/start.sh
+# Start all infrastructure + services
+docker compose up -d
+
+# Check health
+make dev-status
+
+# View logs
+make dev-logs
 ```
 
-**Access Points:**
-- API Gateway: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger-ui.html
-- Grafana: http://localhost:3002 (admin/admin123)
-- Prometheus: http://localhost:9090
-- Jaeger: http://localhost:16686
-
----
-
-## Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           EXTERNAL SYSTEMS                                     │
-│  Card Networks │ Banks/ABKS │ Email/SMS │ Banking Partners                     │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           API GATEWAY (8080)                                   │
-│  JWT Auth │ Rate Limiting │ Security Headers │ Circuit Breaker              │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-        ┌────────────────────────────┼────────────────────────────┐
-        │                            │                            │
-        ▼                            ▼                            ▼
-┌──────────────┐            ┌──────────────┐            ┌──────────────┐
-│Auth Service  │            │Order Service │            │Payment Svc  │
-│   (8081)    │            │   (8082)    │            │   (8083)    │
-└──────────────┘            └──────────────┘            └──────────────┘
-        │                            │                            │
-        └────────────────────────────┴────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         KAFKA EVENT BUS                                          │
-│  Topics: payment.events, refund.events, settlement.events, risk.events             │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-        ┌────────────────────────────┼────────────────────────────┐
-        │                            │                            │
-        ▼                            ▼                            ▼
-┌──────────────┐            ┌──────────────┐            ┌──────────────┐
-│Settlement    │            │   Risk       │            │Analytics    │
-│  (8087)     │            │   (8088)    │            │  (8089)     │
-└──────────────┘            └──────────────┘            └──────────────┘
-```
-
----
-
-## Microservices (16 Services)
-
-| Service | Port | Description |
-|---------|------|-------------|
-| **API Gateway** | 8080 | JWT validation, rate limiting, routing |
-| **Config Service** | 8888 | Centralized configuration (Spring Cloud Config) |
-| **Auth Service** | 8081 | User auth, JWT, API keys |
-| **Order Service** | 8082 | Order management |
-| **Payment Service** | 8083 | Payment processing, refunds |
-| **Notification Service** | 8084 | Email/SMS notifications |
-| **Webhook Service** | 8085 | Webhook delivery, retry |
-| **Simulator Service** | 8086 | Payment provider simulator |
-| **Settlement Service** | 8087 | Daily settlements, payouts |
-| **Risk Service** | 8088 | Fraud detection |
-| **Analytics Service** | 8089 | Metrics, reporting |
-| **Merchant Service** | 8090 | Merchant onboarding, KYC |
-| **Dispute Service** | 8091 | Chargeback management |
-| **Feature Flags** | 8092 | Feature toggles |
-
----
-
-## Key Features
-
-### Payment Lifecycle
-```
-INITIATED → AUTHORIZED → CAPTURED → COMPLETED
-                    ↓            ↓
-                 FAILED      REFUNDED (partial/full)
-```
-
-### Event-Driven Architecture
-- **Outbox Pattern** for reliable event publishing
-- **Saga Pattern** for distributed transactions
-- **Dead Letter Queue** for failed messages
-- **Event versioning** for schema evolution
-
-### Resilience
-- **Circuit Breaker** (Resilience4j)
-- **Retry with exponential backoff**
-- **Timeout handling**
-- **Bulkhead isolation**
-
-### Security
-- JWT authentication
-- RBAC (Role-Based Access Control)
-- HMAC webhook validation
-- Rate limiting per user/API key
-- Security headers
-
----
-
-## System Flow
-
-### Payment Flow (Happy Path)
-```
-1. Client → API Gateway (auth + rate limit)
-2. Gateway → Auth Service (validate JWT)
-3. Auth → Gateway (token valid)
-4. Gateway → Payment Service (create payment)
-5. Payment → Risk Service (fraud check)
-6. Risk → Payment (approved/declined)
-7. Payment → Simulator (process payment)
-8. Simulator → Payment (success/failure)
-9. Payment → Kafka (event published)
-10. Payment → Client (response)
-```
-
-### Idempotency
-- `Idempotency-Key` header ensures exactly-once processing
-- Keys stored with 24h expiration
-- Duplicate requests return cached response
-
----
-
-## API Documentation
-
-### Authentication
+### Run in Dev Mode (Hot Reload)
 ```bash
+# Start infrastructure only
+make dev-infra
+
+# Start all backend services with hot reload
+make dev-run
+
+# Start web apps
+make dev-web
+```
+
+### Build
+```bash
+make dev-build-all
+```
+
+## API Endpoints
+
+```bash
+# Health check
+curl http://localhost:8080/actuator/health
+
 # Register
-POST /api/v1/auth/register
-{"email": "user@example.com", "password": "password123", "name": "User"}
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@payflow.dev","password":"Demo@1234","firstName":"Demo","lastName":"User"}'
 
 # Login
-POST /api/v1/auth/login
-{"email": "user@example.com", "password": "password123"}
-→ {"accessToken": "eyJ...", "refreshToken": "eyJ..."}
-```
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@payflow.com","password":"Test@1234"}'
 
-### Payments
-```bash
+# Create Order (requires auth token)
+curl -X POST http://localhost:8080/api/v1/orders \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"amount":5000,"currency":"USD","customerEmail":"test@example.com","description":"Test Order"}'
+
 # Create Payment
-POST /api/v1/payments
-Headers: Authorization: Bearer <token>, Idempotency-Key: <uuid>
-{
-  "amount": 5000,
-  "currency": "USD",
-  "paymentMethod": {
-    "type": "card",
-    "card": {"number": "4242...", "expiryMonth": "12", "expiryYear": "25", "cvv": "123"}
-  }
-}
-
-# Capture
-POST /api/v1/payments/{id}/capture
-
-# Refund
-POST /api/v1/payments/{id}/refunds
-{"amount": 1000, "reason": "CUSTOMER_REQUEST"}
+curl -X POST http://localhost:8080/api/v1/payments \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"orderId":"<order-id>","provider":"STRIPE","paymentMethod":"CARD"}'
 ```
 
-### Error Response Format
-```json
-{
-  "success": false,
-  "error": {
-    "code": "PAYMENT_DECLINED",
-    "message": "Card declined by issuer",
-    "correlationId": "abc-123"
-  }
-}
-```
+## Technology Stack
 
----
-
-## Observability
-
-### Prometheus Metrics
-```
-# Payment success rate
-payment_success_total / payment_total * 100
-
-# Average response time
-rate(http_server_requests_seconds_sum[5m]) / rate(http_server_requests_seconds_count[5m])
-
-# Circuit breaker state
-resilience4j_circuitbreaker_state{name="payment"}
-```
-
-### Distributed Tracing (Jaeger)
-- Every request tagged with `correlationId`
-- Trace spans for: Gateway → Auth → Service → DB → Kafka
-- End-to-end latency breakdown
-
-### Centralized Logging (Loki)
-```
-# Query all payment errors
-{app="payment-service"} |= "ERROR" |= "payment"
-
-# Query by correlation ID
-{app="payment-service"} |= "correlationId=abc-123"
-```
-
----
-
-## Design Decisions
-
-### Why Kafka over REST for inter-service communication?
-
-| Factor | REST | Kafka |
-|--------|------|-------|
-| **Coupling** | Tight (direct calls) | Loose (event-driven) |
-| **Reliability** | Need circuit breakers | Built-in retry + DLQ |
-| **Scalability** | Thread-per-request | Partitioned consumers |
-| **Audit Trail** | None | Events stored permanently |
-| **Use Case** | Synchronous queries | Async workflows |
-
-**Decision:** Kafka for all async workflows (payments, settlements, notifications). REST for synchronous queries only.
-
-### Why Outbox Pattern?
-
-```
-Problem: DB write + Kafka publish are not atomic
-Solution: Single DB transaction writes both payment + outbox event
-         Outbox processor polls and publishes to Kafka
-```
-
-### Why Database-per-Service?
-
-- **Isolation:** Each service owns its data
-- **Scalability:** Scale services independently
-- **Technology:** Choose best DB per use case
-- **Failure isolation:** DB outage doesn't cascade
-
----
-
-## Failure Scenarios
-
-### 1. Payment Service Crashes After DB Write
-```
-Solution: Outbox Pattern
-- Payment + OutboxEvent written in same transaction
-- On restart, outbox processor replays pending events
-- At-least-once delivery, consumer handles idempotency
-```
-
-### 2. Kafka Consumer Fails
-```
-Solution: Retry with Exponential Backoff
-- Attempt 1: Immediate
-- Attempt 2: 2s
-- Attempt 3: 4s
-- Attempt 4: 8s
-- Attempt 5: Move to DLQ + Alert
-```
-
-### 3. Idempotency Key Collision
-```
-Solution: Store idempotency keys in DB
-- Check on every request
-- If exists: return cached response
-- Expire after 24h
-```
-
----
-
-## Scaling Strategy
-
-### Stateless Services (Horizontal Scaling)
-```
-API Gateway ─┬─▶ Auth (3 pods)
-             ├─▶ Payment (10 pods) ← hot path
-             ├─▶ Order (5 pods)
-             └─▶ Notification (2 pods)
-```
-
-### Database Scaling
-```
-Primary DB ← All writes + critical reads
-     ↑
-Read Replica ← Analytics, reporting
-```
-
-### Caching Strategy
-- **Redis:** Sessions, rate limits, feature flags
-- **Local:** Payment method lookup, merchant configs
-
----
+| Layer | Technology |
+|-------|------------|
+| **Backend** | Java 21, Spring Boot 3.3, Spring Cloud 2023 |
+| **Database** | PostgreSQL 16, Flyway migrations |
+| **Messaging** | Apache Kafka 3.7 |
+| **Cache** | Redis 7 |
+| **Frontend** | React 19, TypeScript, Tailwind CSS, Vite |
+| **Gateway** | Spring Cloud Gateway (WebFlux) |
+| **Security** | Spring Security, JWT (JJWT), BCrypt |
+| **Resilience** | Resilience4j (Circuit Breaker, Retry) |
+| **Observability** | OpenTelemetry, Prometheus, Grafana |
+| **Container** | Docker, Docker Compose |
+| **Build** | Maven, Make |
 
 ## Project Structure
 
 ```
 payment-gateway/
+├── libs/common/              # Shared library (DTOs, exceptions, utils)
 ├── services/
-│   ├── api-gateway/          # Edge routing
-│   ├── auth-service/          # Authentication
-│   ├── payment-service/       # Core payments
-│   ├── order-service/         # Orders
-│   ├── notification-service/  # Notifications
-│   ├── webhook-service/       # Webhooks
-│   ├── simulator-service/     # Testing
-│   ├── settlement-service/    # Settlements
-│   ├── risk-service/         # Fraud detection
-│   ├── analytics-service/     # Metrics
-│   ├── merchant-service/      # Merchants
-│   ├── dispute-service/       # Disputes
-│   ├── featureflags-service/  # Feature toggles
-│   └── config-service/       # Config server
-├── libs/
-│   └── common/               # Shared code
-├── docker/                   # Docker configs
-├── docker-compose.yml         # Full stack
-├── docs/                     # Documentation
-│   ├── api/                 # OpenAPI spec
-│   ├── demo/                # Demo guide
-│   └── ARCHITECTURE.md      # Architecture
-├── infrastructure/           # Terraform (AWS)
-├── scripts/                  # Dev scripts
-└── tests/                    # Load tests
+│   ├── api-gateway/          # Central API gateway
+│   ├── auth-service/         # Authentication & authorization
+│   ├── order-service/        # Orders, merchants, KYC, API keys
+│   ├── payment-service/      # Payment orchestration
+│   ├── notification-service/ # Notifications, webhooks, feature flags
+│   ├── analytics-service/    # Risk, settlements, disputes, reports
+│   └── simulator-service/    # Payment simulation & testing
+├── web/
+│   ├── dashboard/            # Admin & merchant dashboard (React)
+│   └── frontend/             # Customer checkout (React)
+├── docker/postgres/init/     # Database initialization
+├── nginx/                    # Nginx reverse proxy
+├── docs/                     # Architecture & security docs
+└── scripts/                  # Development scripts
 ```
 
----
-
-## Contributing
+## Development
 
 ```bash
-# Setup
-git clone https://github.com/your-org/payment-gateway.git
-cd payment-gateway
+# Build all services
+make dev-build-all
 
-# Build
-mvn clean install
+# Start infrastructure (Postgres, Kafka, Redis)
+make dev-infra
 
-# Run tests
-mvn test
+# Run all backend services with hot reload
+make dev-run
 
-# Start for development
-docker compose --profile infra up -d
-./mvnw spring-boot:run -pl services/api-gateway
+# Start web applications
+make dev-web
+
+# Check service health
+make dev-status
+
+# View logs
+make dev-logs
+
+# Stop everything
+make dev-stop
 ```
 
----
+## Security
+
+This project follows OWASP Top 10 guidelines and implements:
+- JWT-based authentication with secure token management
+- Rate limiting on all API endpoints
+- Input validation and sanitization
+- SQL injection prevention via parameterized queries
+- XSS protection through security headers
+- Secure password hashing with bcrypt
+- Regular dependency scanning via Dependabot & CodeQL
+
+See [SECURITY.md](SECURITY.md) for the complete security policy and [docs/SECURITY-CHECKLIST.md](docs/SECURITY-CHECKLIST.md) for the implementation checklist.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE)
+MIT License — see [LICENSE](LICENSE)
 
----
+## Contributing
 
-**Built with enterprise-grade patterns for production payment systems**
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.

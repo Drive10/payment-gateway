@@ -16,14 +16,8 @@
         <module>services/order-service</module>
         <module>services/payment-service</module>
         <module>services/notification-service</module>
-        <module>services/webhook-service</module>
         <module>services/simulator-service</module>
-        <module>services/settlement-service</module>
-        <module>services/risk-service</module>
         <module>services/analytics-service</module>
-        <module>services/merchant-service</module>
-        <module>services/dispute-service</module>
-        <module>services/featureflags-service</module>
     </modules>
 
     <properties>

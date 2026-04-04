@@ -141,7 +141,6 @@ dev-status: ## Show hybrid dev status
 	@docker compose -f docker-compose.dev.yml --env-file .env.dev ps 2>/dev/null || echo "  Not running"
 	@echo ""
 	@echo "$(CYAN)Local services (Maven):$(NC)"
-	@for svc in auth-service order-service payment-service notification-service webhook-service simulator-service settlement-service risk-service analytics-service merchant-service dispute-service; do \
 		port=$$(echo $$svc | sed 's/-service//; s/auth/8081/; s/order/8082/; s/payment/8083/; s/notification/8084/; s/webhook/8085/; s/simulator/8086/; s/settlement/8087/; s/risk/8088/; s/analytics/8089/; s/merchant/8090/; s/dispute/8091/'); \
 		if curl -s --connect-timeout 1 http://localhost:$$port/actuator/health >/dev/null 2>&1; then \
 			echo "  $(GREEN)●$(NC) $$svc (port $$port)"; \
@@ -154,8 +153,6 @@ dev-run: ## Run a service locally (usage: make dev-run SERVICE=payment-service)
 	@if [ -z "$(SERVICE)" ]; then \
 		echo "$(RED)Error: Specify service (make dev-run SERVICE=payment-service)$(NC)"; \
 		echo "$(YELLOW)Available: auth-service, order-service, payment-service, notification-service,$(NC)"; \
-		echo "$(YELLOW)           webhook-service, simulator-service, settlement-service, risk-service,$(NC)"; \
-		echo "$(YELLOW)           analytics-service, merchant-service, dispute-service$(NC)"; \
 		exit 1; \
 	fi
 	@echo "$(CYAN)Starting $(SERVICE) locally...$(NC)"

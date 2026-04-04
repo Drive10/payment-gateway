@@ -1,52 +1,48 @@
 server:
-  port: ${SERVER_PORT:8084}
+  port: ${SERVER_PORT:8092}
 
 spring:
   application:
-    name: notification-service
-
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: notification-service-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: dev.payment.common.event
-
+    name: featureflags-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:notificationdb}
-    username: ${DB_USERNAME:payment}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:featureflagsdb}
+    username: ${DB_USERNAME:feature}
     password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-
   flyway:
-    enabled: false
-    baseline-on-migrate: true
-    out-of-order: true
-    ignore-missing-migrations: true
-    ignore-pending-migrations: true
+    enabled: true
+    locations: classpath:db/migration
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info
   endpoint:
     health:
       show-details: always
 
 logging:
   level:
-    dev.payment.notificationservice: DEBUG
-    org.springframework.kafka: INFO
+    root: INFO
+
+# Webhook tables (merged from webhook-service)
+webhook:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/notificationdb
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD}
+
+# Feature flags (merged from featureflags-service)
+featureflags:
+  enabled: true
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/notificationdb
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD}
