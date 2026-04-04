@@ -76,7 +76,7 @@ spring:
             - Path=/api/v1/payments/**,/api/v1/admin/**
           filters:
             - StripPrefix=2
-            - AddRequestHeader=X-Gateway-Token,dev-gateway-internal-secret
+            - AddRequestHeader=X-Gateway-Token,${GATEWAY_INTERNAL_SECRET}
 
         - id: webhook-service
           uri: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
@@ -171,7 +171,7 @@ logging:
 
 application:
   gateway:
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-gateway-internal-secret}
+    internal-secret: ${GATEWAY_INTERNAL_SECRET}
 
   services:
     auth: ${AUTH_SERVICE_URL:http://localhost:8081}

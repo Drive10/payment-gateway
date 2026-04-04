@@ -15,10 +15,9 @@ ARG SERVICE_PATH
 COPY services/ ./services/
 
 # Download dependencies for the target service and its dependencies
-RUN mvn -q dependency:go-offline -pl ${SERVICE_PATH} -am -Dmaven.repo.local=/root/.m2/repository || true
+RUN mvn -q dependency:go-offline -pl ${SERVICE_PATH} -am -Dmaven.repo.local=/root/.m2/repository
 
 # Layer 4: Source code (changes frequently — this is the hot path)
-# Note: services/ already copied above with poms, so this layer caches on src changes only
 RUN mvn -q -DskipTests -pl ${SERVICE_PATH} -am package -Dmaven.repo.local=/root/.m2/repository
 
 # Extract JAR
@@ -35,5 +34,4 @@ WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=build --chown=appuser:appgroup /workspace/app.jar /app/app.jar
 USER appuser
-EXPOSE 8080
 ENTRYPOINT ["java","-XX:+UseZGC","-XX:MaxRAMPercentage=75.0","-XX:+HeapDumpOnOutOfMemoryError","-Djava.security.egd=file:/dev/./urandom","-jar","/app/app.jar"]

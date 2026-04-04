@@ -1,7 +1,7 @@
 services:
   vault:
     profiles: ["services", "infra"]
-    image: hashicorp/vault:latest
+    image: hashicorp/vault:1.15
     container_name: vault
     environment:
       VAULT_ADDR: http://vault:8200
@@ -12,6 +12,11 @@ services:
       - "8200:8200"
     cap_add:
       - IPC_LOCK
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8200/v1/sys/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     deploy:
       resources:
@@ -42,7 +47,7 @@ services:
 
   kafka:
     profiles: ["services", "infra"]
-    image: apache/kafka:latest
+    image: apache/kafka:3.7.0
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -103,6 +108,13 @@ services:
 
   auth-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -141,6 +153,11 @@ services:
 
   order-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -176,6 +193,13 @@ services:
 
   payment-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -224,6 +248,11 @@ services:
 
   notification-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -260,6 +289,11 @@ services:
 
   webhook-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -294,6 +328,11 @@ services:
 
   simulator-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -327,6 +366,11 @@ services:
 
   settlement-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -360,6 +404,11 @@ services:
 
   risk-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -396,6 +445,11 @@ services:
 
   analytics-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -429,6 +483,11 @@ services:
 
   merchant-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -462,6 +521,11 @@ services:
 
   dispute-service:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -495,6 +559,13 @@ services:
 
   api-gateway:
     profiles: ["services"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -542,6 +613,16 @@ services:
     ports:
       - "3000:80"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
     networks:
       - fintech-network
 
@@ -552,10 +633,15 @@ services:
     ports:
       - "3001:80"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     deploy:
       resources:
         limits:
-          memory: 128m
+          memory: 256m
           cpus: "0.25"
     networks:
       - fintech-network
@@ -574,7 +660,7 @@ networks:
 services:
   prometheus:
     profiles: ["observability"]
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.51.0
     container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -586,16 +672,21 @@ services:
       - ./docker/prometheus:/etc/prometheus:ro
       - prometheus_data:/prometheus
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.50"
     networks:
       - fintech-network
 
   grafana:
     profiles: ["observability"]
-    image: grafana/grafana:latest
+    image: grafana/grafana:10.4.0
     container_name: grafana
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
       GF_INSTALL_PLUGINS: grafana-piechart-panel
     ports:
       - "3002:3000"
@@ -605,5 +696,10 @@ services:
     restart: unless-stopped
     depends_on:
       - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
     networks:
       - fintech-network

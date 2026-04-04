@@ -12,7 +12,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${DB_PORT:5432}/${ORDER_DB:orderdb}
     username: ${ORDER_DB_USER:order}
-    password: ${ORDER_DB_PASSWORD:orderpass}
+    password: ${ORDER_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 15

@@ -166,7 +166,6 @@ dev-run: ## Run a service locally (usage: make dev-run SERVICE=payment-service)
 		KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
 		REDIS_HOST=localhost \
 		REDIS_PORT=6379 \
-		REDIS_PASSWORD=redis-dev-pass \
 		AUTH_SERVICE_URL=http://localhost:8081 \
 		ORDER_SERVICE_URL=http://localhost:8082 \
 		PAYMENT_SERVICE_URL=http://localhost:8083 \
@@ -178,8 +177,9 @@ dev-run: ## Run a service locally (usage: make dev-run SERVICE=payment-service)
 		ANALYTICS_SERVICE_URL=http://localhost:8089 \
 		MERCHANT_SERVICE_URL=http://localhost:8090 \
 		DISPUTE_SERVICE_URL=http://localhost:8091 \
-		JWT_SECRET_B64=dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk \
-		GATEWAY_INTERNAL_SECRET=dev-gateway-internal-secret \
+		REDIS_PASSWORD=$${REDIS_PASSWORD} \
+		JWT_SECRET_B64=$${JWT_SECRET_B64} \
+		GATEWAY_INTERNAL_SECRET=$${GATEWAY_INTERNAL_SECRET} \
 		mvn spring-boot:run
 
 dev-build: ## Build a specific service (usage: make dev-build SERVICE=payment-service)
@@ -214,20 +214,6 @@ dev-test: ## API test shortcuts (usage: make dev-test CMD=login)
 
 dev-health: ## Check all service health
 	@./dev/test.sh health
-
-# ============================================================================
-# Legacy Development Mode (compatibility)
-# ============================================================================
-
-dev-infra: dev-start ## Start infrastructure (alias)
-dev-stop: dev-stop ## Stop infrastructure (alias)
-
-dev-build-all: ## Build all services with Maven
-	@echo "$(CYAN)Building all services...$(NC)"
-	mvn clean package -DskipTests
-	@echo "$(GREEN)Build complete!$(NC)"
-
-dev-run: dev-run ## Run a service (alias)
 
 # ============================================================================
 # Docker Mode
@@ -359,6 +345,3 @@ endif
 # Maven commands
 build:
 	mvn -B -q -DskipTests package
-
-verify:
-	mvn verify
