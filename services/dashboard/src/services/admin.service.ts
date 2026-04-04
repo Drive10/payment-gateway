@@ -19,37 +19,30 @@ export type {
 
 export const adminService = {
   async getDashboardStats(): Promise<DashboardStats> {
-    const response = await api.get<{ data: DashboardStats }>('/admin/dashboard/stats')
-    return response.data
+    return api.get<DashboardStats>('/admin/dashboard/stats')
   },
 
   async getRecentTransactions(limit: number): Promise<Transaction[]> {
-    const response = await api.get<{ data: Transaction[] }>(`/transactions?limit=${limit}`)
-    return response.data
+    return api.get<Transaction[]>(`/transactions?limit=${limit}`)
   },
 
   async getTransactions(): Promise<Transaction[]> {
-    const response = await api.get<{ data: Transaction[] }>('/payments')
-    return response.data
+    return api.get<Transaction[]>('/payments')
   },
 
   async getTransactionDetail(id: string): Promise<TransactionDetail> {
-    const response = await api.get<{ data: TransactionDetail }>(`/payments/${id}`)
-    return response.data
+    return api.get<TransactionDetail>(`/payments/${id}`)
   },
 
   async getAnalytics(): Promise<AnalyticsData> {
-    const response = await api.get<{ data: AnalyticsData }>('/analytics')
-    return response.data
+    return api.get<AnalyticsData>('/analytics')
   },
 
   async getOrders(): Promise<Order[]> {
-    const response = await api.get<{ data: Order[] }>('/orders')
-    return response.data
+    return api.get<Order[]>('/orders')
   },
 
   async getOrderAnalytics(): Promise<OrderAnalytics> {
-    const response = await api.get<{ data: OrderAnalytics }>('/orders/analytics')
-    return response.data
+    return api.get<OrderAnalytics>('/orders/analytics')
   },
 }

@@ -25,6 +25,9 @@
         <module>services/merchant-service</module>
         <module>services/dispute-service</module>
         <module>services/featureflags-service</module>
+        <module>tests/api</module>
+        <module>tests/integration</module>
+        <module>tests/contracts</module>
     </modules>
 
     <properties>

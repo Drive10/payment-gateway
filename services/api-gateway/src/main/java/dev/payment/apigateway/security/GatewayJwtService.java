@@ -42,10 +42,10 @@ public class GatewayJwtService {
         }
 
         public Map<String, Object> asHeaders() {
-            return Map.of(
-                    "X-Authenticated-User", username,
-                    "X-Authenticated-Roles", String.join(",", roles)
-            );
+            Map<String, Object> headers = new java.util.HashMap<>();
+            headers.put("X-Authenticated-User", username);
+            headers.put("X-Authenticated-Roles", String.join(",", roles));
+            return headers;
         }
     }
 }

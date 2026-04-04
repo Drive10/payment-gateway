@@ -29,8 +29,8 @@ async function getToken(): Promise<string | null> {
   const stored = localStorage.getItem('payflow_auth')
   if (stored) {
     try {
-      const { token } = JSON.parse(stored)
-      return token
+      const { accessToken } = JSON.parse(stored)
+      return accessToken
     } catch {
       return null
     }

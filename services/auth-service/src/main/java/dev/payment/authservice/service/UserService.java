@@ -40,10 +40,13 @@ public class UserService {
         user.setEnabled(true);
 
         String roleName = (role != null && !role.isBlank()) ? role : "USER";
+        if (!roleName.startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
+        }
         Optional<Role> userRole = roleRepository.findByName(roleName);
         userRole.ifPresentOrElse(
                 user::addRole,
-                () -> roleRepository.findByName("USER").ifPresent(user::addRole)
+                () -> roleRepository.findByName("ROLE_USER").ifPresent(user::addRole)
         );
 
         return userRepository.save(user);

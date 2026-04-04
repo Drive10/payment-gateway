@@ -21,7 +21,7 @@ public record UserResponse(
         List<String> userRoles = user.getRoles().stream()
                 .map(role -> role.getName().replace("ROLE_", ""))
                 .collect(Collectors.toList());
-        String primaryRole = userRoles.isEmpty() ? "USER" : userRoles.get(0);
+        String primaryRole = userRoles.contains("ADMIN") ? "ADMIN" : (userRoles.isEmpty() ? "USER" : userRoles.get(0));
         String fullName = user.getFirstName() + " " + user.getLastName();
         
         return new UserResponse(

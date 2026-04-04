@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json()
-      const { accessToken: authToken, user: userData } = data.data
+      const { accessToken: authToken, user: userData } = data
 
       const user: User = {
         id: userData.id,
