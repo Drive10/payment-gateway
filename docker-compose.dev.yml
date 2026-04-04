@@ -127,7 +127,7 @@ services:
 
   frontend:
     build:
-      context: ./services/frontend
+      context: ./web/frontend
     ports:
       - "3000:80"
     restart: unless-stopped
@@ -136,7 +136,7 @@ services:
 
   dashboard:
     build:
-      context: ./services/dashboard
+      context: ./web/dashboard
     ports:
       - "3001:80"
     restart: unless-stopped

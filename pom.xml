@@ -11,7 +11,6 @@
 
     <modules>
         <module>libs/common</module>
-        <module>services/config-service</module>
         <module>services/api-gateway</module>
         <module>services/auth-service</module>
         <module>services/order-service</module>

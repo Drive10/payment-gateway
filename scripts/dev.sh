@@ -2,8 +2,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FRONTEND_DIR="$REPO_ROOT/services/frontend"
-DASHBOARD_DIR="$REPO_ROOT/services/dashboard"
+FRONTEND_DIR="$REPO_ROOT/web/frontend"
+DASHBOARD_DIR="$REPO_ROOT/web/dashboard"
 COMMAND="${1:-help}"
 TARGET="${2:-}"
 INFRA_SERVICES=(

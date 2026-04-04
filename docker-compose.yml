@@ -40,36 +40,6 @@ services:
       timeout: 3s
       retries: 5
 
-  config-service:
-    profiles: ["services", "infra"]
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/config-service
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8888
-      CONFIG_GIT_URI: ${CONFIG_GIT_URI:-file:///config-repo}
-    ports:
-      - "8888:8888"
-    volumes:
-      - ./config-repo:/config-repo
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "0.50"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8888/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
-    networks:
-      - fintech-network
-
   kafka:
     profiles: ["services", "infra"]
     image: apache/kafka:latest
@@ -568,7 +538,7 @@ services:
   frontend:
     profiles: ["services"]
     build:
-      context: ./services/frontend
+      context: ./web/frontend
     ports:
       - "3000:80"
     restart: unless-stopped
@@ -578,7 +548,7 @@ services:
   dashboard:
     profiles: ["services"]
     build:
-      context: ./services/dashboard
+      context: ./web/dashboard
     ports:
       - "3001:80"
     restart: unless-stopped
