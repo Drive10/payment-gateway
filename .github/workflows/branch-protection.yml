@@ -1,0 +1,22 @@
+name: Branch Protection
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  enforce-branch-naming:
+    name: Enforce Branch Naming
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name
+        run: |
+          echo "Branch: ${{ github.ref }}"
+          echo "Branch protection rules should be configured in repository settings:"
+          echo "  - Require pull request reviews before merging"
+          echo "  - Require status checks to pass before merging"
+          echo "  - Require branches to be up to date before merging"
+          echo "  - Include administrators"
+          echo "  - Restrict who can push to matching branches"
+          echo "  - Allow force pushes: false"
+          echo "  - Allow deletions: false"

@@ -1,0 +1,108 @@
+version: 2
+updates:
+  # Java/Maven dependencies
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Drive10"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "deps"
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework.boot:*"
+          - "org.springframework.cloud:*"
+      spring-security:
+        patterns:
+          - "org.springframework.security:*"
+      jwt:
+        patterns:
+          - "io.jsonwebtoken:*"
+      resilience4j:
+        patterns:
+          - "io.github.resilience4j:*"
+
+  # Node.js dependencies - Dashboard
+  - package-ecosystem: "npm"
+    directory: "/web/dashboard"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Drive10"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "deps(dashboard)"
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-router-dom"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+
+  # Node.js dependencies - Frontend
+  - package-ecosystem: "npm"
+    directory: "/web/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Drive10"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "deps(frontend)"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    reviewers:
+      - "Drive10"
+    labels:
+      - "ci-cd"
+      - "security"
+    commit-message:
+      prefix: "ci"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    reviewers:
+      - "Drive10"
+    labels:
+      - "docker"
+      - "security"
+    commit-message:
+      prefix: "docker"

@@ -1,0 +1,39 @@
+# Codeowners
+# These owners will be requested for review when someone opens a pull request that changes one of their files.
+
+# Overall project ownership
+* @Drive10
+
+# Security-critical files
+/.github/workflows/security.yml @Drive10
+/.github/dependabot.yml @Drive10
+SECURITY.md @Drive10
+docs/SECURITY-CHECKLIST.md @Drive10
+
+# API Gateway (authentication, authorization, rate limiting)
+/services/api-gateway/ @Drive10
+
+# Auth Service (authentication, JWT)
+/services/auth-service/ @Drive10
+
+# Payment Service (payment processing, PCI compliance)
+/services/payment-service/ @Drive10
+
+# Frontend applications
+/web/dashboard/ @Drive10
+/web/frontend/ @Drive10
+
+# Infrastructure and Docker
+/Dockerfile.build @Drive10
+/docker-compose.yml @Drive10
+/docker-compose.dev.yml @Drive10
+/nginx/ @Drive10
+
+# Database migrations
+/services/*/src/main/resources/db/migration/ @Drive10
+
+# Configuration files
+*.yml @Drive10
+*.yaml @Drive10
+pom.xml @Drive10
+Makefile @Drive10
