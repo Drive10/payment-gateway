@@ -35,7 +35,7 @@
         <springdoc.version>2.6.0</springdoc.version>
         <jjwt.version>0.12.6</jjwt.version>
         <resilience4j.version>2.2.0</resilience4j.version>
-        <testcontainers.version>1.20.2</testcontainers.version>
+        <testcontainers.version>2.0.4</testcontainers.version>
     </properties>
 
     <dependencyManagement>
