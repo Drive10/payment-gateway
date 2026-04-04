@@ -68,6 +68,7 @@ public class WebhookService {
 
             log.info("Successfully processed webhook event {} for provider {}", event.getId(), provider);
         } catch (Exception e) {
+            log.error("Webhook delivery failed: {}", e.getMessage(), e);
             event.setStatus(WebhookStatus.FAILED);
             webhookEventRepository.save(event);
             log.error("Failed to process webhook event {}: {}", event.getId(), e.getMessage());
@@ -106,6 +107,7 @@ public class WebhookService {
 
             log.info("Forwarded webhook event {} to payment service", event.getId());
         } catch (Exception e) {
+            log.error("Webhook delivery failed: {}", e.getMessage(), e);
             log.error("Failed to forward webhook event {} to payment service: {}", event.getId(), e.getMessage());
             throw new RuntimeException("Failed to forward webhook to payment service", e);
         }

@@ -1,4 +1,5 @@
 package dev.payment.notificationservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -13,6 +14,7 @@ import java.util.UUID;
     @Index(name = "idx_notification_channel", columnList = "channel"),
     @Index(name = "idx_notification_created", columnList = "created_at")
 })
+@Data
 public class Notification {
 
     @Id

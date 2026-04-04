@@ -1,4 +1,5 @@
 package dev.payment.orderservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -6,6 +7,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "kyc_documents")
+@Data
 public class KycDocument {
 
     @Id

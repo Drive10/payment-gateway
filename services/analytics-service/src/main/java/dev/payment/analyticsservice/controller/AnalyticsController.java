@@ -1,4 +1,5 @@
 package dev.payment.analyticsservice.controller;
+import jakarta.validation.Valid;
 
 import dev.payment.analyticsservice.entity.AnalyticsEvent;
 import dev.payment.analyticsservice.entity.Kpi;
@@ -27,7 +28,7 @@ public class AnalyticsController {
     }
 
     @PostMapping("/events")
-    public ResponseEntity<ApiResponse<AnalyticsEvent>> recordEvent(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<ApiResponse<AnalyticsEvent>> recordEvent(@RequestBody @Valid Map<String, Object> request) {
         validateEventRequest(request);
 
         AnalyticsEvent event = analyticsService.recordEvent(
@@ -47,7 +48,7 @@ public class AnalyticsController {
     }
 
     @PostMapping("/metrics")
-    public ResponseEntity<ApiResponse<Metric>> recordMetric(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<ApiResponse<Metric>> recordMetric(@RequestBody @Valid Map<String, Object> request) {
         validateMetricRequest(request);
 
         Metric metric = analyticsService.recordMetric(
@@ -114,7 +115,7 @@ public class AnalyticsController {
     }
 
     @PostMapping("/reports")
-    public ResponseEntity<ApiResponse<Report>> createReport(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<ApiResponse<Report>> createReport(@RequestBody @Valid Map<String, Object> request) {
         validateReportRequest(request);
 
         Report report = analyticsService.createReport(
@@ -151,7 +152,7 @@ public class AnalyticsController {
     }
 
     @PostMapping("/kpis")
-    public ResponseEntity<ApiResponse<Void>> updateKpi(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<ApiResponse<Void>> updateKpi(@RequestBody @Valid Map<String, Object> request) {
         validateKpiRequest(request);
 
         analyticsService.updateKpi(

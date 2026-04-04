@@ -1,4 +1,5 @@
 package dev.payment.analyticsservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -6,6 +7,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "risk_rules")
+@Data
 public class RiskRule {
 
     @Id

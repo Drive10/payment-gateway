@@ -1,4 +1,5 @@
 package dev.payment.analyticsservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -6,6 +7,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "metrics")
+@Data
 public class Metric {
 
     @Id

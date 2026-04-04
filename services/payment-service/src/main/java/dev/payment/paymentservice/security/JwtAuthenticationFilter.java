@@ -61,6 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 log.debug("Authenticated user: {} with roles: {}", username, roles);
             }
         } catch (Exception e) {
+            log.error("JWT validation failed: {}", e.getMessage());
             log.warn("Invalid JWT token: {}", e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");

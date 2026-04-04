@@ -1,4 +1,5 @@
 package dev.payment.orderservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,6 +16,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "orders")
+@Data
 public class Order extends BaseEntity {
 
     @Id

@@ -1,4 +1,5 @@
 package dev.payment.paymentservice.domain;
+import lombok.Data;
 
 import dev.payment.paymentservice.domain.enums.RoleName;
 import jakarta.persistence.Column;
@@ -12,6 +13,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "roles")
+@Data
 public class Role {
 
     @Id

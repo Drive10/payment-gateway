@@ -1,4 +1,5 @@
 package dev.payment.orderservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -7,7 +8,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "merchants")
+@Data
 public class Merchant {
+    private static final BigDecimal DEFAULT_TRANSACTION_LIMIT = new BigDecimal("100000");
+    private static final BigDecimal DEFAULT_DAILY_LIMIT = new BigDecimal("1000000");
+    private static final BigDecimal DEFAULT_MONTHLY_LIMIT = new BigDecimal("5000000");
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -59,13 +64,13 @@ public class Merchant {
     private String pricingTier = "STANDARD";
 
     @Column(name = "transaction_limit", precision = 19, scale = 4)
-    private BigDecimal transactionLimit = new BigDecimal("100000");
+    private BigDecimal transactionLimit = DEFAULT_TRANSACTION_LIMIT;
 
     @Column(name = "daily_limit", precision = 19, scale = 4)
-    private BigDecimal dailyLimit = new BigDecimal("1000000");
+    private BigDecimal dailyLimit = DEFAULT_DAILY_LIMIT;
 
     @Column(name = "monthly_limit", precision = 19, scale = 4)
-    private BigDecimal monthlyLimit = new BigDecimal("5000000");
+    private BigDecimal monthlyLimit = DEFAULT_MONTHLY_LIMIT;
 
     @Column(name = "current_month_volume", precision = 19, scale = 4)
     private BigDecimal currentMonthVolume = BigDecimal.ZERO;

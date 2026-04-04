@@ -1,4 +1,5 @@
 package dev.payment.paymentservice.domain;
+import lombok.Data;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,6 +12,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "processed_webhook_events")
+@Data
 public class ProcessedWebhookEvent extends BaseEntity {
 
     @Id

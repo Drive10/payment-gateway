@@ -1,4 +1,5 @@
 package dev.payment.paymentservice.domain;
+import lombok.Data;
 
 import dev.payment.paymentservice.domain.enums.OutboxEventStatus;
 import jakarta.persistence.Column;
@@ -15,6 +16,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "payment_outbox_events")
+@Data
 public class PaymentOutboxEvent extends BaseEntity {
 
     @Id

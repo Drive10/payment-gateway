@@ -1,4 +1,5 @@
 package dev.payment.paymentservice.domain;
+import lombok.Data;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,6 +10,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "audit_logs")
+@Data
 public class AuditLog extends BaseEntity {
 
     @Id

@@ -1,4 +1,5 @@
 package dev.payment.analyticsservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -8,6 +9,7 @@ import java.util.HashMap;
 
 @Entity
 @Table(name = "analytics_events")
+@Data
 public class AnalyticsEvent {
 
     @Id

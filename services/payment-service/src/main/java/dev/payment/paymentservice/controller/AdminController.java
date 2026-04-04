@@ -151,7 +151,7 @@ public class AdminController {
     @PostMapping("/disputes/{disputeId}/accept")
     public ApiResponse<Dispute> acceptDispute(
             @PathVariable UUID disputeId,
-            @RequestBody Map<String, String> request,
+            @RequestBody @Valid Map<String, String> request,
             Authentication authentication
     ) {
         authService.getCurrentUser(authentication.getName());
@@ -162,7 +162,7 @@ public class AdminController {
     @PostMapping("/disputes/{disputeId}/reject")
     public ApiResponse<Dispute> rejectDispute(
             @PathVariable UUID disputeId,
-            @RequestBody Map<String, String> request,
+            @RequestBody @Valid Map<String, String> request,
             Authentication authentication
     ) {
         authService.getCurrentUser(authentication.getName());

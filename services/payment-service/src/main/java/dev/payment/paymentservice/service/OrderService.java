@@ -95,6 +95,7 @@ public class OrderService {
             orderServiceClient.updateOrderStatus(orderReference, status);
             log.info("event=order_status_notified orderId={} status={}", orderId, status);
         } catch (Exception e) {
+            log.error("Order status update failed: {}", e.getMessage(), e);
             log.warn("event=order_status_notify_failed orderId={} status={} error={}",
                     orderId, status, e.getMessage());
         }

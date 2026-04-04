@@ -1,4 +1,5 @@
 package dev.payment.authservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +14,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "roles")
+@Data
 public class Role {
 
     @Id

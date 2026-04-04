@@ -10,6 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class RiskScoringService {
+    private static final BigDecimal HIGH_AMOUNT_THRESHOLD = new BigDecimal("100000");
+    private static final BigDecimal CRITICAL_AMOUNT_THRESHOLD = new BigDecimal("500000");
     
     private static final Logger log = LoggerFactory.getLogger(RiskScoringService.class);
     
@@ -34,13 +36,13 @@ public class RiskScoringService {
         List<String> triggeredRules = new ArrayList<>();
         List<String> flags = new ArrayList<>();
         
-        if (amount.compareTo(new BigDecimal("100000")) > 0) {
+        if (amount.compareTo(HIGH_AMOUNT_THRESHOLD) > 0) {
             totalScore += 30;
             triggeredRules.add("HIGH_AMOUNT");
             flags.add("Large transaction amount");
         }
         
-        if (amount.compareTo(new BigDecimal("500000")) > 0) {
+        if (amount.compareTo(CRITICAL_AMOUNT_THRESHOLD) > 0) {
             totalScore += 50;
             triggeredRules.add("VERY_HIGH_AMOUNT");
             flags.add("Exceptionally large transaction");

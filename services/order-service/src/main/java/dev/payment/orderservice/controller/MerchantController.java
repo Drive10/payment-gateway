@@ -1,4 +1,5 @@
 package dev.payment.orderservice.controller;
+import jakarta.validation.Valid;
 
 import dev.payment.orderservice.entity.ApiKey;
 import dev.payment.orderservice.entity.BankAccount;
@@ -33,7 +34,7 @@ public class MerchantController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Merchant>> createMerchant(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<ApiResponse<Merchant>> createMerchant(@RequestBody @Valid Map<String, Object> request) {
         validateCreateRequest(request);
 
         Merchant merchant = new Merchant();
@@ -84,7 +85,7 @@ public class MerchantController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Merchant>> updateMerchant(
             @PathVariable UUID id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody @Valid Map<String, Object> request) {
 
         Merchant updates = new Merchant();
         updates.setBusinessName(getString(request, "businessName"));
@@ -101,7 +102,7 @@ public class MerchantController {
     @PostMapping("/{id}/kyc/verify")
     public ResponseEntity<ApiResponse<Merchant>> verifyKyc(
             @PathVariable UUID id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody @Valid Map<String, Object> request) {
 
         String verifiedBy = getStringOrDefault(request, "verifiedBy", "SYSTEM");
         String notes = getString(request, "notes");
@@ -113,7 +114,7 @@ public class MerchantController {
     @PostMapping("/{id}/kyc/reject")
     public ResponseEntity<ApiResponse<Merchant>> rejectKyc(
             @PathVariable UUID id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody @Valid Map<String, Object> request) {
 
         String reason = getStringRequired(request, "reason");
 
@@ -154,7 +155,7 @@ public class MerchantController {
     @PostMapping("/{id}/kyc-documents")
     public ResponseEntity<ApiResponse<KycDocument>> addKycDocument(
             @PathVariable UUID id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody @Valid Map<String, Object> request) {
 
         KycDocument document = new KycDocument();
         document.setDocumentType(getStringRequired(request, "documentType"));
@@ -169,7 +170,7 @@ public class MerchantController {
     @PostMapping("/{id}/kyc/submit")
     public ResponseEntity<ApiResponse<Merchant>> submitKyc(
             @PathVariable UUID id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody @Valid Map<String, Object> request) {
         List<KycDocument> documents = parseDocuments(request);
         Merchant updated = kycService.submitKyc(id, documents);
         return ResponseEntity.ok(ApiResponse.success(updated));
@@ -178,7 +179,7 @@ public class MerchantController {
     @PostMapping("/{id}/kyc/start-review")
     public ResponseEntity<ApiResponse<Merchant>> startKycReview(
             @PathVariable UUID id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody @Valid Map<String, Object> request) {
         String reviewer = getStringOrDefault(request, "reviewer", "SYSTEM");
         Merchant updated = kycService.startReview(id, reviewer);
         return ResponseEntity.ok(ApiResponse.success(updated));
@@ -205,7 +206,7 @@ public class MerchantController {
     @PostMapping("/{id}/bank-accounts")
     public ResponseEntity<ApiResponse<BankAccount>> addBankAccount(
             @PathVariable UUID id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody @Valid Map<String, Object> request) {
 
         validateBankAccountRequest(request);
 
@@ -251,7 +252,7 @@ public class MerchantController {
     @PostMapping("/{merchantId}/api-keys")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createApiKey(
             @PathVariable UUID merchantId,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody @Valid Map<String, Object> request) {
         String name = getStringRequired(request, "name");
         String description = getString(request, "description");
         List<String> permissions = (List<String>) request.get("permissions");

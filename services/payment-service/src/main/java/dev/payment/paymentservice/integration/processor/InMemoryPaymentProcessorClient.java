@@ -3,6 +3,7 @@ package dev.payment.paymentservice.integration.processor;
 import dev.payment.paymentservice.domain.Payment;
 import dev.payment.paymentservice.domain.enums.TransactionMode;
 import dev.payment.paymentservice.dto.request.CapturePaymentRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -12,13 +13,18 @@ import java.util.UUID;
 @Profile("test")
 public class InMemoryPaymentProcessorClient implements PaymentProcessorClient {
 
+    @Value("${application.payment.simulator-url:https://simulator.test/checkout/}")
+    private String simulatorUrl;
+
+    @Value("${application.payment.checkout-url:https://checkout.fintech.local/pay/}")
+    private String checkoutUrl;
+
     @Override
     public PaymentProcessorIntentResponse createIntent(Payment payment, String orderReference, TransactionMode mode) {
         String prefix = mode == TransactionMode.TEST ? "test_order_" : "prod_order_";
         String providerOrderId = prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 18);
-        String checkoutUrl = mode == TransactionMode.TEST
-                ? "https://simulator.test/checkout/" + providerOrderId
-                : "https://checkout.fintech.local/pay/" + providerOrderId;
+        String url = mode == TransactionMode.TEST ? simulatorUrl : checkoutUrl;
+        String checkoutUrl = url + providerOrderId;
         return new PaymentProcessorIntentResponse(providerOrderId, checkoutUrl, mode == TransactionMode.TEST);
     }
 

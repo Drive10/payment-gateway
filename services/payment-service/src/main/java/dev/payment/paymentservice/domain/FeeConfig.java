@@ -1,4 +1,5 @@
 package dev.payment.paymentservice.domain;
+import lombok.Data;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,7 +16,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "fee_configs")
+@Data
 public class FeeConfig {
+    private static final BigDecimal VOLUME_THRESHOLD = new BigDecimal("100000");
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -40,7 +43,7 @@ public class FeeConfig {
     private BigDecimal gatewayFixedFee = new BigDecimal("2.00");
 
     @Column(name = "volume_threshold", precision = 19, scale = 2)
-    private BigDecimal volumeThreshold = new BigDecimal("100000");
+    private BigDecimal volumeThreshold = VOLUME_THRESHOLD;
 
     @Column(name = "volume_discount_percent", precision = 5, scale = 2)
     private BigDecimal volumeDiscountPercent = new BigDecimal("0.25");

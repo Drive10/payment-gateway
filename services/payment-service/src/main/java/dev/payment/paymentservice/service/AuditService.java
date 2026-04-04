@@ -3,12 +3,16 @@ package dev.payment.paymentservice.service;
 import dev.payment.paymentservice.domain.AuditLog;
 import dev.payment.paymentservice.dto.response.AuditLogResponse;
 import dev.payment.paymentservice.repository.AuditLogRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuditService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuditService.class);
 
     private final AuditLogRepository auditLogRepository;
 

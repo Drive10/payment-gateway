@@ -1,13 +1,15 @@
 package dev.payment.orderservice.kafka;
 
-import dev.payment.orderservice.entity.OrderStatus;
 import dev.payment.orderservice.service.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -21,51 +23,19 @@ public class PaymentStatusListener {
         this.orderService = orderService;
     }
 
-    @KafkaListener(topics = "${application.kafka.topic.payment-events:payment.events}", groupId = "order-service")
-    public void onPaymentEvent(Map<String, Object> event) {
+    @KafkaListener(topics = "${application.kafka.topic.payment-status:payment.status}", groupId = "${spring.kafka.consumer.group-id}")
+    public void handlePaymentStatus(@Payload String message,
+                                     @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+                                     Acknowledgment ack) {
         try {
-            String eventType = (String) event.get("eventType");
-            if (eventType == null) {
-                log.warn("Received payment event without eventType");
-                return;
-            }
-
-            UUID orderId = parseUUID(event.get("orderId"));
-            if (orderId == null) {
-                log.warn("Received payment event without orderId: {}", eventType);
-                return;
-            }
-
-            OrderStatus newOrderStatus = mapEventTypeToOrderStatus(eventType);
-            if (newOrderStatus != null) {
-                orderService.updateOrderStatus(orderId, newOrderStatus);
-                log.info("Updated order {} status to {} from event {}", orderId, newOrderStatus, eventType);
-            }
-        } catch (Exception e) {
-            log.error("Error processing payment status event", e);
-        }
-    }
-
-    private UUID parseUUID(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof UUID) {
-            return (UUID) value;
-        }
-        try {
-            return UUID.fromString(value.toString());
+            log.info("Received payment status update from {}: {}", topic, message);
+            orderService.updateOrderStatus(UUID.fromString(message), dev.payment.orderservice.entity.OrderStatus.PAID);
+            ack.acknowledge();
         } catch (IllegalArgumentException e) {
-            return null;
+            log.warn("Invalid payment status message: {}", e.getMessage());
+            ack.acknowledge();
+        } catch (Exception e) {
+            log.error("Failed to process payment status update. Message: {}. Error: {}", message, e.getMessage(), e);
         }
-    }
-
-    private OrderStatus mapEventTypeToOrderStatus(String eventType) {
-        return switch (eventType.toUpperCase()) {
-            case "PAYMENT.CAPTURED", "PAYMENT.WEBHOOK.CAPTURED" -> OrderStatus.PAID;
-            case "PAYMENT.FAILED", "PAYMENT.WEBHOOK.FAILED" -> OrderStatus.FAILED;
-            case "PAYMENT.REFUNDED", "PAYMENT.WEBHOOK.REFUND_PROCESSED" -> OrderStatus.REFUNDED;
-            default -> null;
-        };
     }
 }

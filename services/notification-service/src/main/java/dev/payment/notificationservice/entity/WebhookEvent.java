@@ -1,4 +1,5 @@
 package dev.payment.notificationservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,6 +21,7 @@ import java.util.UUID;
 @Table(name = "webhook_events")
 @EnableJpaAuditing
 @EntityListeners(AuditingEntityListener.class)
+@Data
 public class WebhookEvent {
 
     @Id

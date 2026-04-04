@@ -1,4 +1,5 @@
 package dev.payment.notificationservice.controller;
+import jakarta.validation.Valid;
 
 import dev.payment.common.api.ApiResponse;
 import dev.payment.notificationservice.dto.WebhookPayload;
@@ -30,7 +31,7 @@ public class WebhookController {
     @PostMapping("/simulator")
     public ResponseEntity<ApiResponse<Map<String, Object>>> handleSimulatorWebhook(
             @RequestHeader(value = "X-Signature", required = false) String signature,
-            @RequestBody String payload
+            @RequestBody @Valid String payload
     ) {
         log.info("Received webhook from simulator");
 

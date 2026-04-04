@@ -1,4 +1,5 @@
 package dev.payment.analyticsservice.controller;
+import jakarta.validation.Valid;
 
 import dev.payment.analyticsservice.entity.Dispute;
 import dev.payment.analyticsservice.service.DisputeService;
@@ -22,7 +23,7 @@ public class DisputeController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Dispute>> createDispute(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<ApiResponse<Dispute>> createDispute(@RequestBody @Valid Map<String, Object> request) {
         validateCreateRequest(request);
 
         Dispute dispute = new Dispute();
@@ -101,7 +102,7 @@ public class DisputeController {
     @PostMapping("/{id}/contest")
     public ResponseEntity<ApiResponse<Dispute>> contestDispute(
             @PathVariable UUID id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody @Valid Map<String, Object> request) {
 
         String evidenceNotes = getStringOrDefault(request, "evidenceNotes", "");
         String resolvedBy = getStringOrDefault(request, "resolvedBy", "MERCHANT");
@@ -133,7 +134,7 @@ public class DisputeController {
     @PostMapping("/{id}/assign")
     public ResponseEntity<ApiResponse<Dispute>> assignDispute(
             @PathVariable UUID id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody @Valid Map<String, Object> request) {
 
         String assignedTo = getStringRequired(request, "assignedTo");
         Dispute assigned = disputeService.assignDispute(id, assignedTo);

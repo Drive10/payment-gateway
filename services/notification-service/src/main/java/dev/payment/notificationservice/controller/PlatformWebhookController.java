@@ -1,4 +1,5 @@
 package dev.payment.notificationservice.controller;
+import jakarta.validation.Valid;
 
 import dev.payment.common.api.ApiResponse;
 import dev.payment.notificationservice.dto.ForwardWebhookRequest;
@@ -28,7 +29,7 @@ public class PlatformWebhookController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<Map<String, Object>>> receiveInternalWebhook(
-            @RequestBody ForwardWebhookRequest request
+            @RequestBody @Valid ForwardWebhookRequest request
     ) {
         log.info("Received internal webhook for event type: {}", request.eventType());
 

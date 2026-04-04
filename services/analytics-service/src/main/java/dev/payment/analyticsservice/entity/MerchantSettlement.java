@@ -1,4 +1,5 @@
 package dev.payment.analyticsservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -7,7 +8,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "merchant_settlements")
+@Data
 public class MerchantSettlement {
+    private static final BigDecimal DEFAULT_MINIMUM_SETTLEMENT = new BigDecimal("1000");
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -44,7 +47,7 @@ public class MerchantSettlement {
     private Boolean autoSettle = true;
 
     @Column(name = "minimum_settlement", nullable = false, precision = 19, scale = 2)
-    private BigDecimal minimumSettlement = new BigDecimal("1000");
+    private BigDecimal minimumSettlement = DEFAULT_MINIMUM_SETTLEMENT;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

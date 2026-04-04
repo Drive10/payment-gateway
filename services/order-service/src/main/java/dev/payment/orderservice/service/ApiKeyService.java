@@ -181,6 +181,7 @@ public class ApiKeyService {
             byte[] hash = digest.digest(rawKey.getBytes(StandardCharsets.UTF_8));
             return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
         } catch (Exception e) {
+            log.error("API key operation failed: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to hash API key", e);
         }
     }

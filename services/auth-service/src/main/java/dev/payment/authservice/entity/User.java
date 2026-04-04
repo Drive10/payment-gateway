@@ -1,4 +1,5 @@
 package dev.payment.authservice.entity;
+import lombok.Data;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -19,6 +20,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "users")
+@Data
 public class User extends BaseEntity {
 
     @Id

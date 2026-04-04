@@ -1,4 +1,5 @@
 package dev.payment.paymentservice.domain;
+import lombok.Data;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,6 +17,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "users")
+@Data
 public class User extends BaseEntity {
 
     @Id

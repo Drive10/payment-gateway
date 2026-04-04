@@ -14,6 +14,7 @@ import java.util.UUID;
 
 @Service
 public class FeeEngine {
+    private static final BigDecimal FEE_DIVISOR = new BigDecimal("100");
 
     private static final Logger log = LoggerFactory.getLogger(FeeEngine.class);
 
@@ -96,7 +97,7 @@ public class FeeEngine {
         }
 
         BigDecimal refundFee = refundAmount.multiply(platformPercent)
-                .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                .divide(FEE_DIVISOR, 2, RoundingMode.HALF_UP);
 
         return new FeeCalculation(
                 refundAmount,
@@ -111,11 +112,11 @@ public class FeeEngine {
 
     private BigDecimal calculateFee(BigDecimal amount, BigDecimal percent, BigDecimal fixed, BigDecimal minFee, BigDecimal maxFeePercent) {
         BigDecimal percentFee = amount.multiply(percent)
-                .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                .divide(FEE_DIVISOR, 2, RoundingMode.HALF_UP);
         BigDecimal totalFee = percentFee.add(fixed);
 
         BigDecimal maxFee = amount.multiply(maxFeePercent)
-                .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                .divide(FEE_DIVISOR, 2, RoundingMode.HALF_UP);
 
         if (totalFee.compareTo(minFee) < 0) {
             return minFee;

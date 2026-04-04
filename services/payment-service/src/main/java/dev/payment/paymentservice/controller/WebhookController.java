@@ -1,4 +1,5 @@
 package dev.payment.paymentservice.controller;
+import jakarta.validation.Valid;
 
 import dev.payment.common.api.ApiResponse;
 import dev.payment.paymentservice.service.RazorpayWebhookService;
@@ -64,7 +65,7 @@ public class WebhookController {
                                     """)
                     )
             )
-            @RequestBody String payload
+            @RequestBody @Valid String payload
     ) {
         razorpayWebhookService.processWebhook(eventId, signature, payload);
         return ResponseEntity.ok(ApiResponse.success(Map.of("status", "processed")));

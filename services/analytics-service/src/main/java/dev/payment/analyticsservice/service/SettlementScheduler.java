@@ -61,6 +61,7 @@ public class SettlementScheduler {
             try {
                 processMerchantSettlement(merchant, periodStart, periodEnd);
             } catch (Exception e) {
+                log.error("Settlement processing failed for merchant {}: {}", merchant.getMerchantId(), e.getMessage(), e);
                 log.error("Failed to process settlement for merchant {}: {}", 
                         merchant.getMerchantId(), e.getMessage());
             }

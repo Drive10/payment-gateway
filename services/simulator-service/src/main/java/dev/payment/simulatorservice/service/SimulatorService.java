@@ -102,10 +102,8 @@ public class SimulatorService {
     }
 
     private String buildCheckoutUrl(SimulationMode mode, String providerOrderId) {
-        if (mode == SimulationMode.TEST) {
-            return "https://simulator.test/checkout/" + providerOrderId;
-        }
-        return "https://checkout.fintech.local/pay/" + providerOrderId;
+        String url = mode == SimulationMode.TEST ? "https://simulator.test/checkout/" : "https://checkout.fintech.local/pay/";
+        return url + providerOrderId;
     }
 
     private SimulationResponse toResponse(SimulationTransaction transaction) {

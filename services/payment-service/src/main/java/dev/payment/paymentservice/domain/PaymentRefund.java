@@ -1,4 +1,5 @@
 package dev.payment.paymentservice.domain;
+import lombok.Data;
 
 import dev.payment.paymentservice.domain.enums.RefundStatus;
 import jakarta.persistence.Column;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "payment_refunds")
+@Data
 public class PaymentRefund extends BaseEntity {
 
     @Id
