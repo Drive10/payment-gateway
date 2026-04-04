@@ -155,15 +155,15 @@ management:
   metrics:
     export:
       prometheus:
-        enabled: true
+        enabled: false
 
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
-    enabled: true
+    enabled: false
   api-docs:
     path: /v3/api-docs
-    enabled: true
+    enabled: false
 
 logging:
   level:

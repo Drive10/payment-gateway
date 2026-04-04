@@ -1,29 +1,48 @@
 server:
-  port: ${SERVER_PORT:8092}
+  port: ${SERVER_PORT:8084}
+  shutdown: graceful
 
 spring:
   application:
-    name: featureflags-service
+    name: notification-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:featureflagsdb}
-    username: ${DB_USERNAME:feature}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/notificationdb
+    username: ${DB_USERNAME:payment}
     password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
+    open-in-view: false
     show-sql: false
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: dev.payment.notificationservice.*,dev.payment.common.*
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
   endpoint:
     health:
       show-details: always
@@ -31,18 +50,9 @@ management:
 logging:
   level:
     root: INFO
+    dev.payment.notificationservice: DEBUG
 
-# Webhook tables (merged from webhook-service)
-webhook:
-  datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/notificationdb
-    username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD}
-
-# Feature flags (merged from featureflags-service)
-featureflags:
-  enabled: true
-  datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/notificationdb
-    username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD}
+# Service URLs
+application:
+  payment-service:
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8083}

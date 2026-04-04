@@ -49,7 +49,7 @@ spring:
         order_updates: true
         generate_statistics: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -96,11 +96,11 @@ management:
   metrics:
     export:
       prometheus:
-        enabled: true
+        enabled: false
 
 application:
   gateway-trust:
-    enabled: true
+    enabled: false
     internal-secret: ${GATEWAY_INTERNAL_SECRET}
 
   security:
