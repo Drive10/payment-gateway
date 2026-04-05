@@ -21,8 +21,6 @@ spring:
       timeout: 2000ms
       ssl:
         enabled: false
-        enabled: false
-        trust-store-type: JKS
       lettuce:
         pool:
           max-active: 50
@@ -35,10 +33,6 @@ spring:
       httpclient:
         connect-timeout: 5000
         response-timeout: 30s
-        ssl:
-        enabled: false
-          trusted-certs:
-            - classpath:truststore.jks
       globalcors:
         corsConfigurations:
           '[/**]':
@@ -95,25 +89,26 @@ spring:
                 redis-rate-limiter.replenishRate: 100
                 redis-rate-limiter.burstCapacity: 200
 
-        - id: webhook-service
-          uri: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
+        - id: notification-service
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/v1/webhooks/**
-
-        - id: merchant-service
-          uri: ${MERCHANT_SERVICE_URL:http://localhost:8090}
-          predicates:
-            - Path=/api/v1/merchants/**
+            - Path=/api/v1/notifications/**
           filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 100
-                redis-rate-limiter.burstCapacity: 200
+            - StripPrefix=2
 
-        - id: dispute-service
-          uri: ${DISPUTE_SERVICE_URL:http://localhost:8091}
+        - id: analytics-service
+          uri: ${ANALYTICS_SERVICE_URL:http://localhost:8085}
           predicates:
-            - Path=/api/v1/disputes/**
+            - Path=/api/v1/analytics/**
+          filters:
+            - StripPrefix=2
+
+        - id: simulator-service
+          uri: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/v1/simulator/**
+          filters:
+            - StripPrefix=2
 
         - id: internal-auth
           uri: ${AUTH_SERVICE_URL:http://localhost:8081}
@@ -129,6 +124,13 @@ spring:
           filters:
             - RewritePath=/platform/order/(?<segment>.*), /internal/platform/${segment}
 
+        - id: internal-payment
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/platform/payment/**
+          filters:
+            - RewritePath=/platform/payment/(?<segment>.*), /internal/platform/${segment}
+
         - id: internal-notification
           uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
           predicates:
@@ -136,12 +138,12 @@ spring:
           filters:
             - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
 
-        - id: internal-webhook
-          uri: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
+        - id: internal-analytics
+          uri: ${ANALYTICS_SERVICE_URL:http://localhost:8085}
           predicates:
-            - Path=/platform/webhook/**
+            - Path=/platform/analytics/**
           filters:
-            - RewritePath=/platform/webhook/(?<segment>.*), /internal/platform/${segment}
+            - RewritePath=/platform/analytics/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-simulator
           uri: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
@@ -149,20 +151,6 @@ spring:
             - Path=/platform/simulator/**
           filters:
             - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
-
-        - id: internal-merchant
-          uri: ${MERCHANT_SERVICE_URL:http://localhost:8090}
-          predicates:
-            - Path=/platform/merchant/**
-          filters:
-            - RewritePath=/platform/merchant/(?<segment>.*), /internal/platform/${segment}
-
-        - id: internal-dispute
-          uri: ${DISPUTE_SERVICE_URL:http://localhost:8091}
-          predicates:
-            - Path=/platform/dispute/**
-          filters:
-            - RewritePath=/platform/dispute/(?<segment>.*), /internal/platform/${segment}
 
 vault:
   uri: ${VAULT_ADDR:http://vault:8200}
@@ -200,10 +188,8 @@ application:
     order: ${ORDER_SERVICE_URL:http://localhost:8082}
     payment: ${PAYMENT_SERVICE_URL:http://localhost:8083}
     notification: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
-    webhook: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
+    analytics: ${ANALYTICS_SERVICE_URL:http://localhost:8085}
     simulator: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
-    merchant: ${MERCHANT_SERVICE_URL:http://localhost:8090}
-    dispute: ${DISPUTE_SERVICE_URL:http://localhost:8091}
 
 security:
   jwt:

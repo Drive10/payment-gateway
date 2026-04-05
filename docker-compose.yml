@@ -98,7 +98,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_MULTIPLE_DATABASES: authdb,orderdb,paymentdb,notificationdb,webhookdb,simulatordb,settlementdb,riskdb,analyticsdb,merchantdb,disputedb
+      POSTGRES_MULTIPLE_DATABASES: authdb,orderdb,paymentdb,notificationdb,simulatordb,analyticsdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -460,8 +460,6 @@ services:
 
 volumes:
   postgres_data:
-  prometheus_data:
-  grafana_data:
   vault_data:
   kafka_data:
   redis_data:
@@ -469,52 +467,3 @@ volumes:
 networks:
   fintech-network:
     name: fintech-network
-
----
-# Observability Stack
-services:
-  prometheus:
-    profiles: ["observability"]
-    image: prom/prometheus:v2.51.0
-    container_name: prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./docker/prometheus:/etc/prometheus:ro
-      - prometheus_data:/prometheus
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "0.50"
-    networks:
-      - fintech-network
-
-  grafana:
-    profiles: ["observability"]
-    image: grafana/grafana:10.4.0
-    container_name: grafana
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
-      GF_INSTALL_PLUGINS: grafana-piechart-panel
-    ports:
-      - "3002:3000"
-    volumes:
-      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
-      - grafana_data:/var/lib/grafana
-    restart: unless-stopped
-    depends_on:
-      - prometheus
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-          cpus: "0.25"
-    networks:
-      - fintech-network

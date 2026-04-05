@@ -11,7 +11,7 @@
 We take the security of this payment gateway seriously. If you discover a security vulnerability, please follow these steps:
 
 1. **DO NOT** open a public GitHub issue
-2. Email us at: security@payflow.dev (replace with actual security contact)
+2. Email us at: security@payflow.dev
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce

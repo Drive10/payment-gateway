@@ -116,28 +116,33 @@
 # Start all infrastructure + services
 docker compose up -d
 
-# Check health
-make dev-status
+# Check service health
+docker compose ps
 
 # View logs
-make dev-logs
+docker compose logs -f
 ```
 
 ### Run in Dev Mode (Hot Reload)
 ```bash
 # Start infrastructure only
-make dev-infra
+docker compose --profile infra up -d
 
-# Start all backend services with hot reload
-make dev-run
+# Run services locally with Maven
+./scripts/dev.sh start
 
 # Start web apps
-make dev-web
+cd web/frontend && npm run dev
+cd web/dashboard && npm run dev
 ```
 
 ### Build
 ```bash
-make dev-build-all
+# Build all services
+mvn clean package -DskipTests
+
+# Build a single service
+mvn clean package -pl services/payment-service -DskipTests
 ```
 
 ## API Endpoints
@@ -201,9 +206,13 @@ payment-gateway/
 ├── web/
 │   ├── dashboard/            # Admin & merchant dashboard (React)
 │   └── frontend/             # Customer checkout (React)
-├── docker/postgres/init/     # Database initialization
-├── nginx/                    # Nginx reverse proxy
+├── docker/
+│   ├── postgres/init/        # Database initialization
+│   ├── vault/                # Vault TLS & init scripts
+│   ├── redis/tls/            # Redis TLS certificates
+│   └── kafka/tls/            # Kafka TLS certificates
 ├── docs/                     # Architecture & security docs
+├── chaos/                    # Chaos engineering tests
 └── scripts/                  # Development scripts
 ```
 
@@ -211,26 +220,37 @@ payment-gateway/
 
 ```bash
 # Build all services
-make dev-build-all
+mvn clean package -DskipTests
 
-# Start infrastructure (Postgres, Kafka, Redis)
-make dev-infra
+# Start infrastructure (Postgres, Kafka, Redis, Vault)
+docker compose --profile infra up -d
 
 # Run all backend services with hot reload
-make dev-run
+./scripts/dev.sh start
 
 # Start web applications
-make dev-web
+cd web/frontend && npm run dev
 
 # Check service health
-make dev-status
+./scripts/dev.sh status
 
 # View logs
-make dev-logs
+./scripts/dev.sh logs
 
 # Stop everything
-make dev-stop
+./scripts/dev.sh stop
 ```
+
+## CI/CD
+
+This project uses GitHub Actions for automated builds and testing:
+
+- **Build**: Compiles all services and builds Docker images
+- **Test**: Runs unit tests with PostgreSQL and Redis
+- **Security**: Trivy vulnerability scanning and hardcoded secret detection
+- **Deploy**: Pushes images to GitHub Container Registry
+
+See [`.github/workflows/build.yml`](.github/workflows/build.yml) for the pipeline configuration.
 
 ## Security
 

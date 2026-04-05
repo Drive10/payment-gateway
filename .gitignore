@@ -56,5 +56,4 @@ loki_data/
 *.swp
 *~
 coverage/.env.dev
-.idea/
-.env
+*.tsbuildinfo
