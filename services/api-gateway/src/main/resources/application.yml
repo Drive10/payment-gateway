@@ -20,7 +20,7 @@ spring:
       password: ${REDIS_PASSWORD:redis_dev_pass}
       timeout: 2000ms
       ssl:
-        enabled: false
+        enabled: true
       lettuce:
         pool:
           max-active: 50
@@ -83,7 +83,7 @@ spring:
             - Path=/api/v1/payments/**,/api/v1/admin/**
           filters:
             - StripPrefix=2
-            - AddRequestHeader=X-Gateway-Token,${vault:gateway-internal-secret}
+            - AddRequestHeader=X-Gateway-Token,${GATEWAY_INTERNAL_SECRET:}
             - name: RequestRateLimiter
               args:
                 redis-rate-limiter.replenishRate: 100
@@ -155,7 +155,7 @@ spring:
 vault:
   uri: ${VAULT_ADDR:http://vault:8200}
   token: ${VAULT_TOKEN:dev-root-token}
-  enabled: ${VAULT_ENABLED:true}
+  enabled: ${VAULT_ENABLED:false}
 
 management:
   endpoints:
@@ -165,15 +165,15 @@ management:
   metrics:
     export:
       prometheus:
-        enabled: false
+        enabled: true
 
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
-    enabled: false
+    enabled: true
   api-docs:
     path: /v3/api-docs
-    enabled: false
+    enabled: true
 
 logging:
   level:
@@ -181,7 +181,7 @@ logging:
 
 application:
   gateway:
-    internal-secret: ${vault:gateway-internal-secret}
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:}
 
   services:
     auth: ${AUTH_SERVICE_URL:http://localhost:8081}
@@ -193,4 +193,4 @@ application:
 
 security:
   jwt:
-    secret-key: ${vault:jwt-secret}
+    secret-key: ${JWT_SECRET:}

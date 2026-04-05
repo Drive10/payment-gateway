@@ -1,9 +1,8 @@
 -- ============================================================
 -- Payment Gateway PostgreSQL Initialization Script
 -- ============================================================
--- SECURITY: This script uses environment variables for passwords
--- Passwords should be passed via POSTGRES_PASSWORD environment variable
--- For production, use Vault or external secrets manager
+-- SECURITY: For production, use Vault or external secrets manager
+-- Development password: devpassword (change via environment in production)
 -- ============================================================
 
 -- Create databases
@@ -14,43 +13,39 @@ SELECT 'CREATE DATABASE notificationdb' WHERE NOT EXISTS (SELECT FROM pg_databas
 SELECT 'CREATE DATABASE simulatordb' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'simulatordb')\gexec;
 SELECT 'CREATE DATABASE analyticsdb' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'analyticsdb')\gexec;
 
--- Create roles with secure passwords (override via environment in production)
+-- Create roles with known passwords for development
+-- In production, override via environment or use Vault
 DO $$
-DECLARE
-    v_master_password TEXT := COALESCE(current_setting('app.master_password', true), gen_random_uuid()::text);
-    v_db_password TEXT := COALESCE(current_setting('app.db_password', true), gen_random_uuid()::text);
 BEGIN
     -- Master user (for admin access)
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'payment') THEN
-        EXECUTE format('CREATE ROLE payment WITH LOGIN PASSWORD %L', v_master_password);
+        CREATE ROLE payment WITH LOGIN PASSWORD 'devpassword';
     END IF;
     
     -- Service-specific users
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'auth') THEN
-        EXECUTE format('CREATE ROLE auth WITH LOGIN PASSWORD %L', v_db_password);
+        CREATE ROLE auth WITH LOGIN PASSWORD 'devpassword';
     END IF;
     
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ord') THEN
-        EXECUTE format('CREATE ROLE ord WITH LOGIN PASSWORD %L', v_db_password);
+        CREATE ROLE ord WITH LOGIN PASSWORD 'devpassword';
     END IF;
     
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'paymentuser') THEN
-        EXECUTE format('CREATE ROLE paymentuser WITH LOGIN PASSWORD %L', v_db_password);
+        CREATE ROLE paymentuser WITH LOGIN PASSWORD 'devpassword';
     END IF;
     
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'notification') THEN
-        EXECUTE format('CREATE ROLE notification WITH LOGIN PASSWORD %L', v_db_password);
+        CREATE ROLE notification WITH LOGIN PASSWORD 'devpassword';
     END IF;
     
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'simulator') THEN
-        EXECUTE format('CREATE ROLE simulator WITH LOGIN PASSWORD %L', v_db_password);
+        CREATE ROLE simulator WITH LOGIN PASSWORD 'devpassword';
     END IF;
     
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'analytics') THEN
-        EXECUTE format('CREATE ROLE analytics WITH LOGIN PASSWORD %L', v_db_password);
+        CREATE ROLE analytics WITH LOGIN PASSWORD 'devpassword';
     END IF;
-    
-    RAISE NOTICE 'Database users created. Use Vault or environment variables for password management in production.';
 END
 $$;
 
@@ -71,12 +66,18 @@ ALTER DATABASE simulatordb OWNER TO simulator;
 ALTER DATABASE analyticsdb OWNER TO analytics;
 
 -- Grant schema access
-GRANT ALL PRIVILEGES ON SCHEMA public TO auth;
-GRANT ALL PRIVILEGES ON SCHEMA public TO ord;
-GRANT ALL PRIVILEGES ON SCHEMA public TO notification;
-GRANT ALL PRIVILEGES ON SCHEMA public TO simulator;
-GRANT ALL PRIVILEGES ON SCHEMA public TO analytics;
-GRANT ALL PRIVILEGES ON SCHEMA public TO paymentuser;
+GRANT ALL ON SCHEMA public TO auth;
+GRANT ALL ON SCHEMA public TO ord;
+GRANT ALL ON SCHEMA public TO paymentuser;
+GRANT ALL ON SCHEMA public TO notification;
+GRANT ALL ON SCHEMA public TO simulator;
+GRANT ALL ON SCHEMA public TO analytics;
+GRANT ALL ON SCHEMA public TO payment;
 
--- SECURITY: Require password authentication for all connections
-ALTER ROLE payment WITH PASSWORD VALID UNTIL '2099-01-01';
+-- PostgreSQL 15+ requires explicit schema grants
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO auth;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ord;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO paymentuser;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO notification;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO simulator;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO analytics;

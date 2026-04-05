@@ -7,11 +7,9 @@ spring:
     name: notification-service
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
-  config:
-    import: optional:vault://secret/notification-service
-  
+
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:notificationdb}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:notificationdb}
     username: ${DB_USERNAME:payment}
     password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
@@ -38,7 +36,7 @@ spring:
         order_updates: true
 
   flyway:
-    enabled: false
+    enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
 
@@ -61,7 +59,7 @@ vault:
   token: ${VAULT_TOKEN:}
   enabled: ${VAULT_ENABLED:false}
   ssl:
-    enabled: false
+    enabled: true
   kv:
     enabled: true
 

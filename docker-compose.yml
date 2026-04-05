@@ -28,16 +28,8 @@ services:
     command: >
       redis-server
       --requirepass ${REDIS_PASSWORD}
-      --tls-port 6380
-      --port 0
-      --tls-cert-file /etc/redis/tls/redis.crt
-      --tls-key-file /etc/redis/tls/redis.key
-      --tls-ca-cert-file /etc/redis/tls/ca.crt
       --save ""
       --appendonly no
-    volumes:
-      - redis_data:/data
-      - ./docker/redis/tls:/etc/redis/tls:ro
     ports:
       - "6379:6379"
       - "6380:6380"
@@ -64,7 +56,7 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:SSL,INTERNAL:SSL,EXTERNAL:SSL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1

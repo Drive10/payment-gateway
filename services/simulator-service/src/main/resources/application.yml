@@ -7,11 +7,9 @@ spring:
     name: simulator-service
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
-  config:
-    import: optional:vault://secret/simulator-service
-  
+
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:simulatordb}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:simulatordb}
     username: ${DB_USERNAME:simulator}
     password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
@@ -37,7 +35,7 @@ spring:
         order_updates: true
 
   flyway:
-    enabled: false
+    enabled: true
     baseline-on-migrate: true
     out-of-order: true
 
@@ -46,7 +44,7 @@ vault:
   token: ${VAULT_TOKEN:}
   enabled: ${VAULT_ENABLED:false}
   ssl:
-    enabled: false
+    enabled: true
   kv:
     enabled: true
 

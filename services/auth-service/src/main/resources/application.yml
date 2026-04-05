@@ -9,13 +9,10 @@ spring:
     name: auth-service
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:docker}
-  config:
-    import: vault://secret/auth-service
-
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:authdb}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:authdb}
     username: ${DB_USERNAME:auth}
-    password: ${DB_PASSWORD:${vault:db-password:}}
+    password: ${DB_PASSWORD:}
     hikari:
       maximum-pool-size: 15
       minimum-idle: 3
@@ -26,7 +23,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     open-in-view: false
     properties:
@@ -39,7 +36,7 @@ spring:
         order_updates: true
 
   flyway:
-    enabled: false
+    enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
 
@@ -51,14 +48,14 @@ spring:
 vault:
   uri: ${VAULT_ADDR:http://vault:8200}
   token: ${VAULT_TOKEN:}
-  enabled: ${VAULT_ENABLED:true}
+  enabled: ${VAULT_ENABLED:false}
   ssl:
-    enabled: false
+    enabled: true
   kv:
     enabled: true
 
 jwt:
-  secret: ${JWT_SECRET:${vault:jwt-secret:}}
+  secret: ${JWT_SECRET:}
   expiration: 86400000
   refresh-expiration: 604800000
 
@@ -93,7 +90,7 @@ management:
   metrics:
     export:
       prometheus:
-        enabled: false
+        enabled: true
 
 logging:
   level:

@@ -11,11 +11,9 @@ spring:
     name: payment-service
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
-  config:
-    import: optional:vault://secret/payment-service
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:paymentdb}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:paymentdb}
     username: ${DB_USERNAME:payment}
     password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
@@ -87,7 +85,7 @@ spring:
       spec: maximumSize=1000,expireAfterWrite=300s
 
   flyway:
-    enabled: false
+    enabled: true
     baseline-on-migrate: true
     out-of-order: true
 
@@ -96,7 +94,7 @@ vault:
   token: ${VAULT_TOKEN:}
   enabled: ${VAULT_ENABLED:false}
   ssl:
-    enabled: false
+    enabled: true
   kv:
     enabled: true
 
@@ -108,11 +106,11 @@ management:
   metrics:
     export:
       prometheus:
-        enabled: false
+        enabled: true
 
 application:
   gateway-trust:
-    enabled: false
+    enabled: true
     internal-secret: ${INTERNAL_SECRET:}
 
   security:
@@ -151,7 +149,7 @@ application:
     relay-delay-ms: 2000
 
   reconciliation:
-    enabled: false
+    enabled: true
     batch-size: 50
     lookback: PT6H
 

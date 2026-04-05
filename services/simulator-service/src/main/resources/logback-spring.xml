@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <property name="LOG_PATH" value="${LOG_PATH:-/app/logs}"/>
+    <property name="LOG_PATH" value="${LOG_PATH:-./logs}"/>
     <property name="LOG_FILE" value="${LOG_FILE:-application}"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

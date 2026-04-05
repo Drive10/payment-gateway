@@ -13,7 +13,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/docker-compose.dev.yml"
-ENV_FILE="$REPO_ROOT/.env.example"
+ENV_FILE="$REPO_ROOT/.env"
 LOG_DIR="/tmp/payflow"
 PID_DIR="$LOG_DIR/pids"
 
@@ -35,8 +35,9 @@ declare -a BACKEND_SERVICES=(
   "simulator-service|8086"
 )
 
-INFRA_SERVICES=("postgres" "redis" "kafka")
-DOCKER_SERVICES=("api-gateway" "dashboard" "frontend")
+INFRA_SERVICES=("postgres" "redis" "kafka" "vault")
+DOCKER_SERVICES=()
+ALL_BACKEND_SERVICES=()
 
 # Helpers
 log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -100,14 +101,22 @@ infra_stop() {
 # ── Docker Services ────────────────────────────────────────────
 docker_start() {
   require_docker
-  log_info "Starting Docker services (API Gateway, Dashboard, Frontend)..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d "${DOCKER_SERVICES[@]}"
+  if [ ${#DOCKER_SERVICES[@]} -eq 0 ]; then
+    log_info "No Docker services to start"
+    return 0
+  fi
+  log_info "Starting Docker services..."
+  if [ ${#DOCKER_SERVICES[@]} -gt 0 ]; then
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d "${DOCKER_SERVICES[@]}"
+  fi
   log_ok "Docker services started"
 }
 
 docker_stop() {
   log_info "Stopping Docker services..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" stop "${DOCKER_SERVICES[@]}" 2>/dev/null || true
+  if [ ${#DOCKER_SERVICES[@]} -gt 0 ]; then
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" stop "${DOCKER_SERVICES[@]}" 2>/dev/null || true
+  fi
   log_ok "Docker services stopped"
 }
 
@@ -118,9 +127,48 @@ setup_env() {
   export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}"
   export REDIS_HOST="${REDIS_HOST:-localhost}"
   export REDIS_PORT="${REDIS_PORT:-6379}"
+  export REDIS_PASSWORD="${REDIS_PASSWORD:-devpassword}"
   export VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
   export VAULT_TOKEN="${VAULT_TOKEN:-dev-root-token}"
-  export VAULT_ENABLED="${VAULT_ENABLED:-true}"
+  export VAULT_ENABLED="${VAULT_ENABLED:-false}"
+  export GATEWAY_INTERNAL_SECRET="${GATEWAY_INTERNAL_SECRET:-dev-gateway-secret}"
+  export JWT_SECRET="${JWT_SECRET:-dev-jwt-secret-key-must-be-at-least-256-bits-long-for-hs512}"
+}
+
+get_db_config() {
+  local service=$1
+  case "$service" in
+    auth-service)
+      export DB_NAME="authdb"
+      export DB_USERNAME="auth"
+      export DB_PASSWORD="devpassword"
+      ;;
+    order-service)
+      export DB_NAME="orderdb"
+      export DB_USERNAME="payment"
+      export DB_PASSWORD="devpassword"
+      ;;
+    payment-service)
+      export DB_NAME="paymentdb"
+      export DB_USERNAME="paymentuser"
+      export DB_PASSWORD="devpassword"
+      ;;
+    notification-service)
+      export DB_NAME="notificationdb"
+      export DB_USERNAME="notification"
+      export DB_PASSWORD="devpassword"
+      ;;
+    analytics-service)
+      export DB_NAME="analyticsdb"
+      export DB_USERNAME="analytics"
+      export DB_PASSWORD="devpassword"
+      ;;
+    simulator-service)
+      export DB_NAME="simulatordb"
+      export DB_USERNAME="simulator"
+      export DB_PASSWORD="devpassword"
+      ;;
+  esac
 }
 
 start_local_service() {
@@ -150,7 +198,7 @@ start_local_service() {
 
   log_info "Starting $service on port $port..."
   nohup mvn -pl "services/$service" spring-boot:run -q -DskipTests \
-    -Dspring-boot.run.jvmArguments="-DDB_HOST=$DB_HOST -DDB_PORT=$DB_PORT -DKAFKA_BOOTSTRAP_SERVERS=$KAFKA_BOOTSTRAP_SERVERS -DREDIS_HOST=$REDIS_HOST -DREDIS_PORT=$REDIS_PORT -DVAULT_ADDR=$VAULT_ADDR -DVAULT_TOKEN=$VAULT_TOKEN -DVAULT_ENABLED=$VAULT_ENABLED" \
+    -Dspring-boot.run.jvmArguments="-DDB_HOST=$DB_HOST -DDB_PORT=$DB_PORT -DDB_NAME=${DB_NAME:-} -DDB_USERNAME=${DB_USERNAME:-} -DDB_PASSWORD=${DB_PASSWORD:-} -DKAFKA_BOOTSTRAP_SERVERS=$KAFKA_BOOTSTRAP_SERVERS -DREDIS_HOST=$REDIS_HOST -DREDIS_PORT=$REDIS_PORT -DREDIS_PASSWORD=${REDIS_PASSWORD:-} -DVAULT_ADDR=$VAULT_ADDR -DVAULT_TOKEN=$VAULT_TOKEN -DVAULT_ENABLED=$VAULT_ENABLED -DJWT_SECRET=${JWT_SECRET:-dev-jwt-secret}" \
     > "$log_file" 2>&1 &
 
   echo $! > "$pid_file"
@@ -179,6 +227,7 @@ services_start_local() {
   log_info "Starting all backend services locally (hot reload enabled)..."
   for entry in "${BACKEND_SERVICES[@]}"; do
     IFS='|' read -r service port <<< "$entry"
+    get_db_config "$service"
     start_local_service "$service" "$port"
     sleep 2
   done
@@ -245,13 +294,17 @@ show_status() {
   done
 
   log_header "Docker Services"
-  for svc in "${DOCKER_SERVICES[@]}"; do
-    if docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps "$svc" 2>/dev/null | grep -qi "up"; then
-      echo -e "  ${GREEN}✅${NC} $svc"
-    else
-      echo -e "  ${RED}❌${NC} $svc"
-    fi
-  done
+  if [ ${#DOCKER_SERVICES[@]} -gt 0 ]; then
+    for svc in "${DOCKER_SERVICES[@]}"; do
+      if docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps "$svc" 2>/dev/null | grep -qi "up"; then
+        echo -e "  ${GREEN}✅${NC} $svc"
+      else
+        echo -e "  ${RED}❌${NC} $svc"
+      fi
+    done
+  else
+    echo -e "  ${YELLOW}(none configured)${NC}"
+  fi
 
   log_header "Web Applications"
   for app in dashboard frontend; do
