@@ -247,10 +247,12 @@ services:
       VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
       VAULT_ADDR: http://vault:8200
       VAULT_ENABLED: "true"
+      JWT_SECRET: ${JWT_SECRET}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: paymentdb
       DB_USERNAME: ${PAYMENT_DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD_PAYMENT}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       REDIS_HOST: redis
       REDIS_PORT: 6379
