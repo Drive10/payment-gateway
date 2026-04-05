@@ -18,6 +18,8 @@
         <module>services/notification-service</module>
         <module>services/simulator-service</module>
         <module>services/analytics-service</module>
+        <module>services/graphql-gateway</module>
+        <module>services/search-service</module>
     </modules>
 
     <properties>
