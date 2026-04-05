@@ -28,7 +28,7 @@
         <spring-cloud.version>2023.0.2</spring-cloud.version>
         <opentelemetry.version>2.5.0</opentelemetry.version>
         <lombok.version>1.18.36</lombok.version>
-        <springdoc.version>2.6.0</springdoc.version>
+        <springdoc.version>3.0.2</springdoc.version>
         <jjwt.version>0.12.6</jjwt.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <testcontainers.version>1.20.2</testcontainers.version>
