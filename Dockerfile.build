@@ -1,24 +1,31 @@
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /workspace
 
-# Layer 1: Parent pom (rarely changes)
-COPY pom.xml .
-RUN mvn -q -N install -DskipTests -Dmaven.repo.local=/root/.m2/repository
+# Use Maven cache volume for dependencies
+ARG MavenCacheDir=/root/.m2/repository
 
-# Layer 2: Common lib (changes occasionally)
+# Layer 1: Parent pom
+COPY pom.xml .
+RUN --mount=type=cache,target=$MavenCacheDir \
+    mvn -q -N install -DskipTests -Dmaven.repo.local=$MavenCacheDir
+
+# Layer 2: Common lib
 COPY libs/common/pom.xml libs/common/
 COPY libs/common/src libs/common/src
-RUN mvn -q -N -f libs/common/pom.xml install -DskipTests -Dmaven.repo.local=/root/.m2/repository
+RUN --mount=type=cache,target=$MavenCacheDir \
+    mvn -q -N -f libs/common/pom.xml install -DskipTests -Dmaven.repo.local=$MavenCacheDir
 
-# Layer 3: All service poms for Maven reactor resolution (changes when deps change)
+# Layer 3: Service dependencies
 ARG SERVICE_PATH
 COPY services/ ./services/
 
-# Download dependencies for the target service and its dependencies
-RUN mvn -q dependency:go-offline -pl ${SERVICE_PATH} -am -Dmaven.repo.local=/root/.m2/repository
+# Download all dependencies (cached)
+RUN --mount=type=cache,target=$MavenCacheDir \
+    mvn -q dependency:go-offline -pl ${SERVICE_PATH} -am -Dmaven.repo.local=$MavenCacheDir || true
 
-# Layer 4: Source code (changes frequently — this is the hot path)
-RUN mvn -q -DskipTests -pl ${SERVICE_PATH} -am package -Dmaven.repo.local=/root/.m2/repository
+# Layer 4: Build service (cached)
+RUN --mount=type=cache,target=$MavenCacheDir \
+    mvn -q -DskipTests -pl ${SERVICE_PATH} -am package -Dmaven.repo.local=$MavenCacheDir
 
 # Extract JAR
 RUN set -eux; \
@@ -34,19 +41,16 @@ WORKDIR /app
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Create logs directory
 RUN mkdir -p /app/logs && chown -R appuser:appgroup /app/logs
 
 COPY --from=build --chown=appuser:appgroup /workspace/app.jar /app/app.jar
 
 USER appuser
 
-# JVM options for production:
-# -XX:+UseZGC: Use ZGC for low latency
-# -XX:MaxRAMPercentage: Optimize memory usage
-# -XX:+HeapDumpOnOutOfMemoryError: Generate heap dump on OOM
-# -Djava.security.egd=file:/dev/./urandom: Faster random generation
-# Log4j2 configuration for rolling logs
 ENV JAVA_OPTS="-XX:+UseZGC -XX:MaxRAMPercentage=75.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/logs/heapdump.hprof -Djava.security.egd=file:/dev/./urandom"
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1
 
 ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar /app/app.jar"]

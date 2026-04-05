@@ -421,6 +421,9 @@ services:
         condition: service_healthy
     networks:
       - fintech-network
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -435,13 +438,6 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-    extra_hosts:
-      - "auth-service:host-gateway"
-      - "order-service:host-gateway"
-      - "payment-service:host-gateway"
-      - "notification-service:host-gateway"
-      - "simulator-service:host-gateway"
-      - "analytics-service:host-gateway"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80 || exit 1"]
