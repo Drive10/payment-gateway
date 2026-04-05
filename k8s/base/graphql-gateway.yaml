@@ -1,0 +1,65 @@
+# Kubernetes Deployment - GraphQL Gateway
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graphql-gateway
+  labels:
+    app: graphql-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: graphql-gateway
+  template:
+    metadata:
+      labels:
+        app: graphql-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8087"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+        - name: graphql-gateway
+          image: payment-gateway/graphql-gateway:latest
+          ports:
+            - containerPort: 8087
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            - name: PAYMENT_SERVICE_URL
+              value: "http://payment-service:8082"
+            - name: ORDER_SERVICE_URL
+              value: "http://order-service:8083"
+            - name: AUTH_SERVICE_URL
+              value: "http://auth-service:8081"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8087
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8087
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: graphql-gateway
+spec:
+  selector:
+    app: graphql-gateway
+  ports:
+    - port: 8087
+      targetPort: 8087
