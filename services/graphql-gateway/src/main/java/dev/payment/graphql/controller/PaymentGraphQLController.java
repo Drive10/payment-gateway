@@ -134,7 +134,7 @@ public class PaymentGraphQLController {
                     .block();
             
             if (response != null) {
-                return new ArrayList<>(response);
+                return new ArrayList<Map<String, Object>>((java.util.Collection<Map<String, Object>>) (java.util.Collection<?>) response);
             }
         } catch (Exception e) {
             log.warn("Analytics service unavailable: {}", e.getMessage());
@@ -157,7 +157,7 @@ public class PaymentGraphQLController {
                     .block();
             
             if (response != null) {
-                return new ArrayList<>(response);
+                return new ArrayList<Map<String, Object>>((java.util.Collection<Map<String, Object>>) (java.util.Collection<?>) response);
             }
         } catch (Exception e) {
             log.warn("Simulator service unavailable: {}", e.getMessage());
@@ -251,7 +251,7 @@ public class PaymentGraphQLController {
                     .block();
             
             if (response != null) {
-                return new ArrayList<>(response);
+                return new ArrayList<Map<String, Object>>((java.util.Collection<Map<String, Object>>) (java.util.Collection<?>) response);
             }
         } catch (Exception e) {
             log.warn("Order service unavailable: {}", e.getMessage());

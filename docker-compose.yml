@@ -110,6 +110,30 @@ services:
     networks:
       - fintech-network
 
+  mongodb:
+    profiles: ["services", "infra"]
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-mongouser}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-mongopassword}
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.50"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fintech-network
+
   auth-service:
     profiles: ["services"]
     depends_on:
@@ -437,6 +461,7 @@ volumes:
   vault_data:
   kafka_data:
   redis_data:
+  mongodb_data:
 
 networks:
   fintech-network:

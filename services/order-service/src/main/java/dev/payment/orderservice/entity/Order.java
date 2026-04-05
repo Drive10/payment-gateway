@@ -1,36 +1,37 @@
 package dev.payment.orderservice.entity;
-import lombok.Data;
 
+import dev.payment.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
-import java.util.Map;
 import java.util.UUID;
 
 @Entity
 @Table(name = "orders")
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class Order extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
+
+    @Column(name = "external_reference", length = 100)
+    private String externalReference;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
     @Column(nullable = false, length = 3)
     private String currency;
+
+    @Column(name = "customer_email", length = 255)
+    private String customerEmail;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
@@ -39,62 +40,9 @@ public class Order extends BaseEntity {
     @Column(length = 255)
     private String description;
 
+    @Column(name = "merchant_id", length = 100)
+    private String merchantId;
+
     @Column(columnDefinition = "TEXT")
     private String metadata;
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public UUID getUserId() {
-        return userId;
-    }
-
-    public void setUserId(UUID userId) {
-        this.userId = userId;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
-    public String getCurrency() {
-        return currency;
-    }
-
-    public void setCurrency(String currency) {
-        this.currency = currency;
-    }
-
-    public OrderStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(OrderStatus status) {
-        this.status = status;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getMetadata() {
-        return metadata;
-    }
-
-    public void setMetadata(String metadata) {
-        this.metadata = metadata;
-    }
 }
