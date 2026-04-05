@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:devpassword}
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
+          predicates:
+            - Path=/api/v1/auth/**
+
+        - id: order-service
+          uri: ${ORDER_SERVICE_URL:http://order-service:8082}
+          predicates:
+            - Path=/api/v1/orders/**
+
+        - id: payment-service
+          uri: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+          predicates:
+            - Path=/api/v1/payments/**
+            - Path=/api/v1/admin/**
+
+        - id: notification-service
+          uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8084}
+          predicates:
+            - Path=/api/v1/notifications/**
+
+        - id: simulator-service
+          uri: ${SIMULATOR_SERVICE_URL:http://simulator-service:8086}
+          predicates:
+            - Path=/api/v1/simulator/**
+
+        - id: analytics-service
+          uri: ${ANALYTICS_SERVICE_URL:http://analytics-service:8089}
+          predicates:
+            - Path=/api/v1/analytics/**
+
+      httpclient:
+        connect-timeout: 10000
+        response-timeout: 30s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG

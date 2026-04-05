@@ -256,6 +256,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       SIMULATOR_SERVICE_URL: http://simulator-service:8086
       SIMULATOR_BASE_URL: http://simulator-service:8086
       ORDER_SERVICE_URL: http://order-service:8082
@@ -302,9 +303,11 @@ services:
       DB_PORT: 5432
       DB_NAME: notificationdb
       DB_USERNAME: ${NOTIFICATION_DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD_NOTIFICATION}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "8084:8084"
     restart: unless-stopped
@@ -346,6 +349,7 @@ services:
       DB_PORT: 5432
       DB_NAME: simulatordb
       DB_USERNAME: ${SIMULATOR_DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD_SIMULATOR}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
       - "8086:8086"
@@ -388,7 +392,11 @@ services:
       DB_PORT: 5432
       DB_NAME: analyticsdb
       DB_USERNAME: ${ANALYTICS_DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD_ANALYTICS}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "8089:8089"
     restart: unless-stopped
@@ -409,14 +417,10 @@ services:
   api-gateway:
     profiles: ["services"]
     depends_on:
-      vault:
-        condition: service_started
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - fintech-network
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -427,21 +431,17 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8080
-      VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
-      VAULT_ADDR: http://vault:8200
-      VAULT_ENABLED: "true"
+      JWT_SECRET: ${JWT_SECRET}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:8081}
-      ORDER_SERVICE_URL: ${ORDER_SERVICE_URL:-http://order-service:8082}
-      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8083}
-  # Frontend - build only, static files served by reverse-proxy
-  frontend:
-    profiles: ["services"]
-    build:
-      context: ./web/frontend
-    ports:
-      - "3000:80"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    extra_hosts:
+      - "auth-service:host-gateway"
+      - "order-service:host-gateway"
+      - "payment-service:host-gateway"
+      - "notification-service:host-gateway"
+      - "simulator-service:host-gateway"
+      - "analytics-service:host-gateway"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80 || exit 1"]
@@ -453,10 +453,6 @@ services:
         limits:
           memory: 256m
           cpus: "0.25"
-    networks:
-      - fintech-network
-
-
 
 volumes:
   postgres_data:
