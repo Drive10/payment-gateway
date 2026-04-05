@@ -13,32 +13,44 @@ spring:
           uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
           predicates:
             - Path=/api/v1/auth/**
+          filters:
+            - StripPrefix=1
 
         - id: order-service
           uri: ${ORDER_SERVICE_URL:http://order-service:8082}
           predicates:
             - Path=/api/v1/orders/**
+          filters:
+            - StripPrefix=1
 
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
           predicates:
             - Path=/api/v1/payments/**
             - Path=/api/v1/admin/**
+          filters:
+            - StripPrefix=1
 
         - id: notification-service
           uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8084}
           predicates:
             - Path=/api/v1/notifications/**
+          filters:
+            - StripPrefix=1
 
         - id: simulator-service
           uri: ${SIMULATOR_SERVICE_URL:http://simulator-service:8086}
           predicates:
             - Path=/api/v1/simulator/**
+          filters:
+            - StripPrefix=1
 
         - id: analytics-service
           uri: ${ANALYTICS_SERVICE_URL:http://analytics-service:8089}
           predicates:
             - Path=/api/v1/analytics/**
+          filters:
+            - StripPrefix=1
 
       httpclient:
         connect-timeout: 10000

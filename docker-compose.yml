@@ -153,9 +153,10 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8081
+      JWT_SECRET: ${JWT_SECRET}
       VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
       VAULT_ADDR: http://vault:8200
-      VAULT_ENABLED: "true"
+      VAULT_ENABLED: "false"
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: authdb
