@@ -54,11 +54,11 @@ export class ProcessingPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.processingIndicator = page.getByText(/processing|please wait/i).or(page.locator('[data-testid="processing"]'));
+    this.processingIndicator = page.getByRole('heading', { name: /processing/i }).or(page.locator('[data-testid="processing"]'));
   }
 
   async expectVisible() {
-    await expect(this.processingIndicator).toBeVisible();
+    await expect(this.processingIndicator.first()).toBeVisible();
   }
 }
 
@@ -71,14 +71,14 @@ export class SuccessPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.successMessage = page.getByText(/success|payment successful|completed/i);
-    this.transactionId = page.getByText(/transaction|reference|id/i);
+    this.successMessage = page.getByRole('heading', { name: /success/i }).or(page.getByText(/payment successful/i).first());
+    this.transactionId = page.getByText(/transaction|reference|id/i).first();
     this.receiptButton = page.getByRole('button', { name: /receipt|download/i });
     this.doneButton = page.getByRole('button', { name: /done|back to home/i });
   }
 
   async expectVisible() {
-    await expect(this.successMessage).toBeVisible();
+    await expect(this.successMessage.first()).toBeVisible();
     await expect(this.transactionId).toBeVisible();
   }
 
@@ -111,14 +111,14 @@ export class FailurePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.failureMessage = page.getByText(/failed|payment failed|error/i);
-    this.errorCode = page.getByText(/error code|reason/i);
+    this.failureMessage = page.getByRole('heading', { name: /failed/i }).or(page.getByText(/payment failed/i).first());
+    this.errorCode = page.getByText(/error code|reason/i).first();
     this.retryButton = page.getByRole('button', { name: /retry|try again/i });
     this.homeButton = page.getByRole('button', { name: /home|back to home/i });
   }
 
   async expectVisible() {
-    await expect(this.failureMessage).toBeVisible();
+    await expect(this.failureMessage.first()).toBeVisible();
   }
 
   async retry() {

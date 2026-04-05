@@ -144,6 +144,9 @@ export default function Checkout() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <header>
+          <h1 className="sr-only">PayFlow Checkout</h1>
+        </header>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -180,7 +183,7 @@ export default function Checkout() {
               <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-500">Order Summary</p>
+                    <h1 className="text-sm font-medium text-slate-500">Order Summary</h1>
                     <h2 className="mt-1 text-2xl font-bold text-slate-900">Checkout</h2>
                   </div>
                   <div className="text-right">
