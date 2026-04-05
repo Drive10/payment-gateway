@@ -1,10 +1,6 @@
 pipeline {
     agent any
     
-    parameters {
-        choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'prod'], description: 'Select deployment environment')
-    }
-    
     environment {
         REGISTRY = 'ghcr.io'
         GITHUB_ORG = 'Drive10'
@@ -19,48 +15,6 @@ pipeline {
     }
     
     stages {
-        stage('Initialize') {
-            steps {
-                script {
-                    def envConfig = [
-                        dev: [
-                            profile: 'dev',
-                            vaultEnabled: 'true',
-                            vaultAddr: 'http://vault:8200',
-                            vaultToken: 'dev-root-token'
-                        ],
-                        staging: [
-                            profile: 'staging',
-                            vaultEnabled: 'true',
-                            vaultAddr: '${VAULT_ADDR}',
-                            vaultToken: '${VAULT_TOKEN}'
-                        ],
-                        prod: [
-                            profile: 'prod',
-                            vaultEnabled: 'true',
-                            vaultAddr: '${VAULT_ADDR}',
-                            vaultToken: '${VAULT_TOKEN}'
-                        ]
-                    ]
-                    
-                    env.SELECTED_ENV = params.ENVIRONMENT
-                    env.SPRING_PROFILE = envConfig[params.ENVIRONMENT].profile
-                    env.VAULT_ENABLED = envConfig[params.ENVIRONMENT].vaultEnabled
-                    env.VAULT_ADDR = envConfig[params.ENVIRONMENT].vaultAddr
-                    env.VAULT_TOKEN = envConfig[params.ENVIRONMENT].vaultToken
-                    env.IMAGE_TAG = "${env.BUILD_NUMBER}-${params.ENVIRONMENT}"
-                    env.FULL_REGISTRY_URL = "${REGISTRY}/${GITHUB_ORG}/${IMAGE_NAME}"
-                    
-                    echo "=== Pipeline Started ==="
-                    echo "Environment: ${params.ENVIRONMENT}"
-                    echo "Spring Profile: ${env.SPRING_PROFILE}"
-                    echo "Vault Enabled: ${env.VAULT_ENABLED}"
-                    echo "Vault Addr: ${env.VAULT_ADDR}"
-                    echo "Image Tag: ${env.IMAGE_TAG}"
-                }
-            }
-        }
-        
         stage('Checkout') {
             steps {
                 echo "Checking out source code..."
@@ -111,8 +65,8 @@ pipeline {
                         echo "Building $service..."
                         docker build \
                             --build-arg SERVICE_PATH=services/$service \
-                            -t ${FULL_REGISTRY_URL}/${service}:${IMAGE_TAG} \
-                            -t ${FULL_REGISTRY_URL}/${service}:${SELECTED_ENV}-latest \
+                            -t ${FULL_REGISTRY_URL}/${service}:${BUILD_NUMBER} \
+                            -t ${FULL_REGISTRY_URL}/${service}:latest \
                             -f Dockerfile.build .
                     done
                 '''
@@ -136,8 +90,8 @@ pipeline {
                     services="api-gateway auth-service order-service payment-service notification-service analytics-service simulator-service"
                     for service in $services; do
                         echo "Pushing $service..."
-                        docker push ${FULL_REGISTRY_URL}/${service}:${IMAGE_TAG}
-                        docker push ${FULL_REGISTRY_URL}/${service}:${SELECTED_ENV}-latest
+                        docker push ${FULL_REGISTRY_URL}/${service}:${BUILD_NUMBER}
+                        docker push ${FULL_REGISTRY_URL}/${service}:latest
                     done
                 '''
             }
@@ -145,26 +99,23 @@ pipeline {
         
         stage('Deploy') {
             steps {
-                echo "Deploying to ${params.ENVIRONMENT} environment..."
+                echo "Deploying..."
                 sh '''
                     echo "=========================================="
-                    echo "Deploying to ${SELECTED_ENV}"
+                    echo "Deploying payment-gateway"
                     echo "=========================================="
-                    echo "Spring Profile: ${SPRING_PROFILE}"
-                    echo "Vault Enabled: ${VAULT_ENABLED}"
-                    echo "Vault Addr: ${VAULT_ADDR}"
-                    echo "Vault Token: ${VAULT_TOKEN}"
-                    echo "Namespace: payment-gateway-${SELECTED_ENV}"
-                    echo "Images: ${FULL_REGISTRY_URL}/*:${IMAGE_TAG}"
+                    echo "Vault Enabled: true"
+                    echo "Namespace: payment-gateway"
+                    echo "Images: ${FULL_REGISTRY_URL}/*:${BUILD_NUMBER}"
                     
                     # For local dev testing:
-                    # export VAULT_TOKEN=${VAULT_TOKEN}
+                    # export VAULT_TOKEN=dev-root-token
                     # docker compose -f docker-compose.yml up -d
                     
                     # For Podman/K3s deployment:
-                    # kubectl set image deployment/payment-gateway *=${FULL_REGISTRY_URL}/payment-service:${IMAGE_TAG}
+                    # kubectl set image deployment/payment-gateway *=${FULL_REGISTRY_URL}/payment-service:${BUILD_NUMBER}
                     
-                    echo "✓ ${SELECTED_ENV} deployment initiated"
+                    echo "✓ Deployment initiated"
                 '''
             }
         }
@@ -173,11 +124,11 @@ pipeline {
             steps {
                 echo "Running health checks..."
                 sh '''
-                    echo "Checking ${SELECTED_ENV} services..."
+                    echo "Checking services..."
                     # curl -sf http://localhost:8081/actuator/health || exit 1
                     # curl -sf http://localhost:8082/actuator/health || exit 1
                     # curl -sf http://localhost:8083/actuator/health || exit 1
-                    echo "✓ ${SELECTED_ENV} health checks passed"
+                    echo "✓ Health checks passed"
                 '''
             }
         }
@@ -188,17 +139,14 @@ pipeline {
             echo "=========================================="
             echo "✅ Pipeline completed successfully!"
             echo "=========================================="
-            echo "Environment: ${params.ENVIRONMENT}"
-            echo "Spring Profile: ${env.SPRING_PROFILE}"
-            echo "Build: ${env.BUILD_NUMBER}"
-            echo "Images: ${env.FULL_REGISTRY_URL}/*:${env.IMAGE_TAG}"
+            echo "Build: ${BUILD_NUMBER}"
+            echo "Images: ${FULL_REGISTRY_URL}/*:${BUILD_NUMBER}"
         }
         failure {
             echo "=========================================="
             echo "❌ Pipeline failed!"
             echo "=========================================="
-            echo "Environment: ${params.ENVIRONMENT}"
-            echo "Check logs: ${env.BUILD_URL}console"
+            echo "Check logs: ${BUILD_URL}console"
         }
         always {
             sh 'docker logout ${REGISTRY} 2>/dev/null || true'

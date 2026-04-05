@@ -96,15 +96,9 @@ docker exec -it payment-gateway-auth-service-1 sh
 ## Environment-Specific Configurations
 
 ### Development
-- Use `SPRING_PROFILES_ACTIVE=dev`
-- Vault disabled or local instance
+- Use `SPRING_PROFILES_ACTIVE=dev` or `SPRING_PROFILES_ACTIVE=docker`
+- Vault disabled for local dev or local Vault instance
 - Debug logging enabled
-
-### Production
-- Use `SPRING_PROFILES_ACTIVE=prod`
-- Vault required
-- TLS enabled for all connections
-- Rate limiting enforced
 
 ## API Security
 

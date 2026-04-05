@@ -10,15 +10,6 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to deploy'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - dev
 
 env:
   REGISTRY: ghcr.io
@@ -192,9 +183,9 @@ jobs:
           fi
 
   # ============================================================
-  # JOB 4: DEPLOY STAGING - Push to staging on main branch
+  # JOB 4: DEPLOY - Push to registry on main/dev branches
   # ============================================================
-  deploy-staging:
+  deploy:
     runs-on: ubuntu-latest
     needs: [build, test, security-scan]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/dev/'))
@@ -223,78 +214,27 @@ jobs:
           echo "BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
           echo "SHA=${{ github.sha }}" >> $GITHUB_ENV
       
-      - name: Build and push staging images
+      - name: Build and push images
         run: |
           services="api-gateway auth-service order-service payment-service notification-service simulator-service analytics-service"
           
           for service in $services; do
-            echo "Building and pushing $service to staging..."
+            echo "Building and pushing $service..."
             
             # Build
             docker build \
               --build-arg SERVICE_PATH=services/$service \
-              -t ${{ env.REGISTRY }}/${{ github.repository }}/$service:staging-latest \
-              -t ${{ env.REGISTRY }}/${{ github.repository }}/$service:staging-${{ github.sha }} \
+              -t ${{ env.REGISTRY }}/${{ github.repository }}/$service:latest \
+              -t ${{ env.REGISTRY }}/${{ github.repository }}/$service:${{ github.sha }} \
               -f Dockerfile.build .
             
             # Push
-            docker push ${{ env.REGISTRY }}/${{ github.repository }}/$service:staging-latest
-            docker push ${{ env.REGISTRY }}/${{ github.repository }}/$service:staging-${{ github.sha }}
+            docker push ${{ env.REGISTRY }}/${{ github.repository }}/$service:latest
+            docker push ${{ env.REGISTRY }}/${{ github.repository }}/$service:${{ github.sha }}
             
-            echo "✓ $service pushed to staging"
+            echo "✓ $service pushed"
           done
       
-      - name: Notify Jenkins (optional)
+      - name: Notify deployment system
         run: |
-          echo "Staging images pushed successfully!"
-          echo "Triggering Jenkins staging pipeline..."
-          # curl -X POST http://localhost:8080/job/payment-gateway-staging/build?token=staging
-          echo "Jenkins staging pipeline would be triggered here"
-
-  # ============================================================
-  # JOB 5: DEPLOY DEV - Push to dev on dev branch
-  # ============================================================
-  deploy-dev:
-    runs-on: ubuntu-latest
-    needs: [build, test, security-scan]
-    if: startsWith(github.ref, 'refs/heads/dev/')
-    permissions:
-      contents: read
-      packages: write
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Build and push dev images
-        run: |
-          services="api-gateway auth-service order-service payment-service notification-service simulator-service analytics-service"
-          
-          for service in $services; do
-            echo "Building and pushing $service to dev..."
-            
-            # Build
-            docker build \
-              --build-arg SERVICE_PATH=services/$service \
-              -t ${{ env.REGISTRY }}/${{ github.repository }}/$service:dev-latest \
-              -t ${{ env.REGISTRY }}/${{ github.repository }}/$service:dev-${{ github.sha }} \
-              -f Dockerfile.build .
-            
-            # Push
-            docker push ${{ env.REGISTRY }}/${{ github.repository }}/$service:dev-latest
-            docker push ${{ env.REGISTRY }}/${{ github.repository }}/$service:dev-${{ github.sha }}
-            
-            echo "✓ $service pushed to dev"
-          done
+          echo "Images pushed successfully!"

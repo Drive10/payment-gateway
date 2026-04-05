@@ -471,7 +471,7 @@ networks:
     name: fintech-network
 
 ---
-# Observability Stack (production-ready)
+# Observability Stack
 services:
   prometheus:
     profiles: ["observability"]

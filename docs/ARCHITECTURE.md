@@ -41,7 +41,7 @@ flowchart LR
 - `auth-service`: API client lifecycle and access audit
 - `risk-service`: risk scoring and decisioning
 - `settlement-service`: settlement batches and payout instructions
-- `simulator-service`: test and production-like provider simulation
+- `simulator-service`: test provider simulation
 
 ## Payment and Refund Flow
 

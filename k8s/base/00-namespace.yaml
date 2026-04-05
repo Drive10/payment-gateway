@@ -4,4 +4,3 @@ metadata:
   name: payment-gateway
   labels:
     name: payment-gateway
-    environment: production

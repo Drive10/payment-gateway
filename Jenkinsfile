@@ -86,7 +86,7 @@ pipeline {
             when {
                 anyOf {
                     branch 'main'
-                    branch 'develop'
+                    branch pattern: 'dev/.*', comparator: 'REGEXP'
                 }
             }
             steps {

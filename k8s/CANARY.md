@@ -1,5 +1,4 @@
 # Kubernetes Canary Deployment Configuration
-# Usage: kubectl apply -k k8s/overlays/production/
 
 ## Canary Strategy
 
@@ -32,7 +31,7 @@ kubectl apply -f k8s/base/canary-virtualservice.yaml
 ### Step 3: Monitor Metrics
 ```bash
 # Check canary metrics
-kubectl get canary payment-gateway -n payflow-production
+kubectl get canary payment-gateway -n payment-gateway
 ```
 
 ### Step 4: Promote or Rollback
