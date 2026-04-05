@@ -5,54 +5,90 @@ server:
 spring:
   application:
     name: notification-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    import: optional:vault://secret/notification-service
+  
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/notificationdb
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:notificationdb}
     username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 25000
+      pool-name: NotificationHikariPool
+
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${DDL_AUTO:validate}
     open-in-view: false
     show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
+    baseline-on-migrate: true
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      spring.json.trusted.packages: "*"
+      spring.kafka.listener.simple.auto-startup: true
     consumer:
       group-id: notification-service
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: dev.payment.notificationservice.*,dev.payment.common.*
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+vault:
+  uri: ${VAULT_ADDR:http://localhost:8200}
+  token: ${VAULT_TOKEN:}
+  enabled: ${VAULT_ENABLED:false}
+  ssl:
+    enabled: false
+  kv:
+    enabled: true
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized
 
 logging:
   level:
     root: INFO
-    dev.payment.notificationservice: DEBUG
+    dev.payment: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
 
-# Service URLs
+# Application-specific configuration
 application:
-  payment-service:
-    url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+  kafka:
+    topic:
+      notification-events: notification.events
+      webhook-updates: webhook.updates
+  email:
+    from-address: noreply@payment-gateway.local
+    from-name: Payment Gateway
+  sms:
+    provider: SIMULATOR

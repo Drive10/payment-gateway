@@ -13,7 +13,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/docker-compose.dev.yml"
-ENV_FILE="$REPO_ROOT/.env.dev"
+ENV_FILE="$REPO_ROOT/.env.example"
 LOG_DIR="/tmp/payflow"
 PID_DIR="$LOG_DIR/pids"
 
@@ -118,9 +118,9 @@ setup_env() {
   export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}"
   export REDIS_HOST="${REDIS_HOST:-localhost}"
   export REDIS_PORT="${REDIS_PORT:-6379}"
-  export REDIS_PASSWORD="${REDIS_PASSWORD:-redis-dev-pass}"
-  export JWT_SECRET_B64="${JWT_SECRET_B64:-$(openssl rand -base64 64 | tr -d '\n')}"
-  export GATEWAY_INTERNAL_SECRET="${GATEWAY_INTERNAL_SECRET:-dev-gateway-internal-secret}"
+  export VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
+  export VAULT_TOKEN="${VAULT_TOKEN:-dev-root-token}"
+  export VAULT_ENABLED="${VAULT_ENABLED:-true}"
 }
 
 start_local_service() {
@@ -150,7 +150,7 @@ start_local_service() {
 
   log_info "Starting $service on port $port..."
   nohup mvn -pl "services/$service" spring-boot:run -q -DskipTests \
-    -Dspring-boot.run.jvmArguments="-DDB_HOST=$DB_HOST -DDB_PORT=$DB_PORT -DDB_USERNAME=payment -DDB_PASSWORD=pg-dev-password -DKAFKA_BOOTSTRAP_SERVERS=$KAFKA_BOOTSTRAP_SERVERS -DREDIS_HOST=$REDIS_HOST -DREDIS_PORT=$REDIS_PORT -DREDIS_PASSWORD=$REDIS_PASSWORD -DJWT_SECRET_B64=$JWT_SECRET_B64 -DGATEWAY_INTERNAL_SECRET=$GATEWAY_INTERNAL_SECRET" \
+    -Dspring-boot.run.jvmArguments="-DDB_HOST=$DB_HOST -DDB_PORT=$DB_PORT -DKAFKA_BOOTSTRAP_SERVERS=$KAFKA_BOOTSTRAP_SERVERS -DREDIS_HOST=$REDIS_HOST -DREDIS_PORT=$REDIS_PORT -DVAULT_ADDR=$VAULT_ADDR -DVAULT_TOKEN=$VAULT_TOKEN -DVAULT_ENABLED=$VAULT_ENABLED" \
     > "$log_file" 2>&1 &
 
   echo $! > "$pid_file"

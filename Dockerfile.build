@@ -31,7 +31,22 @@ RUN set -eux; \
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
+
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Create logs directory
+RUN mkdir -p /app/logs && chown -R appuser:appgroup /app/logs
+
 COPY --from=build --chown=appuser:appgroup /workspace/app.jar /app/app.jar
+
 USER appuser
-ENTRYPOINT ["java","-XX:+UseZGC","-XX:MaxRAMPercentage=75.0","-XX:+HeapDumpOnOutOfMemoryError","-Djava.security.egd=file:/dev/./urandom","-jar","/app/app.jar"]
+
+# JVM options for production:
+# -XX:+UseZGC: Use ZGC for low latency
+# -XX:MaxRAMPercentage: Optimize memory usage
+# -XX:+HeapDumpOnOutOfMemoryError: Generate heap dump on OOM
+# -Djava.security.egd=file:/dev/./urandom: Faster random generation
+# Log4j2 configuration for rolling logs
+ENV JAVA_OPTS="-XX:+UseZGC -XX:MaxRAMPercentage=75.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/logs/heapdump.hprof -Djava.security.egd=file:/dev/./urandom"
+
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar /app/app.jar"]

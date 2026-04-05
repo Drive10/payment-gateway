@@ -6,37 +6,47 @@ services:
     environment:
       VAULT_ADDR: http://vault:8200
       VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
-      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN:-dev-root-token}
-      VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
+      VAULT_DEV_ROOT_TOKEN_ID: dev-root-token
     ports:
       - "8200:8200"
     cap_add:
       - IPC_LOCK
+    command: server -dev
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8200/v1/sys/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 256m
+          memory: 512m
           cpus: "0.50"
     networks:
       - fintech-network
   redis:
     profiles: ["services", "infra", "observability"]
     image: redis:7-alpine
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--save", "", "--appendonly", "no"]
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --tls-port 6380
+      --port 0
+      --tls-cert-file /etc/redis/tls/redis.crt
+      --tls-key-file /etc/redis/tls/redis.key
+      --tls-ca-cert-file /etc/redis/tls/ca.crt
+      --save ""
+      --appendonly no
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/tls:/etc/redis/tls:ro
     ports:
       - "6379:6379"
+      - "6380:6380"
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 256m
-          cpus: "0.25"
+          memory: 512m
+          cpus: "0.50"
     networks:
       - fintech-network
     healthcheck:
@@ -54,7 +64,7 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:SSL,INTERNAL:SSL,EXTERNAL:SSL
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -64,6 +74,8 @@ services:
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
       KAFKA_DLQ_TOPIC_SUFFIX: .DLQ
       KAFKA_TRANSACTION_MAX_TIMEOUT_MS: 900000
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     ports:
       - "9092:9092"
     restart: unless-stopped
@@ -109,6 +121,8 @@ services:
   auth-service:
     profiles: ["services"]
     depends_on:
+      vault:
+        condition: service_started
       postgres:
         condition: service_healthy
       kafka:
@@ -123,17 +137,17 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8081
-      JWT_SECRET_B64: ${JWT_SECRET_B64}
-      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
+      VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
+      VAULT_ADDR: http://vault:8200
+      VAULT_ENABLED: "true"
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: authdb
       DB_USERNAME: ${AUTH_DB_USER}
-      DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD_AUTH:-authpass}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "8081:8081"
     restart: unless-stopped
@@ -154,6 +168,8 @@ services:
   order-service:
     profiles: ["services"]
     depends_on:
+      vault:
+        condition: service_started
       postgres:
         condition: service_healthy
       kafka:
@@ -166,12 +182,14 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8082
-      JWT_SECRET_B64: ${JWT_SECRET_B64}
-      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
-      POSTGRES_HOST: postgres
-      ORDER_DB: orderdb
-      ORDER_DB_USER: ${ORDER_DB_USER}
-      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD}
+      VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
+      VAULT_ADDR: http://vault:8200
+      VAULT_ENABLED: "true"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: orderdb
+      DB_USERNAME: payment
+      DB_PASSWORD: ${DB_PASSWORD_ORDER:-paymentpass}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8083}
     ports:
@@ -194,6 +212,8 @@ services:
   payment-service:
     profiles: ["services"]
     depends_on:
+      vault:
+        condition: service_started
       postgres:
         condition: service_healthy
       kafka:
@@ -208,27 +228,21 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8083
-      JWT_SECRET_B64: ${JWT_SECRET_B64}
-      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
+      VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
+      VAULT_ADDR: http://vault:8200
+      VAULT_ENABLED: "true"
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: paymentdb
       DB_USERNAME: ${PAYMENT_DB_USER}
-      DB_PASSWORD: ${PAYMENT_DB_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
       SIMULATOR_SERVICE_URL: http://simulator-service:8086
       SIMULATOR_BASE_URL: http://simulator-service:8086
       ORDER_SERVICE_URL: http://order-service:8082
       NOTIFICATION_SERVICE_URL: http://notification-service:8084
       JAVA_OPTS: "-XX:+UseZGC -XX:MaxRAMPercentage=75.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom"
-      SPRING_APPLICATION_JSON: '{"application":{"gateway-trust":{"enabled":false}}}'
-      APPLICATION_GATEWAY_TRUST_ENABLED: "false"
-      FLYWAY_IGNORE_MISSING_MIGRATIONS: "true"
-      FLYWAY_IGNORE_PENDING_MIGRATIONS: "true"
-      FLYWAY_OUT_OF_ORDER: "true"
     ports:
       - "8083:8083"
     restart: unless-stopped
@@ -249,6 +263,8 @@ services:
   notification-service:
     profiles: ["services"]
     depends_on:
+      vault:
+        condition: service_started
       postgres:
         condition: service_healthy
       kafka:
@@ -261,15 +277,16 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8084
+      VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
+      VAULT_ADDR: http://vault:8200
+      VAULT_ENABLED: "true"
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: notificationdb
       DB_USERNAME: ${NOTIFICATION_DB_USER}
-      DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - "8084:8084"
     restart: unless-stopped
@@ -290,6 +307,8 @@ services:
   simulator-service:
     profiles: ["services"]
     depends_on:
+      vault:
+        condition: service_started
       postgres:
         condition: service_healthy
       kafka:
@@ -302,11 +321,13 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8086
+      VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
+      VAULT_ADDR: http://vault:8200
+      VAULT_ENABLED: "true"
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: simulatordb
       DB_USERNAME: ${SIMULATOR_DB_USER}
-      DB_PASSWORD: ${SIMULATOR_DB_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
       - "8086:8086"
@@ -328,6 +349,8 @@ services:
   analytics-service:
     profiles: ["services"]
     depends_on:
+      vault:
+        condition: service_started
       postgres:
         condition: service_healthy
       kafka:
@@ -340,11 +363,13 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8089
+      VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
+      VAULT_ADDR: http://vault:8200
+      VAULT_ENABLED: "true"
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: analyticsdb
       DB_USERNAME: ${ANALYTICS_DB_USER}
-      DB_PASSWORD: ${ANALYTICS_DB_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
       - "8089:8089"
@@ -366,6 +391,8 @@ services:
   api-gateway:
     profiles: ["services"]
     depends_on:
+      vault:
+        condition: service_started
       postgres:
         condition: service_healthy
       kafka:
@@ -377,14 +404,16 @@ services:
       dockerfile: Dockerfile.build
       args:
         SERVICE_PATH: services/api-gateway
+    ports:
+      - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8080
-      JWT_SECRET_B64: ${JWT_SECRET_B64}
-      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
+      VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
+      VAULT_ADDR: http://vault:8200
+      VAULT_ENABLED: "true"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:8081}
       ORDER_SERVICE_URL: ${ORDER_SERVICE_URL:-http://order-service:8082}
       PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://payment-service:8083}
@@ -433,6 +462,9 @@ volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  vault_data:
+  kafka_data:
+  redis_data:
 
 networks:
   fintech-network:

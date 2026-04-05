@@ -29,8 +29,8 @@ echo -e "${GREEN}✓ All dependencies found${NC}"
 echo ""
 
 # Start infrastructure
-echo -e "${CYAN}Starting infrastructure (Postgres, Redis, Kafka, Gateway, Frontends)...${NC}"
-docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
+echo -e "${CYAN}Starting infrastructure (Postgres, Redis, Kafka, Vault, Gateway, Frontends)...${NC}"
+docker compose -f docker-compose.dev.yml up -d
 
 echo ""
 echo -e "${GREEN}✓ Infrastructure started!${NC}"

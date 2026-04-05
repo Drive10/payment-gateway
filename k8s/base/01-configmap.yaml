@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-gateway-config
+  namespace: payment-gateway
+data:
+  SPRING_PROFILES_ACTIVE: "docker"
+  DB_HOST: "postgres.payment-gateway.svc.cluster.local"
+  DB_PORT: "5432"
+  REDIS_HOST: "redis.payment-gateway.svc.cluster.local"
+  REDIS_PORT: "6379"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.payment-gateway.svc.cluster.local:9092"
+  VAULT_ADDR: "http://vault.payment-gateway.svc.cluster.local:8200"
+  VAULT_ENABLED: "true"
+  AUTH_SERVICE_URL: "http://auth-service.payment-gateway.svc.cluster.local:8081"
+  ORDER_SERVICE_URL: "http://order-service.payment-gateway.svc.cluster.local:8082"
+  PAYMENT_SERVICE_URL: "http://payment-service.payment-gateway.svc.cluster.local:8083"
+  NOTIFICATION_SERVICE_URL: "http://notification-service.payment-gateway.svc.cluster.local:8084"
+  SIMULATOR_SERVICE_URL: "http://simulator-service.payment-gateway.svc.cluster.local:8086"
+  ANALYTICS_SERVICE_URL: "http://analytics-service.payment-gateway.svc.cluster.local:8085"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-gateway-secrets
+  namespace: payment-gateway
+type: Opaque
+stringData:
+  VAULT_TOKEN: ""
+  JWT_SECRET_KEY: ""
+  GATEWAY_INTERNAL_SECRET: ""
+  DB_PASSWORD: ""
+  REDIS_PASSWORD: ""

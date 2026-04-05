@@ -1,0 +1,20 @@
+spring:
+  config:
+    import: vault://secret/simulator-service
+
+vault:
+  enabled: true
+  token: ${VAULT_TOKEN:}
+
+datasource:
+  password: ${DB_PASSWORD:${vault:db-password:}}
+
+webhook:
+  service-url: ${WEBHOOK_SERVICE_URL:http://notification-service:8084}
+  simulator-success-rate: ${SIMULATOR_SUCCESS_RATE:90}
+  simulator-mode: ${SIMULATOR_MODE:random}
+
+logging:
+  level:
+    root: INFO
+    dev.payment: INFO

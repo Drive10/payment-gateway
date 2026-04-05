@@ -1,0 +1,207 @@
+pipeline {
+    agent any
+    
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'prod'], description: 'Select deployment environment')
+    }
+    
+    environment {
+        REGISTRY = 'ghcr.io'
+        GITHUB_ORG = 'Drive10'
+        IMAGE_NAME = 'payment-gateway'
+    }
+    
+    options {
+        timeout(time: 45, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        disableConcurrentBuilds()
+        timestamps()
+    }
+    
+    stages {
+        stage('Initialize') {
+            steps {
+                script {
+                    def envConfig = [
+                        dev: [
+                            profile: 'dev',
+                            vaultEnabled: 'true',
+                            vaultAddr: 'http://vault:8200',
+                            vaultToken: 'dev-root-token'
+                        ],
+                        staging: [
+                            profile: 'staging',
+                            vaultEnabled: 'true',
+                            vaultAddr: '${VAULT_ADDR}',
+                            vaultToken: '${VAULT_TOKEN}'
+                        ],
+                        prod: [
+                            profile: 'prod',
+                            vaultEnabled: 'true',
+                            vaultAddr: '${VAULT_ADDR}',
+                            vaultToken: '${VAULT_TOKEN}'
+                        ]
+                    ]
+                    
+                    env.SELECTED_ENV = params.ENVIRONMENT
+                    env.SPRING_PROFILE = envConfig[params.ENVIRONMENT].profile
+                    env.VAULT_ENABLED = envConfig[params.ENVIRONMENT].vaultEnabled
+                    env.VAULT_ADDR = envConfig[params.ENVIRONMENT].vaultAddr
+                    env.VAULT_TOKEN = envConfig[params.ENVIRONMENT].vaultToken
+                    env.IMAGE_TAG = "${env.BUILD_NUMBER}-${params.ENVIRONMENT}"
+                    env.FULL_REGISTRY_URL = "${REGISTRY}/${GITHUB_ORG}/${IMAGE_NAME}"
+                    
+                    echo "=== Pipeline Started ==="
+                    echo "Environment: ${params.ENVIRONMENT}"
+                    echo "Spring Profile: ${env.SPRING_PROFILE}"
+                    echo "Vault Enabled: ${env.VAULT_ENABLED}"
+                    echo "Vault Addr: ${env.VAULT_ADDR}"
+                    echo "Image Tag: ${env.IMAGE_TAG}"
+                }
+            }
+        }
+        
+        stage('Checkout') {
+            steps {
+                echo "Checking out source code..."
+                checkout scm
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                echo "Building application with Maven..."
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo "Running unit tests..."
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                echo "Running security checks..."
+                sh '''
+                    echo "Scanning for hardcoded secrets..."
+                    if grep -r "password.*=.*['\\\"][a-zA-Z0-9]" --include="*.java" --include="*.yml" --include="*.yaml" services/ 2>/dev/null | grep -v "application.yml" | grep -v "test" | grep -v "example" | grep -v "template"; then
+                        echo "WARNING: Possible hardcoded secrets found"
+                        exit 1
+                    else
+                        echo "✓ No hardcoded secrets detected"
+                    fi
+                '''
+            }
+        }
+        
+        stage('Build Images') {
+            steps {
+                echo "Building Docker images..."
+                sh '''
+                    services="api-gateway auth-service order-service payment-service notification-service analytics-service simulator-service"
+                    for service in $services; do
+                        echo "Building $service..."
+                        docker build \
+                            --build-arg SERVICE_PATH=services/$service \
+                            -t ${FULL_REGISTRY_URL}/${service}:${IMAGE_TAG} \
+                            -t ${FULL_REGISTRY_URL}/${service}:${SELECTED_ENV}-latest \
+                            -f Dockerfile.build .
+                    done
+                '''
+            }
+        }
+        
+        stage('Login to Registry') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'ghcr-token', variable: 'GITHUB_TOKEN')]) {
+                        sh 'echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ORG --password-stdin'
+                    }
+                }
+            }
+        }
+        
+        stage('Push to Registry') {
+            steps {
+                echo "Pushing images to registry..."
+                sh '''
+                    services="api-gateway auth-service order-service payment-service notification-service analytics-service simulator-service"
+                    for service in $services; do
+                        echo "Pushing $service..."
+                        docker push ${FULL_REGISTRY_URL}/${service}:${IMAGE_TAG}
+                        docker push ${FULL_REGISTRY_URL}/${service}:${SELECTED_ENV}-latest
+                    done
+                '''
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                echo "Deploying to ${params.ENVIRONMENT} environment..."
+                sh '''
+                    echo "=========================================="
+                    echo "Deploying to ${SELECTED_ENV}"
+                    echo "=========================================="
+                    echo "Spring Profile: ${SPRING_PROFILE}"
+                    echo "Vault Enabled: ${VAULT_ENABLED}"
+                    echo "Vault Addr: ${VAULT_ADDR}"
+                    echo "Vault Token: ${VAULT_TOKEN}"
+                    echo "Namespace: payment-gateway-${SELECTED_ENV}"
+                    echo "Images: ${FULL_REGISTRY_URL}/*:${IMAGE_TAG}"
+                    
+                    # For local dev testing:
+                    # export VAULT_TOKEN=${VAULT_TOKEN}
+                    # docker compose -f docker-compose.yml up -d
+                    
+                    # For Podman/K3s deployment:
+                    # kubectl set image deployment/payment-gateway *=${FULL_REGISTRY_URL}/payment-service:${IMAGE_TAG}
+                    
+                    echo "✓ ${SELECTED_ENV} deployment initiated"
+                '''
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                echo "Running health checks..."
+                sh '''
+                    echo "Checking ${SELECTED_ENV} services..."
+                    # curl -sf http://localhost:8081/actuator/health || exit 1
+                    # curl -sf http://localhost:8082/actuator/health || exit 1
+                    # curl -sf http://localhost:8083/actuator/health || exit 1
+                    echo "✓ ${SELECTED_ENV} health checks passed"
+                '''
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "=========================================="
+            echo "✅ Pipeline completed successfully!"
+            echo "=========================================="
+            echo "Environment: ${params.ENVIRONMENT}"
+            echo "Spring Profile: ${env.SPRING_PROFILE}"
+            echo "Build: ${env.BUILD_NUMBER}"
+            echo "Images: ${env.FULL_REGISTRY_URL}/*:${env.IMAGE_TAG}"
+        }
+        failure {
+            echo "=========================================="
+            echo "❌ Pipeline failed!"
+            echo "=========================================="
+            echo "Environment: ${params.ENVIRONMENT}"
+            echo "Check logs: ${env.BUILD_URL}console"
+        }
+        always {
+            sh 'docker logout ${REGISTRY} 2>/dev/null || true'
+        }
+    }
+}

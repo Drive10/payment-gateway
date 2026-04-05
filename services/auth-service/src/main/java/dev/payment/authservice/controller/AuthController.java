@@ -4,6 +4,7 @@ import dev.payment.authservice.dto.AuthResponse;
 import dev.payment.authservice.dto.LoginRequest;
 import dev.payment.authservice.dto.RegisterRequest;
 import dev.payment.authservice.service.AuthService;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,18 +26,21 @@ public class AuthController {
     }
 
     @PostMapping("/register")
+    @RateLimiter(name = "register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")
+    @RateLimiter(name = "login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh")
+    @RateLimiter(name = "refresh")
     public ResponseEntity<AuthResponse> refresh(@RequestBody Map<String, String> request) {
         String refreshToken = request.get("refreshToken");
         if (refreshToken == null || refreshToken.isBlank()) {

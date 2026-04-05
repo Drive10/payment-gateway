@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payment-gateway
+  labels:
+    name: payment-gateway
+    environment: production

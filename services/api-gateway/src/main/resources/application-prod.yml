@@ -1,0 +1,24 @@
+spring:
+  config:
+    import: vault://secret/api-gateway
+
+vault:
+  enabled: true
+  token: ${VAULT_TOKEN:}
+
+  data:
+    redis:
+      password: ${REDIS_PASSWORD:${vault:redis-password:}}
+
+application:
+  gateway:
+    internal-secret: ${INTERNAL_SECRET:${vault:gateway-internal-secret:}}
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET:${vault:jwt-secret:}}
+
+logging:
+  level:
+    root: WARN
+    org.springframework.cloud.gateway: WARN

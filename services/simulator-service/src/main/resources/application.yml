@@ -1,33 +1,54 @@
 server:
   port: ${SERVER_PORT:8086}
+  shutdown: graceful
 
 spring:
-  profiles:
-    default: local
-
   application:
     name: simulator-service
-
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    import: optional:vault://secret/simulator-service
+  
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:simulatordb}
     username: ${DB_USERNAME:simulator}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 25000
+      pool-name: SimulatorHikariPool
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${DDL_AUTO:validate}
     open-in-view: false
     properties:
       hibernate:
-        format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
 
   flyway:
-    enabled: true
+    enabled: false
     baseline-on-migrate: true
     out-of-order: true
-    ignore-missing-migrations: true
-    ignore-pending-migrations: true
+
+vault:
+  uri: ${VAULT_ADDR:http://localhost:8200}
+  token: ${VAULT_TOKEN:}
+  enabled: ${VAULT_ENABLED:false}
+  ssl:
+    enabled: false
+  kv:
+    enabled: true
 
 webhook:
   service-url: ${WEBHOOK_SERVICE_URL:http://localhost:8085}
@@ -38,8 +59,14 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
 
 logging:
   level:
     root: INFO
+    dev.payment: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG

@@ -57,3 +57,4 @@ loki_data/
 *~
 coverage/.env.dev
 .idea/
+.env

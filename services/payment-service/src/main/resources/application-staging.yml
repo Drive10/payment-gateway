@@ -1,0 +1,31 @@
+spring:
+  config:
+    import: vault://secret/payment-service
+
+vault:
+  enabled: true
+  token: ${VAULT_TOKEN:}
+
+datasource:
+  password: ${DB_PASSWORD:${vault:db-password:}}
+
+spring.data.redis:
+  password: ${REDIS_PASSWORD:${vault:redis-password:}}
+
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET:${vault:jwt-secret:}}
+  gateway-trust:
+    internal-secret: ${INTERNAL_SECRET:${vault:internal-secret:}}
+  webhook:
+    service-url: ${WEBHOOK_SERVICE_URL:http://notification-service:8084}
+  order:
+    service-url: ${ORDER_SERVICE_URL:http://order-service:8082}
+  auth:
+    service-url: ${AUTH_SERVICE_URL:http://auth-service:8081}
+
+logging:
+  level:
+    root: INFO
+    dev.payment: DEBUG

@@ -126,19 +126,19 @@ endif
 
 dev-start: ## Start infra + gateway + frontends in Docker (services run locally)
 	@echo "$(CYAN)Starting hybrid dev environment...$(NC)"
-	docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
+	docker compose -f docker-compose.dev.yml --env-file .env.example up -d
 	@echo "$(GREEN)Infra ready. Run services with: make dev-run SERVICE=payment-service$(NC)"
 
 dev-stop: ## Stop hybrid dev environment
 	@echo "$(CYAN)Stopping hybrid dev environment...$(NC)"
-	docker compose -f docker-compose.dev.yml --env-file .env.dev down
+	docker compose -f docker-compose.dev.yml --env-file .env.example down
 	@echo "$(GREEN)Stopped.$(NC)"
 
 dev-restart: dev-stop dev-start ## Restart hybrid dev environment
 
 dev-status: ## Show hybrid dev status
 	@echo "$(CYAN)Docker services:$(NC)"
-	@docker compose -f docker-compose.dev.yml --env-file .env.dev ps 2>/dev/null || echo "  Not running"
+	@docker compose -f docker-compose.dev.yml --env-file .env.example ps 2>/dev/null || echo "  Not running"
 	@echo ""
 	@echo "$(CYAN)Local services (Maven):$(NC)"
 		port=$$(echo $$svc | sed 's/-service//; s/auth/8081/; s/order/8082/; s/payment/8083/; s/notification/8084/; s/webhook/8085/; s/simulator/8086/; s/settlement/8087/; s/risk/8088/; s/analytics/8089/; s/merchant/8090/; s/dispute/8091/'); \
@@ -163,6 +163,9 @@ dev-run: ## Run a service locally (usage: make dev-run SERVICE=payment-service)
 		KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
 		REDIS_HOST=localhost \
 		REDIS_PORT=6379 \
+		VAULT_ADDR=http://localhost:8200 \
+		VAULT_TOKEN=dev-root-token \
+		VAULT_ENABLED=true \
 		AUTH_SERVICE_URL=http://localhost:8081 \
 		ORDER_SERVICE_URL=http://localhost:8082 \
 		PAYMENT_SERVICE_URL=http://localhost:8083 \
@@ -174,9 +177,6 @@ dev-run: ## Run a service locally (usage: make dev-run SERVICE=payment-service)
 		ANALYTICS_SERVICE_URL=http://localhost:8089 \
 		MERCHANT_SERVICE_URL=http://localhost:8090 \
 		DISPUTE_SERVICE_URL=http://localhost:8091 \
-		REDIS_PASSWORD=$${REDIS_PASSWORD} \
-		JWT_SECRET_B64=$${JWT_SECRET_B64} \
-		GATEWAY_INTERNAL_SECRET=$${GATEWAY_INTERNAL_SECRET} \
 		mvn spring-boot:run
 
 dev-build: ## Build a specific service (usage: make dev-build SERVICE=payment-service)
@@ -189,16 +189,16 @@ dev-build: ## Build a specific service (usage: make dev-build SERVICE=payment-se
 	@echo "$(GREEN)$(SERVICE) built!$(NC)"
 
 dev-logs: ## Follow logs for a Docker service (usage: make dev-logs SERVICE=api-gateway)
-	docker compose -f docker-compose.dev.yml --env-file .env.dev logs -f $(SERVICE)
+	docker compose -f docker-compose.dev.yml --env-file .env.example logs -f $(SERVICE)
 
 dev-db: ## Open psql to a database (usage: make dev-db DB=paymentdb)
-	docker compose -f docker-compose.dev.yml --env-file .env.dev exec postgres psql -U payment -d $(DB)
+	docker compose -f docker-compose.dev.yml --env-file .env.example exec postgres psql -U payment -d $(DB)
 
 dev-redis: ## Open redis-cli
-	docker compose -f docker-compose.dev.yml --env-file .env.dev exec redis redis-cli -a redis-dev-pass
+	docker compose -f docker-compose.dev.yml --env-file .env.example exec redis redis-cli
 
 dev-kafka-topics: ## List Kafka topics
-	docker compose -f docker-compose.dev.yml --env-file .env.dev exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+	docker compose -f docker-compose.dev.yml --env-file .env.example exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 
 dev-seed: ## Seed demo data (users, orders, payments)
 	@./dev/seed.sh

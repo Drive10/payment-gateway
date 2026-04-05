@@ -1,22 +1,21 @@
-.git
-.gitignore
-.idea
-.vscode
-.run
+# Build artifacts (keep pom.xml and libs for docker build)
 **/target
 **/build
 **/node_modules
 **/.DS_Store
 **/*.log
+
+# Environment files
 docker-data
 .env
 .env.*
+
+# Documentation and scripts
 *.md
 !README.md
 docs/
 scripts/
 Makefile
-pom.xml
 nginx/
 docker/
 k8s/
@@ -25,9 +24,14 @@ infrastructure/
 litmus/
 config-repo/
 .devcontainer/
+
+# IDE
 .mvn/
 mvnw
 mvnw.cmd
 .project
 .settings
 *.iml
+
+# Git
+.git

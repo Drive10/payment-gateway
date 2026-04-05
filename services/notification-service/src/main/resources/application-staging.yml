@@ -1,0 +1,23 @@
+spring:
+  config:
+    import: vault://secret/notification-service
+
+vault:
+  enabled: true
+  token: ${VAULT_TOKEN:}
+
+datasource:
+  password: ${DB_PASSWORD:${vault:db-password:}}
+
+application:
+  email:
+    from-address: noreply@payment-gateway.local
+    from-name: Payment Gateway
+  sms:
+    provider: SIMULATOR
+
+logging:
+  level:
+    root: INFO
+    dev.payment: INFO
+    org.springframework.security: INFO

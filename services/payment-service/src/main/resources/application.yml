@@ -9,11 +9,15 @@ server:
 spring:
   application:
     name: payment-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    import: optional:vault://secret/payment-service
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:paymentdb}
     username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 30
@@ -49,10 +53,11 @@ spring:
         order_updates: true
         generate_statistics: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${DDL_AUTO:validate}
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -82,11 +87,18 @@ spring:
       spec: maximumSize=1000,expireAfterWrite=300s
 
   flyway:
-    enabled: true
+    enabled: false
     baseline-on-migrate: true
     out-of-order: true
-    ignore-missing-migrations: true
-    ignore-pending-migrations: true
+
+vault:
+  uri: ${VAULT_ADDR:http://localhost:8200}
+  token: ${VAULT_TOKEN:}
+  enabled: ${VAULT_ENABLED:false}
+  ssl:
+    enabled: false
+  kv:
+    enabled: true
 
 management:
   endpoints:
@@ -96,16 +108,16 @@ management:
   metrics:
     export:
       prometheus:
-        enabled: true
+        enabled: false
 
 application:
   gateway-trust:
-    enabled: true
-    internal-secret: ${GATEWAY_INTERNAL_SECRET}
+    enabled: false
+    internal-secret: ${INTERNAL_SECRET:}
 
   security:
     jwt:
-      secret-key: ${JWT_SECRET_B64}
+      secret-key: ${JWT_SECRET:}
       expiration-seconds: 3600
       refresh-expiration-seconds: 2592000
 
@@ -139,7 +151,7 @@ application:
     relay-delay-ms: 2000
 
   reconciliation:
-    enabled: true
+    enabled: false
     batch-size: 50
     lookback: PT6H
 
@@ -150,6 +162,7 @@ application:
 logging:
   level:
     root: INFO
+    dev.payment: DEBUG
 
 resilience4j:
   retry:

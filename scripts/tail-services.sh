@@ -31,7 +31,7 @@ fi
 # Check if services are running in Docker
 RUNNING_SERVICES=()
 for svc in "${SERVICES[@]}"; do
-    if docker compose -f docker-compose.dev.yml --env-file .env.dev ps --format json 2>/dev/null | grep -q "\"$svc\""; then
+    if docker compose -f docker-compose.dev.yml --env-file .env.example ps --format json 2>/dev/null | grep -q "\"$svc\""; then
         RUNNING_SERVICES+=("$svc")
     fi
 done
@@ -64,7 +64,7 @@ for i in "${!RUNNING_SERVICES[@]}"; do
     svc="${RUNNING_SERVICES[$i]}"
     color="${COLORS[$((i % ${#COLORS[@]}))]}"
     
-    docker compose -f docker-compose.dev.yml --env-file .env.dev logs -f --tail=50 "$svc" 2>&1 | \
+    docker compose -f docker-compose.dev.yml --env-file .env.example logs -f --tail=50 "$svc" 2>&1 | \
         while IFS= read -r line; do
             echo -e "${color}[$svc]${NC} $line"
         done &

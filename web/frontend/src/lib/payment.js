@@ -8,7 +8,7 @@ export const TRANSACTION_MODES = {
   TEST: "TEST",
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
 // Optional merchantId override for environments where the order API doesn't return it
 const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
 const DEFAULT_ERROR_MESSAGE =
@@ -108,7 +108,7 @@ async function ensureAccessToken() {
   const customer = buildCustomerIdentity();
 
   try {
-    await apiRequest("/v1/auth/register", {
+    await apiRequest("/auth/register", {
       method: "POST",
       body: JSON.stringify(customer),
     });
@@ -118,7 +118,7 @@ async function ensureAccessToken() {
     }
   }
 
-  const auth = await apiRequest("/v1/auth/login", {
+  const auth = await apiRequest("/auth/login", {
     method: "POST",
     body: JSON.stringify({
       email: customer.email,
@@ -149,7 +149,7 @@ export async function startCheckout({
       : "RAZORPAY_PRIMARY";
   const correlationId = createCorrelationId("payment");
 
-  const order = await apiRequest("/v1/orders", {
+  const order = await apiRequest("/orders", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -174,7 +174,7 @@ export async function startCheckout({
   });
 
   const merchantIdToSend = order?.merchantId ?? DEFAULT_MERCHANT_ID;
-  const payment = await apiRequest("/v1/payments", {
+  const payment = await apiRequest("/payments", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -210,7 +210,7 @@ export async function startCheckout({
 }
 
 export async function captureCheckout(checkout) {
-  const payment = await apiRequest(`/v1/payments/${checkout.payment.id}/capture`, {
+  const payment = await apiRequest(`/payments/${checkout.payment.id}/capture`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${checkout.token}`,

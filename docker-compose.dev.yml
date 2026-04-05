@@ -1,19 +1,34 @@
-# Hybrid Local Dev - Infrastructure Only
+# Hybrid Local Dev - Infrastructure + Vault
 # Run: docker compose -f docker-compose.dev.yml up -d
-# Then run services locally: make dev:service SERVICE=payment-service
 
 services:
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: vault
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_DEV_ROOT_TOKEN_ID: dev-root-token
+      VAULT_TOKEN: dev-root-token
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8200/v1/sys/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - dev-network
+
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--save", "", "--appendonly", "no"]
     ports:
       - "6379:6379"
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-          cpus: "0.25"
     networks:
       - dev-network
     healthcheck:
@@ -43,11 +58,6 @@ services:
     ports:
       - "9092:9092"
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 1g
-          cpus: "1.00"
     networks:
       - dev-network
     healthcheck:
@@ -68,95 +78,13 @@ services:
     ports:
       - "5433:5432"
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 1g
-          cpus: "1.00"
+    networks:
+      - dev-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - dev-network
-
-  api-gateway:
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/api-gateway
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8080
-      JWT_SECRET_B64: ${JWT_SECRET_B64}
-      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://host.docker.internal:8081}
-      ORDER_SERVICE_URL: ${ORDER_SERVICE_URL:-http://host.docker.internal:8082}
-      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL:-http://host.docker.internal:8083}
-      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL:-http://host.docker.internal:8084}
-      WEBHOOK_SERVICE_URL: ${WEBHOOK_SERVICE_URL:-http://host.docker.internal:8085}
-      SIMULATOR_SERVICE_URL: ${SIMULATOR_SERVICE_URL:-http://host.docker.internal:8086}
-      SETTLEMENT_SERVICE_URL: ${SETTLEMENT_SERVICE_URL:-http://host.docker.internal:8087}
-      RISK_SERVICE_URL: ${RISK_SERVICE_URL:-http://host.docker.internal:8088}
-      ANALYTICS_SERVICE_URL: ${ANALYTICS_SERVICE_URL:-http://host.docker.internal:8089}
-      MERCHANT_SERVICE_URL: ${MERCHANT_SERVICE_URL:-http://host.docker.internal:8090}
-      DISPUTE_SERVICE_URL: ${DISPUTE_SERVICE_URL:-http://host.docker.internal:8091}
-    ports:
-      - "8080:8080"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "0.75"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 120s
-    networks:
-      - dev-network
-
-  frontend:
-    build:
-      context: ./web/frontend
-    ports:
-      - "3000:80"
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-          cpus: "0.25"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    networks:
-      - dev-network
-
-  dashboard:
-    build:
-      context: ./web/dashboard
-    ports:
-      - "3001:80"
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-          cpus: "0.25"
-    networks:
-      - dev-network
 
 volumes:
   postgres_data:
