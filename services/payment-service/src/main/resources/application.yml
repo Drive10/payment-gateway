@@ -51,11 +51,10 @@ spring:
         order_updates: true
         generate_statistics: false
     hibernate:
-      ddl-auto: ${DDL_AUTO:validate}
+      ddl-auto: update
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    properties:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -85,9 +84,7 @@ spring:
       spec: maximumSize=1000,expireAfterWrite=300s
 
   flyway:
-    enabled: true
-    baseline-on-migrate: true
-    out-of-order: true
+    enabled: false
 
 vault:
   uri: ${VAULT_ADDR:http://localhost:8200}

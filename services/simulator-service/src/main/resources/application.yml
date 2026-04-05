@@ -23,7 +23,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:validate}
+      ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
@@ -35,9 +35,7 @@ spring:
         order_updates: true
 
   flyway:
-    enabled: true
-    baseline-on-migrate: true
-    out-of-order: true
+    enabled: false
 
 vault:
   uri: ${VAULT_ADDR:http://localhost:8200}

@@ -7,52 +7,15 @@ server:
 spring:
   application:
     name: api-gateway
-
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
-
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:redis_dev_pass}
-      timeout: 2000ms
-      ssl:
-        enabled: true
-      lettuce:
-        pool:
-          max-active: 50
-          max-idle: 20
-          min-idle: 5
-          max-wait: 1000ms
-
+      password: ${REDIS_PASSWORD:devpassword}
   cloud:
     gateway:
-      httpclient:
-        connect-timeout: 5000
-        response-timeout: 30s
-      globalcors:
-        corsConfigurations:
-          '[/**]':
-            allowedOrigins:
-              - "http://localhost:3000"
-              - "http://localhost:3001"
-              - "http://localhost:3002"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - PATCH
-              - OPTIONS
-            allowedHeaders:
-              - "*"
-            allowCredentials: true
-            maxAge: 3600
-      default-filters:
-        - PreserveHostHeader
       routes:
         - id: auth-service
           uri: ${AUTH_SERVICE_URL:http://localhost:8081}
@@ -152,44 +115,14 @@ spring:
           filters:
             - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
 
-vault:
-  uri: ${VAULT_ADDR:http://vault:8200}
-  token: ${VAULT_TOKEN:dev-root-token}
-  enabled: ${VAULT_ENABLED:false}
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-    enabled: true
-  api-docs:
-    path: /v3/api-docs
-    enabled: true
-
-logging:
-  level:
-    root: INFO
-
 application:
-  gateway:
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:}
-
   services:
-    auth: ${AUTH_SERVICE_URL:http://localhost:8081}
-    order: ${ORDER_SERVICE_URL:http://localhost:8082}
-    payment: ${PAYMENT_SERVICE_URL:http://localhost:8083}
-    notification: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
-    analytics: ${ANALYTICS_SERVICE_URL:http://localhost:8085}
-    simulator: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+    auth: ${AUTH_SERVICE_URL:http://auth-service:8081}
+    order: ${ORDER_SERVICE_URL:http://order-service:8082}
+    payment: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+    notification: ${NOTIFICATION_SERVICE_URL:http://notification-service:8084}
+    analytics: ${ANALYTICS_SERVICE_URL:http://analytics-service:8085}
+    simulator: ${SIMULATOR_SERVICE_URL:http://simulator-service:8086}
 
 security:
   jwt:

@@ -430,25 +430,7 @@ services:
     networks:
       - fintech-network
 
-  dashboard:
-    profiles: ["services"]
-    build:
-      context: ./web/dashboard
-    ports:
-      - "3001:80"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-          cpus: "0.25"
-    networks:
-      - fintech-network
+
 
 volumes:
   postgres_data:

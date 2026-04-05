@@ -27,6 +27,7 @@ NC='\033[0m'
 
 # Service definitions: name|port|docker_port_offset
 declare -a BACKEND_SERVICES=(
+  "api-gateway|8080"
   "auth-service|8081"
   "order-service|8082"
   "payment-service|8083"
@@ -122,22 +123,31 @@ docker_stop() {
 
 # ── Local Backend Services ─────────────────────────────────────
 setup_env() {
-  export DB_HOST="${DB_HOST:-localhost}"
-  export DB_PORT="${DB_PORT:-5433}"
-  export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}"
-  export REDIS_HOST="${REDIS_HOST:-localhost}"
-  export REDIS_PORT="${REDIS_PORT:-6379}"
-  export REDIS_PASSWORD="${REDIS_PASSWORD:-devpassword}"
-  export VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
-  export VAULT_TOKEN="${VAULT_TOKEN:-dev-root-token}"
-  export VAULT_ENABLED="${VAULT_ENABLED:-false}"
-  export GATEWAY_INTERNAL_SECRET="${GATEWAY_INTERNAL_SECRET:-dev-gateway-secret}"
-  export JWT_SECRET="${JWT_SECRET:-dev-jwt-secret-key-must-be-at-least-256-bits-long-for-hs512}"
+   export DB_HOST="${DB_HOST:-localhost}"
+   export DB_PORT="${DB_PORT:-5433}"
+   export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}"
+   export REDIS_HOST="${REDIS_HOST:-localhost}"
+   export REDIS_PORT="${REDIS_PORT:-6379}"
+   export REDIS_PASSWORD="${REDIS_PASSWORD:-devpassword}"
+   export VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
+   export VAULT_TOKEN="${VAULT_TOKEN:-dev-root-token}"
+   export VAULT_ENABLED="${VAULT_ENABLED:-false}"
+   export GATEWAY_INTERNAL_SECRET="${GATEWAY_INTERNAL_SECRET:-dev-gateway-secret}"
+   export JWT_SECRET="${JWT_SECRET:-ILV+eJo6/m2NsKPaBfWGLzr/ew+YZ4ez+MXiYQQg+jbAIqA12PvCnnFolnMcSfkWJ7YgGNM21AHG4HpEHQ1qSg==}"
+   
+   # Ensure DB_PORT is set correctly for localhost connections
+   if [[ "$DB_HOST" == "localhost" || "$DB_HOST" == "127.0.0.1" ]]; then
+     export DB_PORT="${DB_PORT:-5433}"
+   else
+     export DB_PORT="${DB_PORT:-5432}"
+   fi
 }
 
 get_db_config() {
   local service=$1
   case "$service" in
+    api-gateway)
+      ;;
     auth-service)
       export DB_NAME="authdb"
       export DB_USERNAME="auth"
@@ -145,7 +155,7 @@ get_db_config() {
       ;;
     order-service)
       export DB_NAME="orderdb"
-      export DB_USERNAME="payment"
+      export DB_USERNAME="ord"
       export DB_PASSWORD="devpassword"
       ;;
     payment-service)
@@ -196,10 +206,11 @@ start_local_service() {
     fi
   fi
 
-  log_info "Starting $service on port $port..."
-  nohup mvn -pl "services/$service" spring-boot:run -q -DskipTests \
-    -Dspring-boot.run.jvmArguments="-DDB_HOST=$DB_HOST -DDB_PORT=$DB_PORT -DDB_NAME=${DB_NAME:-} -DDB_USERNAME=${DB_USERNAME:-} -DDB_PASSWORD=${DB_PASSWORD:-} -DKAFKA_BOOTSTRAP_SERVERS=$KAFKA_BOOTSTRAP_SERVERS -DREDIS_HOST=$REDIS_HOST -DREDIS_PORT=$REDIS_PORT -DREDIS_PASSWORD=${REDIS_PASSWORD:-} -DVAULT_ADDR=$VAULT_ADDR -DVAULT_TOKEN=$VAULT_TOKEN -DVAULT_ENABLED=$VAULT_ENABLED -DJWT_SECRET=${JWT_SECRET:-dev-jwt-secret}" \
-    > "$log_file" 2>&1 &
+   log_info "Starting $service on port $port..."
+   local db_password="${DB_PASSWORD:-devpassword}"
+   nohup mvn -pl "services/$service" spring-boot:run -q -DskipTests \
+     -Dspring-boot.run.arguments="--DB_HOST=$DB_HOST --DB_PORT=$DB_PORT --DB_NAME=${DB_NAME:-authdb} --DB_USERNAME=${DB_USERNAME:-auth} --DB_PASSWORD=$db_password --KAFKA_BOOTSTRAP_SERVERS=$KAFKA_BOOTSTRAP_SERVERS --REDIS_HOST=$REDIS_HOST --REDIS_PORT=$REDIS_PORT --REDIS_PASSWORD=${REDIS_PASSWORD:-devpassword} --VAULT_ADDR=$VAULT_ADDR --VAULT_TOKEN=$VAULT_TOKEN --VAULT_ENABLED=${VAULT_ENABLED:-false} --GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET:-dev-gateway-secret} --JWT_SECRET=${JWT_SECRET:-ILV+eJo6/m2NsKPaBfWGLzr/ew+YZ4ez+MXiYQQg+jbAIqA12PvCnnFolnMcSfkWJ7YgGNM21AHG4HpEHQ1qSg==}" \
+     > "$log_file" 2>&1 &
 
   echo $! > "$pid_file"
   log_ok "$service started (PID: $!, port: $port)"
@@ -254,11 +265,17 @@ web_start() {
   echo $! > "$PID_DIR/dashboard.pid"
   log_ok "Dashboard started (PID: $!, http://localhost:5173)"
 
-  # Frontend
-  cd "$REPO_ROOT/web/frontend"
-  nohup npm run dev > "$LOG_DIR/frontend.log" 2>&1 &
-  echo $! > "$PID_DIR/frontend.pid"
-  log_ok "Frontend started (PID: $!, http://localhost:5174)"
+   # Frontend
+   cd "$REPO_ROOT/web/frontend"
+   # Set API gateway URL based on mode
+   if [ "$MODE" = "--docker" ]; then
+     export VITE_API_GATEWAY_URL="http://api-gateway:8080"
+   else
+     export VITE_API_GATEWAY_URL="http://localhost:8080"
+   fi
+   nohup npm run dev > "$LOG_DIR/frontend.log" 2>&1 &
+   echo $! > "$PID_DIR/frontend.pid"
+   log_ok "Frontend started (PID: $!, http://localhost:5174)"
 
   cd "$REPO_ROOT"
 }
@@ -428,6 +445,7 @@ case "${1:-help}" in
     for entry in "${BACKEND_SERVICES[@]}"; do
       IFS='|' read -r service port <<< "$entry"
       if [ "$MODE" = "$service" ]; then
+        get_db_config "$service"
         start_local_service "$service" "$port"
         break
       fi

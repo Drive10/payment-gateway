@@ -31,32 +31,7 @@ updates:
         patterns:
           - "io.github.resilience4j:*"
 
-  # Node.js dependencies - Dashboard
-  - package-ecosystem: "npm"
-    directory: "/web/dashboard"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "UTC"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "Drive10"
-    labels:
-      - "dependencies"
-      - "security"
-    commit-message:
-      prefix: "deps(dashboard)"
-    groups:
-      react:
-        patterns:
-          - "react"
-          - "react-dom"
-          - "react-router-dom"
-      tailwind:
-        patterns:
-          - "tailwindcss"
-          - "@tailwindcss/*"
+
 
   # Node.js dependencies - Frontend
   - package-ecosystem: "npm"

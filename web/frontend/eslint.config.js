@@ -16,6 +16,8 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.es2021,
+        process: true,
+        Buffer: true,
       },
       parserOptions: {
         ecmaFeatures: {
