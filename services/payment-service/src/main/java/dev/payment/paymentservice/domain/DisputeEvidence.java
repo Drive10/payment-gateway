@@ -1,5 +1,4 @@
 package dev.payment.paymentservice.domain;
-import lombok.Data;
 
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -7,7 +6,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "dispute_evidence")
-@Data
 public class DisputeEvidence {
 
     @Id

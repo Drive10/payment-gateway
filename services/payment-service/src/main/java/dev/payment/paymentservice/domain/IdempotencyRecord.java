@@ -1,5 +1,4 @@
 package dev.payment.paymentservice.domain;
-import lombok.Data;
 
 import dev.payment.paymentservice.domain.enums.IdempotencyRecordStatus;
 import jakarta.persistence.Column;
@@ -19,7 +18,6 @@ import java.util.UUID;
         name = "payment_idempotency_records",
         uniqueConstraints = @UniqueConstraint(name = "uk_payment_idempotency_operation_actor_key", columnNames = {"operation", "actor_id", "idempotency_key"})
 )
-@Data
 public class IdempotencyRecord extends BaseEntity {
 
     @Id

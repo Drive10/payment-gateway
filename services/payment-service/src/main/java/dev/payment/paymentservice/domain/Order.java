@@ -1,5 +1,4 @@
 package dev.payment.paymentservice.domain;
-import lombok.Data;
 
 import dev.payment.paymentservice.domain.enums.OrderStatus;
 import jakarta.persistence.Column;
@@ -19,7 +18,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "orders")
-@Data
 public class Order extends BaseEntity {
 
     @Id

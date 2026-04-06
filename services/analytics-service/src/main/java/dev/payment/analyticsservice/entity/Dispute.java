@@ -1,5 +1,4 @@
 package dev.payment.analyticsservice.entity;
-import lombok.Data;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -9,7 +8,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "disputes")
-@Data
 public class Dispute {
 
     @Id

@@ -155,3 +155,19 @@ CREATE TABLE IF NOT EXISTS api_keys (
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Notification Service - Feature Flags
+CREATE TABLE IF NOT EXISTS feature_flags (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    key VARCHAR(100) NOT NULL UNIQUE,
+    description VARCHAR(255),
+    enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    rollout_percentage INT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS feature_flag_user_ids (
+    feature_flag_id BIGINT NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
+    PRIMARY KEY (feature_flag_id, user_id),
+    FOREIGN KEY (feature_flag_id) REFERENCES feature_flags(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

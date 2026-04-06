@@ -1,5 +1,4 @@
 package dev.payment.paymentservice.domain;
-import lombok.Data;
 
 import dev.payment.paymentservice.domain.enums.PaymentStatus;
 import jakarta.persistence.*;
@@ -13,7 +12,6 @@ import java.util.UUID;
         @Index(name = "idx_payment_links_status", columnList = "status"),
         @Index(name = "idx_payment_links_reference", columnList = "reference_id")
 })
-@Data
 public class PaymentLink {
 
     @Id

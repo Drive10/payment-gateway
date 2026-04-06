@@ -1,12 +1,10 @@
 package dev.payment.analyticsservice.entity;
-import lombok.Data;
 
 import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
 @Table(name = "real_time_counters")
-@Data
 public class RealTimeCounter {
 
     @Id

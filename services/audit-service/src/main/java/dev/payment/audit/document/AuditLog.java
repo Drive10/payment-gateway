@@ -1,9 +1,5 @@
 package dev.payment.audit.document;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
@@ -19,10 +15,6 @@ import java.util.Map;
     @CompoundIndex(name = "entity_time_idx", def = "{'entityType': 1, 'timestamp': -1}"),
     @CompoundIndex(name = "user_time_idx", def = "{'userId': 1, 'timestamp': -1}")
 })
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class AuditLog {
     @Id
     private String id;

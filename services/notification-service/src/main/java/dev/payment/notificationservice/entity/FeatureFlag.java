@@ -1,5 +1,4 @@
 package dev.payment.notificationservice.entity;
-import lombok.Data;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -7,7 +6,6 @@ import java.util.List;
 
 @Entity
 @Table(name = "feature_flags")
-@Data
 public class FeatureFlag {
 
     @Id

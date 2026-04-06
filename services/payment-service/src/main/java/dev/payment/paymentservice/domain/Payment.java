@@ -1,5 +1,4 @@
 package dev.payment.paymentservice.domain;
-import lombok.Data;
 
 import dev.payment.paymentservice.domain.enums.PaymentMethod;
 import dev.payment.paymentservice.domain.enums.PaymentStatus;
@@ -24,7 +23,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "payments")
-@Data
 public class Payment extends BaseEntity {
 
     @Id

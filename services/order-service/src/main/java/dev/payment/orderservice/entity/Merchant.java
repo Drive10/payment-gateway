@@ -1,5 +1,4 @@
 package dev.payment.orderservice.entity;
-import lombok.Data;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -8,7 +7,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "merchants")
-@Data
 public class Merchant {
     private static final BigDecimal DEFAULT_TRANSACTION_LIMIT = new BigDecimal("100000");
     private static final BigDecimal DEFAULT_DAILY_LIMIT = new BigDecimal("1000000");

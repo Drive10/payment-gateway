@@ -1,5 +1,4 @@
 package dev.payment.notificationservice.entity;
-import lombok.Data;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -10,7 +9,6 @@ import java.util.UUID;
     @Index(name = "idx_template_key", columnList = "templateKey", unique = true),
     @Index(name = "idx_template_channel", columnList = "channel")
 })
-@Data
 public class Template {
 
     @Id
