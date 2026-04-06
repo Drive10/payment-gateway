@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:payment_gateway}
+    username: ${DB_USERNAME:payment}
+    password: ${DB_PASSWORD:devpassword}
+    driver-class-name: org.mariadb.jdbc.Driver
+  flyway:
+    validate-on-migrate: false

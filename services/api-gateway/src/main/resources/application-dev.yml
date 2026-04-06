@@ -1,0 +1,21 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: devpassword
+
+application:
+  services:
+    auth: http://localhost:8081
+    order: http://localhost:8082
+    payment: http://localhost:8083
+    notification: http://localhost:8084
+    webhook: http://localhost:8084
+    simulator: http://localhost:8086
+    analytics: http://localhost:8085
+    merchant: http://localhost:8090
+    dispute: http://localhost:8091
