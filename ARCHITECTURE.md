@@ -72,11 +72,11 @@ The Payment Gateway is a microservices-based payment processing system built wit
 
 ### Start All Infrastructure
 ```bash
-# Production infrastructure (all services)
-docker compose -f docker-compose.prod.yml up -d
-
 # Development infrastructure (basic)
 docker compose -f docker-compose.yml up -d
+
+# Development infrastructure (extended)
+docker compose -f docker-compose.dev.yml up -d
 
 # Monitoring stack only
 docker compose -f docker-compose.monitoring.yml up -d

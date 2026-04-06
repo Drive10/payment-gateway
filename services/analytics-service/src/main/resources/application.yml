@@ -1,13 +1,13 @@
 server:
-  port: ${SERVER_PORT:8085}
+  port: ${SERVER_PORT:8089}
   shutdown: graceful
 
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:analyticsdb}
+    url: jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:payment_gateway}
     username: ${DB_USERNAME:payment}
-    password: ${DB_PASSWORD:}
-    driver-class-name: org.postgresql.Driver
+    password: ${DB_PASSWORD:devpassword}
+    driver-class-name: org.mariadb.jdbc.Driver
 
   data:
     redis:
@@ -17,12 +17,12 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     open-in-view: false
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.MariaDBDialect
         format_sql: true
         jdbc:
           batch_size: 20
@@ -45,6 +45,18 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  cloud:
+    consul:
+      host: ${CONSUL_HOST:consul}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        enabled: ${CONSUL_ENABLED:-true}
+        register: true
+        prefer-ip-address: true
+        instance-id: ${spring.application.name}:${server.port}
+        health-check-path: /actuator/health
+        health-check-interval: 10s
 
 vault:
   uri: ${VAULT_ADDR:http://localhost:8200}
@@ -71,7 +83,6 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
 
-# Application-specific configuration
 application:
   kafka:
     topic:

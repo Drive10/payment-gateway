@@ -10,8 +10,8 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:docker}
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:authdb}
-    username: ${DB_USERNAME:auth}
+    url: jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:payment_gateway}
+    username: ${DB_USERNAME:payment}
     password: ${DB_PASSWORD:devpassword}
     hikari:
       maximum-pool-size: 15
@@ -23,12 +23,12 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.MariaDBDialect
         format_sql: false
         jdbc:
           batch_size: 20
@@ -42,6 +42,18 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=500,expireAfterWrite=600s
+
+  cloud:
+    consul:
+      host: ${CONSUL_HOST:consul}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        enabled: ${CONSUL_ENABLED:-true}
+        register: true
+        prefer-ip-address: true
+        instance-id: ${spring.application.name}:${server.port}
+        health-check-path: /actuator/health
+        health-check-interval: 10s
 
 vault:
   uri: ${VAULT_ADDR:http://vault:8200}

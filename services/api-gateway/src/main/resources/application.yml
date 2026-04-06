@@ -15,10 +15,24 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:devpassword}
   cloud:
+    consul:
+      host: ${CONSUL_HOST:consul}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        enabled: ${CONSUL_ENABLED:-true}
+        register: true
+        prefer-ip-address: true
+        instance-id: ${spring.application.name}:${server.port}
+        health-check-path: /actuator/health
+        health-check-interval: 10s
     gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
       routes:
         - id: auth-service
-          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          uri: lb://auth-service
           predicates:
             - Path=/api/v1/auth/**
           filters:
@@ -30,7 +44,7 @@ spring:
                 redis-rate-limiter.requested-tokens: 1
 
         - id: order-service
-          uri: ${ORDER_SERVICE_URL:http://localhost:8082}
+          uri: lb://order-service
           predicates:
             - Path=/api/v1/orders/**
           filters:
@@ -41,7 +55,7 @@ spring:
                 redis-rate-limiter.burstCapacity: 100
 
         - id: payment-service
-          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+          uri: lb://payment-service
           predicates:
             - Path=/api/v1/payments/**,/api/v1/admin/**
           filters:
@@ -53,63 +67,63 @@ spring:
                 redis-rate-limiter.burstCapacity: 200
 
         - id: notification-service
-          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+          uri: lb://notification-service
           predicates:
             - Path=/api/v1/notifications/**
           filters:
             - StripPrefix=2
 
         - id: analytics-service
-          uri: ${ANALYTICS_SERVICE_URL:http://localhost:8085}
+          uri: lb://analytics-service
           predicates:
             - Path=/api/v1/analytics/**
           filters:
             - StripPrefix=2
 
         - id: simulator-service
-          uri: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+          uri: lb://simulator-service
           predicates:
             - Path=/api/v1/simulator/**
           filters:
             - StripPrefix=2
 
         - id: internal-auth
-          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          uri: lb://auth-service
           predicates:
             - Path=/platform/auth/**
           filters:
             - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-order
-          uri: ${ORDER_SERVICE_URL:http://localhost:8082}
+          uri: lb://order-service
           predicates:
             - Path=/platform/order/**
           filters:
             - RewritePath=/platform/order/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-payment
-          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+          uri: lb://payment-service
           predicates:
             - Path=/platform/payment/**
           filters:
             - RewritePath=/platform/payment/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-notification
-          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+          uri: lb://notification-service
           predicates:
             - Path=/platform/notification/**
           filters:
             - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-analytics
-          uri: ${ANALYTICS_SERVICE_URL:http://localhost:8085}
+          uri: lb://analytics-service
           predicates:
             - Path=/platform/analytics/**
           filters:
             - RewritePath=/platform/analytics/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-simulator
-          uri: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+          uri: lb://simulator-service
           predicates:
             - Path=/platform/simulator/**
           filters:
@@ -117,12 +131,12 @@ spring:
 
 application:
   services:
-    auth: ${AUTH_SERVICE_URL:http://auth-service:8081}
-    order: ${ORDER_SERVICE_URL:http://order-service:8082}
-    payment: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
-    notification: ${NOTIFICATION_SERVICE_URL:http://notification-service:8084}
-    analytics: ${ANALYTICS_SERVICE_URL:http://analytics-service:8085}
-    simulator: ${SIMULATOR_SERVICE_URL:http://simulator-service:8086}
+    auth: lb://auth-service
+    order: lb://order-service
+    payment: lb://payment-service
+    notification: lb://notification-service
+    analytics: lb://analytics-service
+    simulator: lb://simulator-service
 
 security:
   jwt:

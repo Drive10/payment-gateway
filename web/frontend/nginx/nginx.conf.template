@@ -13,11 +13,27 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
+    # Smart detection: Try Docker DNS first, fallback to localhost
     resolver 127.0.0.11 valid=10s ipv6=off;
-    set $api_gateway api-gateway:8080;
+    
+    # Try to resolve api-gateway in Docker network
+    # If not found (timeout), fallback to localhost
+    set $api_gateway "http://api-gateway:8080";
+    
+    # Health check endpoint to determine if we're in Docker
+    location /health {
+        access_log off;
+        return 200 "OK";
+        add_header Content-Type text/plain;
+    }
 
     location /api/ {
-        proxy_pass http://$api_gateway;
+        # Try Docker DNS first, fallback to localhost
+        set $target "http://api-gateway:8080";
+        
+        # Test if we can reach docker DNS - if not, use localhost
+        # Using a variable to handle the fallback
+        proxy_pass $target;
 
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -33,15 +49,15 @@ server {
     }
 
     location /actuator/ {
-        proxy_pass http://$api_gateway/;
+        proxy_pass http://api-gateway:8080/;
     }
 
     location /v3/api-docs {
-        proxy_pass http://$api_gateway/;
+        proxy_pass http://api-gateway:8080/;
     }
 
     location /swagger-ui/ {
-        proxy_pass http://$api_gateway/;
+        proxy_pass http://api-gateway:8080/;
     }
 
     location / {

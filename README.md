@@ -161,7 +161,7 @@
 ### Run with Docker (Recommended)
 ```bash
 # Start all infrastructure + services
-docker compose -f docker-compose.prod.yml up -d
+docker compose up -d
 
 # Check service health
 docker compose ps

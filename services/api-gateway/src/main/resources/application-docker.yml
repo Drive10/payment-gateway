@@ -8,21 +8,25 @@ spring:
       password: ${REDIS_PASSWORD:devpassword}
   cloud:
     gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
       routes:
         - id: auth-service
-          uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
+          uri: lb://auth-service
           predicates:
             - Path=/api/v1/auth/**
 
         - id: order-service
-          uri: ${ORDER_SERVICE_URL:http://order-service:8082}
+          uri: lb://order-service
           predicates:
             - Path=/api/v1/orders/**
           filters:
             - StripPrefix=1
 
         - id: payment-service
-          uri: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+          uri: lb://payment-service
           predicates:
             - Path=/api/v1/payments/**
             - Path=/api/v1/admin/**
@@ -30,21 +34,21 @@ spring:
             - StripPrefix=1
 
         - id: notification-service
-          uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8084}
+          uri: lb://notification-service
           predicates:
             - Path=/api/v1/notifications/**
           filters:
             - StripPrefix=1
 
         - id: simulator-service
-          uri: ${SIMULATOR_SERVICE_URL:http://simulator-service:8086}
+          uri: lb://simulator-service
           predicates:
             - Path=/api/v1/simulator/**
           filters:
             - StripPrefix=1
 
         - id: analytics-service
-          uri: ${ANALYTICS_SERVICE_URL:http://analytics-service:8089}
+          uri: lb://analytics-service
           predicates:
             - Path=/api/v1/analytics/**
           filters:
@@ -53,6 +57,16 @@ spring:
       httpclient:
         connect-timeout: 10000
         response-timeout: 30s
+
+eureka:
+  client:
+    enabled: ${EUREKA_ENABLED:-true}
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
+    registry-fetch-interval-seconds: 10
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
 
 management:
   endpoints:

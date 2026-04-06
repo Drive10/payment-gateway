@@ -4,9 +4,10 @@ spring:
       on-profile: dev
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/paymentdb
+    url: jdbc:mariadb://localhost:3306/payment_gateway
     username: payment
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:devpassword}
+    driver-class-name: org.mariadb.jdbc.Driver
 
   kafka:
     bootstrap-servers: localhost:9092
