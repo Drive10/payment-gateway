@@ -33,7 +33,7 @@
         <lombok.version>1.18.36</lombok.version>
         <springdoc.version>2.6.0</springdoc.version>
         <jjwt.version>0.12.6</jjwt.version>
-        <resilience4j.version>2.2.0</resilience4j.version>
+        <resilience4j.version>2.4.0</resilience4j.version>
         <testcontainers.version>1.20.2</testcontainers.version>
     </properties>
 
