@@ -19,7 +19,13 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass devpassword
+    command: >
+      redis-server
+      --requirepass devpassword
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 300
     ports:
       - "6379:6379"
     volumes:
@@ -33,9 +39,36 @@ services:
     networks:
       - fintech-network
 
+  mongodb:
+    image: mongo:7
+    container_name: payment-gateway-mongodb
+    environment:
+      MONGO_INIT_DATABASE: payment_gateway
+      MONGO_INIT_DB_ROOT_USERNAME: mongoadmin
+      MONGO_INIT_DB_ROOT_PASSWORD: mongopass
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - fintech-network
+
   mariadb:
     image: mariadb:10.11
     command: --default-authentication-plugin=mysql_native_password
+             --innodb-buffer-pool-size=256M
+             --innodb-log-file-size=64M
+             --innodb-flush-log-at-trx-commit=2
+             --innodb-flush-method=O_DIRECT
+             --max-connections=200
+             --query-cache-type=0
+             --query-cache-size=0
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: payment_gateway
@@ -367,6 +400,7 @@ services:
 
 volumes:
   mariadb_data:
+  mongodb_data:
   vault_data:
   kafka_data:
   redis_data:
