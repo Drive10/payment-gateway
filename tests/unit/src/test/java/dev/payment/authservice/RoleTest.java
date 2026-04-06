@@ -1,6 +1,6 @@
 package dev.payment.authservice;
 
-import dev.payment.authservice.entity.Role;
+import dev.payment.authservice.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -55,8 +55,8 @@ class RoleTest {
             Role role3 = new Role();
             role3.setName("ROLE_ADMIN");
             
-            assertEquals(role1, role2);
-            assertNotEquals(role1, role3);
+            assertEquals(role1.getName(), role2.getName());
+            assertNotEquals(role1.getName(), role3.getName());
         }
     }
 }

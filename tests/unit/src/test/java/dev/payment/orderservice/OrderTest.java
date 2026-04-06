@@ -1,7 +1,7 @@
 package dev.payment.orderservice;
 
-import dev.payment.orderservice.entity.Order;
-import dev.payment.orderservice.entity.OrderStatus;
+import dev.payment.orderservice.Order;
+import dev.payment.orderservice.OrderStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -68,18 +68,18 @@ class OrderTest {
     class OrderStatusTransitions {
 
         @Test
-        @DisplayName("should allow status change from PENDING to CONFIRMED")
-        void shouldAllowStatusChangeFromPendingToConfirmed() {
-            order.setStatus(OrderStatus.CONFIRMED);
-            assertEquals(OrderStatus.CONFIRMED, order.getStatus());
+        @DisplayName("should allow status change from PENDING to PAID")
+        void shouldAllowStatusChangeFromPendingToPaid() {
+            order.setStatus(OrderStatus.PAID);
+            assertEquals(OrderStatus.PAID, order.getStatus());
         }
 
         @Test
-        @DisplayName("should allow status change from CONFIRMED to COMPLETED")
-        void shouldAllowStatusChangeFromConfirmedToCompleted() {
-            order.setStatus(OrderStatus.CONFIRMED);
-            order.setStatus(OrderStatus.COMPLETED);
-            assertEquals(OrderStatus.COMPLETED, order.getStatus());
+        @DisplayName("should allow status change from PAID to REFUNDED")
+        void shouldAllowStatusChangeFromPaidToRefunded() {
+            order.setStatus(OrderStatus.PAID);
+            order.setStatus(OrderStatus.REFUNDED);
+            assertEquals(OrderStatus.REFUNDED, order.getStatus());
         }
 
         @Test

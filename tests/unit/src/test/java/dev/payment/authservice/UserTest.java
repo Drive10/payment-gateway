@@ -1,7 +1,7 @@
 package dev.payment.authservice;
 
-import dev.payment.authservice.entity.Role;
-import dev.payment.authservice.entity.User;
+import dev.payment.authservice.Role;
+import dev.payment.authservice.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

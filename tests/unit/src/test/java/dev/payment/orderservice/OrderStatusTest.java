@@ -1,6 +1,6 @@
 package dev.payment.orderservice;
 
-import dev.payment.orderservice.entity.OrderStatus;
+import dev.payment.orderservice.OrderStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -13,7 +13,7 @@ class OrderStatusTest {
     @Test
     @DisplayName("should have all expected statuses")
     void shouldHaveAllExpectedStatuses() {
-        assertEquals(5, OrderStatus.values().length);
+        assertEquals(6, OrderStatus.values().length);
     }
 
     @ParameterizedTest
@@ -31,9 +31,9 @@ class OrderStatusTest {
     }
 
     @Test
-    @DisplayName("COMPLETED should exist")
-    void completedShouldExist() {
-        assertEquals(OrderStatus.COMPLETED, OrderStatus.valueOf("COMPLETED"));
+    @DisplayName("REFUNDED should exist")
+    void refundedShouldExist() {
+        assertEquals(OrderStatus.REFUNDED, OrderStatus.valueOf("REFUNDED"));
     }
 
     @Test

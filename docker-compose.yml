@@ -34,16 +34,18 @@ services:
       - fintech-network
 
   mariadb:
-    image: mariadb:11
+    image: mariadb:10.11
+    command: --default-authentication-plugin=mysql_native_password
     environment:
-      MARIADB_ROOT_PASSWORD: devpassword
-      MARIADB_DATABASE: payment_gateway
-      MARIADB_USER: payment
-      MARIADB_PASSWORD: devpassword
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: payment_gateway
+      MYSQL_USER: payment
+      MYSQL_PASSWORD: devpassword
     ports:
       - "3306:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -141,7 +143,7 @@ services:
       consul:
         condition: service_started
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:80/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12

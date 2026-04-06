@@ -87,7 +87,7 @@ jobs:
       
       - name: Build and tag each service
         run: |
-          services="api-gateway auth-service order-service payment-service notification-service simulator-service analytics-service"
+          services="api-gateway auth-service order-service payment-service notification-service simulator-service analytics-service graphql-gateway search-service audit-service"
           for service in $services; do
             echo "Building $service..."
             docker build \
@@ -216,7 +216,7 @@ jobs:
       
       - name: Build and push images
         run: |
-          services="api-gateway auth-service order-service payment-service notification-service simulator-service analytics-service"
+          services="api-gateway auth-service order-service payment-service notification-service simulator-service analytics-service graphql-gateway search-service audit-service"
           
           for service in $services; do
             echo "Building and pushing $service..."

@@ -6,7 +6,7 @@
     <groupId>dev.payment</groupId>
     <artifactId>payment-gateway-tests</artifactId>
     <version>1.0.0</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
     <name>Payment Gateway Tests</name>
 
