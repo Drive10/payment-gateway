@@ -108,15 +108,17 @@ async function apiRequest(path, options = {}) {
 
 async function ensureAccessToken() {
   const customer = buildCustomerIdentity();
+  console.debug("Ensuring access token for:", customer.email);
 
   try {
     const registerResult = await apiRequest("/auth/register", {
       method: "POST",
       body: JSON.stringify(customer),
     });
-    console.debug("Registered new customer:", customer.email);
+    console.debug("Registered new customer:", customer.email, registerResult);
   } catch (error) {
     const errorStr = String(error.message).toLowerCase();
+    console.debug("Register attempt result:", error.message);
     if (!errorStr.includes("exists")) {
       console.error("Registration failed:", error.message);
       throw error;
@@ -124,24 +126,22 @@ async function ensureAccessToken() {
     console.debug("User already exists, attempting login");
   }
 
+  let auth = null;
   try {
-    const auth = await apiRequest("/auth/login", {
+    auth = await apiRequest("/auth/login", {
       method: "POST",
       body: JSON.stringify({
         email: customer.email,
         password: customer.password,
       }),
     });
+    console.debug("Login result:", auth);
+  } catch (loginError) {
+    console.error("Login error:", loginError.message);
+    console.debug("Attempting retry with new credentials");
+  }
 
-    if (!auth) {
-      throw new Error("Authentication failed - no response from server");
-    }
-    
-    if (!auth.accessToken) {
-      console.error("Auth response missing accessToken:", auth);
-      throw new Error("Authentication failed - no access token received");
-    }
-
+  if (auth && auth.accessToken) {
     return {
       token: auth.accessToken,
       customer: {
@@ -149,50 +149,46 @@ async function ensureAccessToken() {
         id: auth.user?.id,
       },
     };
-  } catch (loginError) {
-    console.error("Login error:", loginError.message);
-    const errorStr = String(loginError.message).toLowerCase();
-    if (errorStr.includes("invalid") || errorStr.includes("credentials") || errorStr.includes("no access token")) {
-      console.warn("Login failed, clearing session and retrying with new credentials");
-      sessionStorage.removeItem("nova-checkout-session-key");
-      sessionStorage.removeItem("nova-checkout-request-seed");
-      
-      const newCustomer = buildCustomerIdentity();
-      console.debug("Retrying with new customer:", newCustomer.email);
-      
-      try {
-        await apiRequest("/auth/register", {
-          method: "POST",
-          body: JSON.stringify(newCustomer),
-        });
-      } catch (registerError) {
-        if (!String(registerError.message).toLowerCase().includes("exists")) {
-          throw registerError;
-        }
-      }
-      
-      const newAuth = await apiRequest("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({
-          email: newCustomer.email,
-          password: newCustomer.password,
-        }),
-      });
-      
-      if (!newAuth || !newAuth.accessToken) {
-        throw new Error("Retry authentication failed - no access token");
-      }
-      
-      return {
-        token: newAuth.accessToken,
-        customer: {
-          ...newCustomer,
-          id: newAuth.user?.id,
-        },
-      };
-    }
-    throw loginError;
   }
+
+  console.warn("Initial auth failed or returned no token, clearing session and retrying");
+  sessionStorage.removeItem("nova-checkout-session-key");
+  sessionStorage.removeItem("nova-checkout-request-seed");
+
+  const newCustomer = buildCustomerIdentity();
+  console.debug("Retrying with new customer:", newCustomer.email);
+
+  try {
+    await apiRequest("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(newCustomer),
+    });
+    console.debug("New registration succeeded");
+  } catch (registerError) {
+    if (!String(registerError.message).toLowerCase().includes("exists")) {
+      throw registerError;
+    }
+  }
+
+  const newAuth = await apiRequest("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({
+      email: newCustomer.email,
+      password: newCustomer.password,
+    }),
+  });
+
+  if (!newAuth || !newAuth.accessToken) {
+    throw new Error("Authentication failed - no access token received");
+  }
+
+  return {
+    token: newAuth.accessToken,
+    customer: {
+      ...newCustomer,
+      id: newAuth.user?.id,
+    },
+  };
 }
 
 export async function startCheckout({
