@@ -8,11 +8,14 @@ import dev.payment.paymentservice.dto.request.CapturePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreatePaymentLinkRequest;
 import dev.payment.paymentservice.dto.request.CreatePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreateRefundRequest;
+import dev.payment.paymentservice.dto.request.InitiatePaymentRequest;
+import dev.payment.paymentservice.dto.request.VerifyOtpRequest;
 import dev.payment.paymentservice.dto.response.PaymentLinkResponse;
 import dev.payment.paymentservice.dto.response.PaymentResponse;
 import dev.payment.paymentservice.dto.response.RefundResponse;
 import dev.payment.paymentservice.dto.response.MerchantBalanceResponse;
 import dev.payment.paymentservice.dto.response.PaymentDetailResponse;
+import dev.payment.paymentservice.dto.response.InitiatePaymentResponse;
 import dev.payment.paymentservice.exception.ApiException;
 import dev.payment.paymentservice.service.AuthService;
 import dev.payment.paymentservice.service.LedgerService;
@@ -169,5 +172,32 @@ public class PaymentController {
             @RequestParam(defaultValue = "30") int days
     ) {
         return ApiResponse.success(paymentService.getPaymentTrends(merchantId, days));
+    }
+
+    // ===== Frontend Payment Endpoints (aligned with React payment page) =====
+
+    @PostMapping("/initiate")
+    public ApiResponse<InitiatePaymentResponse> initiatePayment(
+            @Valid @RequestBody InitiatePaymentRequest request
+    ) {
+        // TODO: Implement payment initiation with card/UPI/netbanking
+        // This should handle card token, UPI ID, or bank code
+        return ApiResponse.success(InitiatePaymentResponse.pending("txn_" + System.currentTimeMillis()));
+    }
+
+    @PostMapping("/verify-otp")
+    public ApiResponse<InitiatePaymentResponse> verifyOtp(
+            @Valid @RequestBody VerifyOtpRequest request
+    ) {
+        // TODO: Implement OTP verification
+        return ApiResponse.success(InitiatePaymentResponse.completed(request.transactionId()));
+    }
+
+    @GetMapping("/{transactionId}/status")
+    public ApiResponse<InitiatePaymentResponse> getPaymentStatus(
+            @PathVariable String transactionId
+    ) {
+        // TODO: Implement status polling
+        return ApiResponse.success(InitiatePaymentResponse.pending(transactionId));
     }
 }
