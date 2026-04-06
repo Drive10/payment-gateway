@@ -48,24 +48,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
+ 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
           cache: 'maven'
-
+ 
       - name: Cache Maven packages
         uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
-
+ 
       - name: Build with Maven
         run: |
-          mvn clean package -DskipTests
+          mvn clean verify
         env:
           DB_HOST: localhost
           DB_PORT: 5433
@@ -170,7 +170,7 @@ jobs:
           cache: 'maven'
 
       - name: Build JAR
-        run: mvn clean package -DskipTests -pl services/${{ matrix.service }}
+        run: mvn clean verify -pl services/${{ matrix.service }}
         working-directory: services/${{ matrix.service }}
 
       - name: Set up Docker Buildx

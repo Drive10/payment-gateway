@@ -75,6 +75,7 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+            <optional>true</optional>
         </dependency>
 
         <!-- Test -->
@@ -100,6 +101,7 @@
                         <exclude>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+            <optional>true</optional>
                         </exclude>
                     </excludes>
                 </configuration>

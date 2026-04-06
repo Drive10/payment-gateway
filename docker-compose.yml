@@ -1,4 +1,58 @@
 services:
+  mariadb:
+    image: mariadb:10.11
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: payflow_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - payflow-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:7
+    environment:
+      MONGO_INIT_DATABASE: payflow_gateway
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - payflow-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - payflow-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  consul:
+    image: consul:1.15
+    ports:
+      - "8500:8500"
+    networks:
+      - payflow-network
+    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
+
   frontend:
     image: nginx:alpine
     ports:
@@ -11,3 +65,7 @@ services:
 networks:
   payflow-network:
     driver: bridge
+
+volumes:
+  mariadb_data:
+  mongodb_data:

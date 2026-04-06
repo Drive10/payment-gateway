@@ -79,6 +79,8 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <optional>true</optional>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.vault</groupId>
@@ -130,6 +132,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+            <optional>true</optional>
                             <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>

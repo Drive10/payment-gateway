@@ -1,0 +1,39 @@
+# Multi-stage Dockerfile for building any service
+# Usage: docker build --build-arg SERVICE_PATH=services/your-service -t your-image .
+
+# Stage 1: Build
+FROM maven:3.9-eclipse-temurin-21-alpine AS build
+WORKDIR /app
+
+# Copy only the pom.xml first to leverage Docker cache
+COPY pom.xml .
+COPY ${SERVICE_PATH}/pom.xml ${SERVICE_PATH}/pom.xml
+COPY libs/common/pom.xml libs/common/pom.xml
+
+# Download dependencies
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -q dependency:go-offline -pl ${SERVICE_PATH} -am
+
+# Copy source code
+COPY ${SERVICE_PATH}/src ${SERVICE_PATH}/src
+COPY libs/common/src libs/common/src
+
+# Build the service
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -q -DskipTests package -pl ${SERVICE_PATH} -am
+
+# Stage 2: Runtime
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy the built JAR from the build stage
+COPY --from=build --chown=appuser:appgroup /app/${SERVICE_PATH}/target/*.jar /app/service.jar
+
+# Run as non-root user
+USER appuser
+
+# JVM options for optimal performance in containerized environment
+ENTRYPOINT ["java","-XX:+UseZGC","-XX:MaxRAMPercentage=75.0","-jar","/app/service.jar"]
