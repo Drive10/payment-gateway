@@ -32,8 +32,9 @@ spring:
         format_sql: false
         jdbc:
           batch_size: 20
-        order_inserts: true
-        order_updates: true
+          time_zone: UTC
+        type:
+          deprecated_uuid_char_type: true
 
   flyway:
     enabled: false
@@ -73,18 +74,18 @@ resilience4j:
   ratelimiter:
     instances:
       login:
-        limit-for-period: 5
+        limit-for-period: 100
         limit-refresh-period: 60s
         timeout-duration: 10s
         register-health-indicator: true
         event-consumer-buffer-size: 100
       register:
-        limit-for-period: 3
-        limit-refresh-period: 300s
+        limit-for-period: 100
+        limit-refresh-period: 60s
         timeout-duration: 30s
         register-health-indicator: true
       refresh:
-        limit-for-period: 10
+        limit-for-period: 100
         limit-refresh-period: 60s
         timeout-duration: 5s
         register-health-indicator: true

@@ -10,6 +10,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
 
 /**
  * Multi-tenant rate limiting filter.
@@ -29,12 +30,24 @@ public class TenantRateLimitingFilter implements GlobalFilter, Ordered {
         this.redisTemplate = redisTemplate;
     }
 
+    private static final List<String> PUBLIC_PREFIXES = List.of(
+            "/actuator",
+            "/swagger-ui",
+            "/v3/api-docs",
+            "/api/v1/auth",
+            "/api/v1/webhooks"
+    );
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String path = exchange.getRequest().getURI().getPath();
+        if (isPublic(path)) {
+            return chain.filter(exchange);
+        }
+
         String tenantId = extractTenantId(exchange);
         if (tenantId == null) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return chain.filter(exchange);
         }
 
         String key = RATE_LIMIT_PREFIX + tenantId;
@@ -81,6 +94,10 @@ public class TenantRateLimitingFilter implements GlobalFilter, Ordered {
         return redisTemplate.opsForValue().get("tenant:limit:" + tenantId)
                 .map(Long::parseLong)
                 .onErrorReturn(DEFAULT_LIMIT);
+    }
+
+    private boolean isPublic(String path) {
+        return PUBLIC_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
     @Override

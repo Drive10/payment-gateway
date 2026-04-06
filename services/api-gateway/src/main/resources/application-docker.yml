@@ -14,9 +14,11 @@ spring:
           lower-case-service-id: true
       routes:
         - id: auth-service
-          uri: lb://auth-service
+          uri: http://auth-service:8081
           predicates:
             - Path=/api/v1/auth/**
+          metadata:
+            wiretap: "true"
 
         - id: order-service
           uri: lb://order-service
@@ -76,5 +78,6 @@ management:
 
 logging:
   level:
-    root: INFO
+    root: DEBUG
     org.springframework.cloud.gateway: DEBUG
+    dev.payment.apigateway: DEBUG

@@ -13,6 +13,7 @@ public class SettlementTransaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(name = "settlement_id", nullable = false)
