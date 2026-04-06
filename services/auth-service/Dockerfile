@@ -9,13 +9,12 @@ WORKDIR /app
 
 # Copy POM files first for dependency caching
 COPY pom.xml .
-COPY services/auth-service/pom.xml services/auth-service/
 
 # Download dependencies (cached layer)
-RUN mvn dependency:go-offline -pl services/auth-service -am || true
+RUN mvn dependency:go-offline || true
 
 # Copy source code
-COPY services/auth-service/src services/auth-service/src
+COPY src ./src
 
 # Build the application
 RUN mvn package -pl services/auth-service -DskipTests

@@ -11,8 +11,16 @@
     <name>PayFlow</name>
 
     <modules>
-        <module>onboarding/backend</module>
-        <module>payflow-gateway/backend</module>
+        <module>services/auth-service</module>
+        <module>services/api-gateway</module>
+        <module>services/payment-service</module>
+        <module>services/order-service</module>
+        <module>services/notification-service</module>
+        <module>services/audit-service</module>
+        <module>services/analytics-service</module>
+        <module>services/search-service</module>
+        <module>services/simulator-service</module>
+        <module>services/graphql-gateway</module>
     </modules>
 
     <properties>

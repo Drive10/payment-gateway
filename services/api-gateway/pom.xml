@@ -2,10 +2,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>dev.payment</groupId>
-        <artifactId>payment-gateway</artifactId>
+        <groupId>dev.payflow</groupId>
+        <artifactId>payflow</artifactId>
         <version>1.0.0</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>api-gateway</artifactId>
     <packaging>jar</packaging>

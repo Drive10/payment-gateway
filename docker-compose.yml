@@ -31,24 +31,18 @@ services:
       - payflow-network
 
   onboarding:
-    build:
-      context: .
-      dockerfile: Dockerfile.onboarding
+    image: httpd:alpine
     ports:
-      - "8081:8081"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/payflow_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpassword
-    depends_on:
-      - mariadb
+      - "8081:80"
+    volumes:
+      - ./dummy-onboarding.html:/usr/local/apache2/htdocs/index.html:ro
     networks:
       - payflow-network
 
   payflow-gateway:
     build:
       context: .
-      dockerfile: Dockerfile.gateway
+      dockerfile: Dockerfile.build
     ports:
       - "8082:8082"
     environment:
@@ -56,6 +50,7 @@ services:
       SPRING_DATA_MONGODB_PORT: 27017
       SPRING_DATA_MONGODB_DATABASE: payflow_gateway
     depends_on:
+      - mariadb
       - mongodb
     networks:
       - payflow-network
