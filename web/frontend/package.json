@@ -28,11 +28,16 @@
     "test:e2e:report": "playwright show-report test-results/html"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "axios": "^1.14.0",
     "framer-motion": "^11.0.0",
     "jspdf": "^2.5.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0"
+    "react-hook-form": "^7.72.1",
+    "react-router-dom": "^6.22.0",
+    "uuid": "^13.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^8.57.1",
