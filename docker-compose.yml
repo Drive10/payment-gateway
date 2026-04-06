@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   mariadb:
     image: mariadb:10.11
@@ -27,31 +29,6 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    networks:
-      - payflow-network
-
-  onboarding:
-    image: httpd:alpine
-    ports:
-      - "8081:80"
-    volumes:
-      - ./dummy-onboarding.html:/usr/local/apache2/htdocs/index.html:ro
-    networks:
-      - payflow-network
-
-  payflow-gateway:
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-    ports:
-      - "8082:8082"
-    environment:
-      SPRING_DATA_MONGODB_HOST: mongodb
-      SPRING_DATA_MONGODB_PORT: 27017
-      SPRING_DATA_MONGODB_DATABASE: payflow_gateway
-    depends_on:
-      - mariadb
-      - mongodb
     networks:
       - payflow-network
 
