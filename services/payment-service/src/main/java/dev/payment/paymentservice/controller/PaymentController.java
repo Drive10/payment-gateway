@@ -185,6 +185,13 @@ public class PaymentController {
         return ApiResponse.success(InitiatePaymentResponse.pending("txn_" + System.currentTimeMillis()));
     }
 
+    @PostMapping("/initiate-compat")
+    public ApiResponse<InitiatePaymentResponse> initiatePaymentCompat(
+            @Valid @RequestBody InitiatePaymentRequest request
+    ) {
+        return ApiResponse.success(InitiatePaymentResponse.pending("txn_" + System.currentTimeMillis()));
+    }
+
     @PostMapping("/verify-otp")
     public ApiResponse<InitiatePaymentResponse> verifyOtp(
             @Valid @RequestBody VerifyOtpRequest request

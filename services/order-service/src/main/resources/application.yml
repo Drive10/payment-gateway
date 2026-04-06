@@ -67,7 +67,7 @@ spring:
 # Application-specific configuration (not Spring managed)
 application:
   payment-service:
-    url: lb://payment-service
+    url: http://payment-service:8083
   notification-service:
     url: lb://notification-service
   kafka:

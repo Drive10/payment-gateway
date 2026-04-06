@@ -86,7 +86,7 @@ logging:
 # Application-specific configuration
 application:
   payment-service:
-    url: lb://payment-service
+    url: http://payment-service:8083
   kafka:
     topic:
       notification-events: notification.events

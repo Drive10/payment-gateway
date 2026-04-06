@@ -4,7 +4,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: payflow_db
+      MYSQL_DATABASE: payment_gateway
     ports:
       - "3306:3306"
     volumes:
@@ -45,13 +45,32 @@ services:
       timeout: 5s
       retries: 5
 
-  consul:
-    image: consul:1.15
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - "8500:8500"
+      - "2181:2181"
     networks:
       - payflow-network
-    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      zookeeper:
+        condition: service_started
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - payflow-network
 
   auth-service:
     image: payment-gateway-auth-service:latest
@@ -59,16 +78,18 @@ services:
       - "8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/payflow_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpassword
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: payment_gateway
+      DB_USERNAME: root
+      DB_PASSWORD: rootpassword
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       JWT_SECRET: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
-      SPRING_CLOUD_CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_PORT: 8500
-      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
       VAULT_ENABLED: "false"
+      CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
     depends_on:
       mariadb:
         condition: service_healthy
@@ -89,19 +110,15 @@ services:
       - "8082:8082"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATA_MONGODB_HOST: mongodb
-      SPRING_DATA_MONGODB_PORT: 27017
-      SPRING_DATA_MONGODB_DATABASE: payflow_gateway
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       JWT_SECRET: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
-      SPRING_CLOUD_CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_PORT: 8500
-      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
       VAULT_ENABLED: "false"
+      CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
+      SPRING_CLOUD_GATEWAY_DISCOVERY_CLIENT_PROVIDER_ENABLED: "false"
     depends_on:
-      mongodb:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -114,21 +131,30 @@ services:
       start_period: 60s
 
   payment-service:
+    build:
+      context: .
+      dockerfile: services/payment-service/Dockerfile
     image: payment-gateway-payment-service:latest
     ports:
       - "8083:8083"
     environment:
+      SERVER_PORT: "8083"
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/payflow_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpassword
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: payment_gateway
+      DB_USERNAME: payment
+      DB_PASSWORD: devpassword
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       JWT_SECRET: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
-      SPRING_CLOUD_CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_PORT: 8500
-      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
       VAULT_ENABLED: "false"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      APPLICATION_GATEWAY_TRUST_ENABLED: "false"
+      CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
       mariadb:
         condition: service_healthy
@@ -144,20 +170,31 @@ services:
       start_period: 60s
 
   order-service:
+    build:
+      context: .
+      dockerfile: services/order-service/Dockerfile
     image: payment-gateway-order-service:latest
     ports:
       - "8084:8084"
+    volumes:
+      - ./services/order-service/src/main/resources/application.yml:/app/config/application.yml:ro
     environment:
+      SERVER_PORT: "8084"
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/payflow_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpassword
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: payment_gateway
+      DB_USERNAME: order
+      DB_PASSWORD: devpassword
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      SPRING_CLOUD_CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_PORT: 8500
-      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
       VAULT_ENABLED: "false"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CONSUL_ENABLED: "false"
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/app/config/
+      SPRING_CLOUD_CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
       mariadb:
         condition: service_healthy
@@ -165,22 +202,34 @@ services:
         condition: service_healthy
     networks:
       - payflow-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
     image: payment-gateway-notification-service:latest
     ports:
       - "8085:8085"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/payflow_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpassword
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: payment_gateway
+      DB_USERNAME: notification
+      DB_PASSWORD: devpassword
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      SPRING_CLOUD_CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_PORT: 8500
-      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
       VAULT_ENABLED: "false"
+      CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
       mariadb:
         condition: service_healthy
@@ -188,20 +237,30 @@ services:
         condition: service_healthy
     networks:
       - payflow-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   analytics-service:
     image: payment-gateway-analytics-service:latest
     ports:
       - "8087:8087"
     environment:
+      SERVER_PORT: "8087"
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/payflow_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpassword
-      SPRING_CLOUD_CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_PORT: 8500
-      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: payment_gateway
+      DB_USERNAME: analytics
+      DB_PASSWORD: devpassword
       VAULT_ENABLED: "false"
+      CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
       mariadb:
         condition: service_healthy
@@ -213,16 +272,20 @@ services:
     ports:
       - "8089:8089"
     environment:
+      SERVER_PORT: "8089"
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/payflow_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpassword
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: payment_gateway
+      DB_USERNAME: simulator
+      DB_PASSWORD: devpassword
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      SPRING_CLOUD_CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_PORT: 8500
-      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
       VAULT_ENABLED: "false"
+      CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
       mariadb:
         condition: service_healthy
@@ -230,6 +293,12 @@ services:
         condition: service_healthy
     networks:
       - payflow-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8089/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   frontend:
     image: nginx:alpine
@@ -237,8 +306,14 @@ services:
       - "3000:80"
     volumes:
       - ./web/frontend/dist:/usr/share/nginx/html:ro
+      - ./web/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - payflow-network
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      api-gateway:
+        condition: service_healthy
 
 networks:
   payflow-network:

@@ -1,17 +1,17 @@
 FROM maven:3.9-eclipse-temurin-21 AS builder
-WORKDIR /build
+WORKDIR /app
 COPY pom.xml .
+COPY order-service/pom.xml order-service/
 COPY libs/common/pom.xml libs/common/
-RUN mvn dependency:go-offline -pl services/order-service -am -q || true
 COPY libs/common/src libs/common/src
-COPY services/order-service/pom.xml services/order-service/
-COPY services/order-service/src services/order-service/src
-RUN mvn package -pl services/order-service -DskipTests -q
+RUN mvn dependency:go-offline -pl order-service -am || true
+COPY order-service/src order-service/src
+RUN mvn package -pl order-service -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S spring && adduser -S spring -G spring
 WORKDIR /app
-COPY --from=builder /build/services/order-service/target/*.jar app.jar
+COPY --from=builder /app/order-service/target/*.jar app.jar
 RUN chown -R spring:spring /app
 USER spring:spring
 EXPOSE 8084

@@ -5,13 +5,16 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public record InitiatePaymentRequest(
-    @NotBlank String cardToken,
+    UUID orderId,
     @NotNull @Positive BigDecimal amount,
     @NotBlank String currency,
-    @NotBlank String merchantId,
-    @NotBlank String idempotencyKey,
+    String returnUrl,
+    String cardToken,
+    String merchantId,
+    String idempotencyKey,
     String upiId,
     String bankCode,
     String paymentMethod,

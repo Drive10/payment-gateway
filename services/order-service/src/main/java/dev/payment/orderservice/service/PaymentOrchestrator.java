@@ -35,6 +35,12 @@ import java.math.BigDecimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.time.Duration;
+import org.slf4j.LoggerFactory;
+import java.util.UUID;
+import org.slf4j.LoggerFactory;
+import java.util.Map;
+import java.util.HashMap;
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.UUID;
@@ -72,9 +78,19 @@ public class PaymentOrchestrator {
         }
 
         try {
+            Map<String, Object> paymentRequest = new HashMap<>();
+            paymentRequest.put("orderId", request.orderId());
+            paymentRequest.put("amount", request.amount());
+            paymentRequest.put("currency", request.currency());
+            paymentRequest.put("returnUrl", request.returnUrl());
+            paymentRequest.put("cardToken", "token_" + System.currentTimeMillis());
+            paymentRequest.put("merchantId", "system-merchant");
+            paymentRequest.put("idempotencyKey", "idem_" + System.currentTimeMillis());
+            paymentRequest.put("paymentMethod", "CARD");
+
             InitiatePaymentResponse response = webClient.post()
-                    .uri("/payments")
-                    .bodyValue(request)
+                    .uri("/payments/initiate")
+                    .bodyValue(paymentRequest)
                     .retrieve()
                     .bodyToMono(InitiatePaymentResponse.class)
                     .timeout(Duration.ofSeconds(30))

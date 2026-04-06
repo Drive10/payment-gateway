@@ -11,6 +11,7 @@
     <name>PayFlow</name>
 
     <modules>
+        <module>libs/common</module>
         <module>services/auth-service</module>
         <module>services/api-gateway</module>
         <module>services/payment-service</module>

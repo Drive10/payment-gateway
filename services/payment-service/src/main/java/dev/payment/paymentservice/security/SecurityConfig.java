@@ -68,7 +68,9 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
                 "https://dashboard.payment-gateway.com",
-                "https://checkout.payment-gateway.com"
+                "https://checkout.payment-gateway.com",
+                "http://localhost:3000",
+                "http://localhost"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(
