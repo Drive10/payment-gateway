@@ -108,31 +108,71 @@ async function ensureAccessToken() {
   const customer = buildCustomerIdentity();
 
   try {
-    await apiRequest("/auth/register", {
+    const registerResult = await apiRequest("/auth/register", {
       method: "POST",
       body: JSON.stringify(customer),
     });
+    console.debug("Registered new customer:", customer.email);
   } catch (error) {
-    if (!String(error.message).toLowerCase().includes("already exists")) {
+    const errorStr = String(error.message).toLowerCase();
+    if (!errorStr.includes("exists")) {
+      console.error("Registration failed:", error.message);
       throw error;
     }
+    console.debug("User already exists, attempting login");
   }
 
-  const auth = await apiRequest("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({
-      email: customer.email,
-      password: customer.password,
-    }),
-  });
+  try {
+    const auth = await apiRequest("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        email: customer.email,
+        password: customer.password,
+      }),
+    });
 
-  return {
-    token: auth.accessToken,
-    customer: {
-      ...customer,
-      id: auth.user?.id,
-    },
-  };
+    if (!auth || !auth.accessToken) {
+      throw new Error("Authentication failed - no access token received");
+    }
+
+    return {
+      token: auth.accessToken,
+      customer: {
+        ...customer,
+        id: auth.user?.id,
+      },
+    };
+  } catch (loginError) {
+    const errorStr = String(loginError.message).toLowerCase();
+    if (errorStr.includes("invalid") || errorStr.includes("credentials")) {
+      console.warn("Login failed,可能的密码不匹配，尝试重新注册");
+      sessionStorage.removeItem("nova-checkout-session-key");
+      sessionStorage.removeItem("nova-checkout-request-seed");
+      
+      const newCustomer = buildCustomerIdentity();
+      await apiRequest("/auth/register", {
+        method: "POST",
+        body: JSON.stringify(newCustomer),
+      });
+      
+      const newAuth = await apiRequest("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email: newCustomer.email,
+          password: newCustomer.password,
+        }),
+      });
+      
+      return {
+        token: newAuth.accessToken,
+        customer: {
+          ...newCustomer,
+          id: newAuth.user?.id,
+        },
+      };
+    }
+    throw loginError;
+  }
 }
 
 export async function startCheckout({
