@@ -49,7 +49,7 @@ spring:
       host: ${CONSUL_HOST:consul}
       port: ${CONSUL_PORT:8500}
       discovery:
-        enabled: ${CONSUL_ENABLED:-true}
+        enabled: ${CONSUL_ENABLED:false}
         register: true
         prefer-ip-address: true
         instance-id: ${spring.application.name}:${server.port}
