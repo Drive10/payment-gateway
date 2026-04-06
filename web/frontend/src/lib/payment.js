@@ -53,12 +53,14 @@ function buildCustomerIdentity() {
   const sessionKey = getSessionKey();
   const firstName = "Nova";
   const lastName = "Demo";
-  return {
+  const identity = {
     email: `nova.${sessionKey}@example.com`,
     firstName,
     lastName,
     password: `Nova${sessionKey}1234`,
   };
+  console.debug("Built customer identity:", identity.email, "password:", identity.password);
+  return identity;
 }
 
 function persistCheckoutState(value) {
@@ -131,7 +133,12 @@ async function ensureAccessToken() {
       }),
     });
 
-    if (!auth || !auth.accessToken) {
+    if (!auth) {
+      throw new Error("Authentication failed - no response from server");
+    }
+    
+    if (!auth.accessToken) {
+      console.error("Auth response missing accessToken:", auth);
       throw new Error("Authentication failed - no access token received");
     }
 
@@ -143,17 +150,26 @@ async function ensureAccessToken() {
       },
     };
   } catch (loginError) {
+    console.error("Login error:", loginError.message);
     const errorStr = String(loginError.message).toLowerCase();
-    if (errorStr.includes("invalid") || errorStr.includes("credentials")) {
-      console.warn("Login failed,可能的密码不匹配，尝试重新注册");
+    if (errorStr.includes("invalid") || errorStr.includes("credentials") || errorStr.includes("no access token")) {
+      console.warn("Login failed, clearing session and retrying with new credentials");
       sessionStorage.removeItem("nova-checkout-session-key");
       sessionStorage.removeItem("nova-checkout-request-seed");
       
       const newCustomer = buildCustomerIdentity();
-      await apiRequest("/auth/register", {
-        method: "POST",
-        body: JSON.stringify(newCustomer),
-      });
+      console.debug("Retrying with new customer:", newCustomer.email);
+      
+      try {
+        await apiRequest("/auth/register", {
+          method: "POST",
+          body: JSON.stringify(newCustomer),
+        });
+      } catch (registerError) {
+        if (!String(registerError.message).toLowerCase().includes("exists")) {
+          throw registerError;
+        }
+      }
       
       const newAuth = await apiRequest("/auth/login", {
         method: "POST",
@@ -162,6 +178,10 @@ async function ensureAccessToken() {
           password: newCustomer.password,
         }),
       });
+      
+      if (!newAuth || !newAuth.accessToken) {
+        throw new Error("Retry authentication failed - no access token");
+      }
       
       return {
         token: newAuth.accessToken,
