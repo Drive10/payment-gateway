@@ -108,7 +108,7 @@ async function apiRequest(path, options = {}) {
 
 async function ensureAccessToken() {
   const customer = buildCustomerIdentity();
-  console.debug("Ensuring access token for:", customer.email);
+  console.debug("Ensuring access token for:", customer.email, "password:", customer.password);
 
   try {
     const registerResult = await apiRequest("/auth/register", {
@@ -127,6 +127,7 @@ async function ensureAccessToken() {
   }
 
   let auth = null;
+  let loginError = null;
   try {
     auth = await apiRequest("/auth/login", {
       method: "POST",
@@ -136,12 +137,14 @@ async function ensureAccessToken() {
       }),
     });
     console.debug("Login result:", auth);
-  } catch (loginError) {
-    console.error("Login error:", loginError.message);
+  } catch (error) {
+    loginError = error;
+    console.error("Login error:", error.message);
     console.debug("Attempting retry with new credentials");
   }
 
   if (auth && auth.accessToken) {
+    console.debug("Login successful, returning token");
     return {
       token: auth.accessToken,
       customer: {
@@ -151,12 +154,12 @@ async function ensureAccessToken() {
     };
   }
 
-  console.warn("Initial auth failed or returned no token, clearing session and retrying");
+  console.warn("Login failed or returned no token, clearing session and retrying");
   sessionStorage.removeItem("nova-checkout-session-key");
   sessionStorage.removeItem("nova-checkout-request-seed");
 
   const newCustomer = buildCustomerIdentity();
-  console.debug("Retrying with new customer:", newCustomer.email);
+  console.debug("Retrying with new customer:", newCustomer.email, "password:", newCustomer.password);
 
   try {
     await apiRequest("/auth/register", {
@@ -177,6 +180,8 @@ async function ensureAccessToken() {
       password: newCustomer.password,
     }),
   });
+
+  console.debug("Retry login result:", newAuth);
 
   if (!newAuth || !newAuth.accessToken) {
     throw new Error("Authentication failed - no access token received");
