@@ -1,412 +1,69 @@
 services:
-  vault:
-    image: hashicorp/vault:1.15
-    container_name: vault
-    environment:
-      VAULT_ADDR: http://vault:8200
-      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
-      VAULT_DEV_ROOT_TOKEN_ID: dev-root-token
-    ports:
-      - "8200:8200"
-    cap_add:
-      - IPC_LOCK
-    command: server -dev
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8200/v1/sys/health || exit 1"]
-    restart: unless-stopped
-    networks:
-      - fintech-network
-
-  redis:
-    image: redis:7-alpine
-    command: >
-      redis-server
-      --requirepass devpassword
-      --appendonly yes
-      --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
-      --tcp-keepalive 300
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - fintech-network
-
-  mongodb:
-    image: mongo:7
-    container_name: payment-gateway-mongodb
-    environment:
-      MONGO_INIT_DATABASE: payment_gateway
-      MONGO_INIT_DB_ROOT_USERNAME: mongoadmin
-      MONGO_INIT_DB_ROOT_PASSWORD: mongopass
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - fintech-network
-
   mariadb:
     image: mariadb:10.11
     command: --default-authentication-plugin=mysql_native_password
-             --innodb-buffer-pool-size=256M
-             --innodb-log-file-size=64M
-             --innodb-flush-log-at-trx-commit=2
-             --innodb-flush-method=O_DIRECT
-             --max-connections=200
-             --query-cache-type=0
-             --query-cache-size=0
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: payment_gateway
-      MYSQL_USER: payment
-      MYSQL_PASSWORD: devpassword
+      MYSQL_DATABASE: payflow_db
     ports:
       - "3306:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
     networks:
-      - fintech-network
+      - payflow-network
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
+  mongodb:
+    image: mongo:7
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+      MONGO_INIT_DATABASE: payflow_gateway
     ports:
-      - "2181:2181"
+      - "27017:27017"
     volumes:
-      - zookeeper_data:/data
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+      - mongodb_data:/data/db
     networks:
-      - fintech-network
+      - payflow-network
 
-  kafka:
-    image: confluentinc/cp-kafka:5.5.3
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+  redis:
+    image: redis:7-alpine
     ports:
-      - "9092:9092"
-    volumes:
-      - kafka_data:/var/lib/kafka/data
-    healthcheck:
-      test: ["CMD", "echo", "ok"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    restart: unless-stopped
+      - "6379:6379"
     networks:
-      - fintech-network
+      - payflow-network
 
-  consul:
-    image: consul:1.15
-    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0 -data-dir=/consul/data
-    environment:
-      CONSUL_BIND_ADDR: '{{ GetInterfaceIP "eth0" }}'
-      CONSUL_HTTP_ADDR: 0.0.0.0:8500
-      CONSUL_CLIENT_ADDR: 0.0.0.0
-    ports:
-      - "8500:8500"
-    volumes:
-      - consul_data:/consul/data
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8500/v1/status/leader || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - fintech-network
-
-  api-gateway:
+  onboarding:
     build:
       context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/api-gateway
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8080
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: devpassword
-      CONSUL_HOST: consul
-      CONSUL_PORT: 8500
-      CONSUL_ENABLED: "true"
-      JWT_SECRET: ILV+eJo6/m2NsKPaBfWGLzr/ew+YZ4ez+MXiYQQg+jbAIqA12PvCnnFolnMcSfkWJ7YgGNM21AHG4HpEHQ1qSg==
-      GATEWAY_INTERNAL_SECRET: dev-gateway-secret
-    ports:
-      - "8080:8080"
-    depends_on:
-      redis:
-        condition: service_healthy
-      consul:
-        condition: service_started
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - fintech-network
-
-  auth-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/auth-service
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8081
-      JWT_SECRET: ILV+eJo6/m2NsKPaBfWGLzr/ew+YZ4ez+MXiYQQg+jbAIqA12PvCnnFolnMcSfkWJ7YgGNM21AHG4HpEHQ1qSg==
-      VAULT_TOKEN: dev-root-token
-      VAULT_ADDR: http://vault:8200
-      VAULT_ENABLED: "false"
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: payment
-      DB_PASSWORD: devpassword
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      CONSUL_HOST: consul
-      CONSUL_PORT: 8500
-      CONSUL_ENABLED: "true"
+      dockerfile: Dockerfile.onboarding
     ports:
       - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/payflow_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: rootpassword
     depends_on:
-      mariadb:
-        condition: service_healthy
-      zookeeper:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      consul:
-        condition: service_started
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 60s
-    restart: unless-stopped
+      - mariadb
     networks:
-      - fintech-network
+      - payflow-network
 
-  order-service:
+  payflow-gateway:
     build:
       context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/order-service
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8082
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: payment
-      DB_PASSWORD: devpassword
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      VAULT_ADDR: http://vault:8200
-      VAULT_TOKEN: dev-root-token
-      VAULT_ENABLED: "false"
-      CONSUL_HOST: consul
-      CONSUL_PORT: 8500
-      CONSUL_ENABLED: "true"
+      dockerfile: Dockerfile.gateway
     ports:
       - "8082:8082"
-    depends_on:
-      mariadb:
-        condition: service_healthy
-      zookeeper:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      consul:
-        condition: service_started
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8083/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - fintech-network
-
-  notification-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/notification-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8084
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: payment
-      DB_PASSWORD: devpassword
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      VAULT_ADDR: http://vault:8200
-      VAULT_TOKEN: dev-root-token
-      VAULT_ENABLED: "false"
-      CONSUL_HOST: consul
-      CONSUL_PORT: 8500
-      CONSUL_ENABLED: "true"
-    ports:
-      - "8084:8084"
+      SPRING_DATA_MONGODB_HOST: mongodb
+      SPRING_DATA_MONGODB_PORT: 27017
+      SPRING_DATA_MONGODB_DATABASE: payflow_gateway
     depends_on:
-      mariadb:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      consul:
-        condition: service_started
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8084/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 60s
-    restart: unless-stopped
+      - mongodb
     networks:
-      - fintech-network
-
-  simulator-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/simulator-service
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8086
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: payment
-      DB_PASSWORD: devpassword
-      VAULT_ADDR: http://vault:8200
-      VAULT_TOKEN: dev-root-token
-      VAULT_ENABLED: "false"
-      SIMULATOR_SUCCESS_RATE: 90
-      SIMULATOR_MODE: random
-      CONSUL_HOST: consul
-      CONSUL_PORT: 8500
-      CONSUL_ENABLED: "true"
-    ports:
-      - "8086:8086"
-    depends_on:
-      mariadb:
-        condition: service_healthy
-      consul:
-        condition: service_started
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8086/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - fintech-network
-
-  analytics-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.build
-      args:
-        SERVICE_PATH: services/analytics-service
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8089
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: payment
-      DB_PASSWORD: devpassword
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      CONSUL_HOST: consul
-      CONSUL_PORT: 8500
-      CONSUL_ENABLED: "true"
-    ports:
-      - "8089:8089"
-    depends_on:
-      mariadb:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      consul:
-        condition: service_started
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8089/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - fintech-network
-
-  frontend:
-    build:
-      context: ./web/frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    restart: unless-stopped
-    networks:
-      - fintech-network
+      - payflow-network
 
 volumes:
   mariadb_data:
   mongodb_data:
-  vault_data:
-  kafka_data:
-  redis_data:
-  consul_data:
-  zookeeper_data:
 
 networks:
-  fintech-network:
-    name: fintech-network
+  payflow-network:
+    driver: bridge
