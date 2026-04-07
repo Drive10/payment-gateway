@@ -189,17 +189,17 @@ export function PaymentPage({
                   onSubmit={handleCardSubmit}
                   onCvvFocus={setCvvFocused}
                   isLoading={status === 'processing'}
-                />
-                <div className="mt-6">
-                  <PayButton
-                    amount={amount}
-                    currency={currency}
-                    status={status === 'processing' ? 'processing' : status === 'success' ? 'success' : status === 'failed' ? 'failed' : 'idle'}
-                    error={error}
-                    onClick={() => {}}
-                    disabled={status === 'processing'}
-                  />
-                </div>
+                 />
+                 <div className="mt-6">
+                   <PayButton
+                     amount={amount}
+                     currency={currency}
+                     status={status === 'processing' ? 'processing' : status === 'success' ? 'success' : status === 'failed' ? 'failed' : 'idle'}
+                     error={error}
+                     onClick={handleCardSubmit}
+                     disabled={status === 'processing'}
+                   />
+                 </div>
               </>
             )}
 

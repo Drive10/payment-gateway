@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { UPI_ID } from "../lib/payment";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function UpiQR() {
   const [showQR, setShowQR] = useState(false);
@@ -9,7 +10,7 @@ export default function UpiQR() {
       <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-100">
           <svg className="h-8 w-8 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 001 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1-1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
           </svg>
         </div>
         <h4 className="text-lg font-semibold text-slate-900">Pay with UPI</h4>
@@ -24,21 +25,21 @@ export default function UpiQR() {
             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1-1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1-1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1-1v2a1 1 0 001 1z" />
             </svg>
             Show QR Code
           </button>
         ) : (
           <div className="mt-4">
-            <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-xl bg-white p-4 shadow-inner">
-              <div className="grid h-full w-full grid-cols-8 gap-1">
-                {Array.from({ length: 64 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`rounded-sm ${Math.random() > 0.5 ? "bg-slate-900" : "bg-white"}`}
-                  />
-                ))}
-              </div>
+            <div className="mx-auto">
+              <QRCodeSVG
+                value={`upi://pay?pa=${UPI_ID}&pn=PayFlow Merchant&am=100&cu=INR`}
+                size={180}
+                bgColor="white"
+                fgColor="black"
+                level="H"
+                includeMargin={true}
+              />
             </div>
             <p className="mt-3 text-xs text-slate-500">
               Scan with any UPI app to complete payment
