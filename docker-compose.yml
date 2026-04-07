@@ -93,10 +93,10 @@ services:
       - payflow-network
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 15s
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   # ============================================
   # Backend Services
@@ -111,23 +111,21 @@ services:
       - "8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
+      CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
       SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
       JWT_SECRET: ${JWT_SECRET:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk}
-      VAULT_ENABLED: "false"
-      CONSUL_ENABLED: "false"
-      SPRING_CLOUD_CONSUL_ENABLED: "false"
-      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
-      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
-      SPRING_MAIN_LAZY_INITIALIZATION: "true"
-      JAVA_OPTS: "-XX:+UseZGC -XX:TieredStopAtLevel=1 -Xshare:on -Dspring.main.lazy-initialization=true"
+      JAVA_OPTS: "-XX:TieredStopAtLevel=1 -Xshare:on -Dspring.main.lazy-initialization=true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -154,16 +152,15 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_MAIN_WEB_APPLICATION_TYPE: reactive
       SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
+      CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_ENABLED: "false"
+      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
       JWT_SECRET: ${JWT_SECRET:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk}
       APPLICATION_GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-internal-gateway-secret}
-      VAULT_ENABLED: "false"
-      CONSUL_ENABLED: "false"
-      SPRING_CLOUD_CONSUL_ENABLED: "false"
-      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
-      SPRING_CLOUD_GATEWAY_DISCOVERY_CLIENT_PROVIDER_ENABLED: "false"
+      JAVA_OPTS: "-XX:TieredStopAtLevel=1 -Xshare:on"
       EUREKA_ENABLED: "false"
     depends_on:
       redis:
@@ -187,10 +184,12 @@ services:
     environment:
       SERVER_PORT: "8083"
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-XX:TieredStopAtLevel=1 -Xshare:on -Dspring.main.lazy-initialization=true"
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
       SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
@@ -234,10 +233,12 @@ services:
     environment:
       SERVER_PORT: "8084"
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-XX:TieredStopAtLevel=1 -Xshare:on -Dspring.main.lazy-initialization=true"
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
       SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
@@ -276,10 +277,12 @@ services:
     environment:
       SERVER_PORT: "8085"
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-XX:TieredStopAtLevel=1 -Xshare:on -Dspring.main.lazy-initialization=true"
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
       SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
@@ -318,10 +321,11 @@ services:
     environment:
       SERVER_PORT: "8089"
       SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
       SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
@@ -359,25 +363,8 @@ services:
     environment:
       SERVER_PORT: "8086"
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
-      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
-      SPRING_JPA_OPEN_IN_VIEW: "false"
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
-      VAULT_ENABLED: "false"
-      CONSUL_ENABLED: "false"
-      SPRING_CLOUD_CONSUL_ENABLED: "false"
-      SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
-      NOTIFICATION_SERVICE_URL: http://notification-service:8085
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
+    depends_on: []
     networks:
       - payflow-network
     healthcheck:
@@ -385,7 +372,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 15s
 
   audit-service:
     build:
@@ -397,6 +384,7 @@ services:
     environment:
       SERVER_PORT: "8088"
       SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
       MONGODB_URI: mongodb://mongodb:27017/audit_db
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:

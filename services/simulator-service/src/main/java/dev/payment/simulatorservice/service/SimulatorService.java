@@ -1,129 +1,134 @@
 package dev.payment.simulatorservice.service;
 
-import dev.payment.simulatorservice.domain.SimulationTransaction;
-import dev.payment.simulatorservice.domain.enums.SimulationMode;
-import dev.payment.simulatorservice.domain.enums.SimulationStatus;
-import dev.payment.simulatorservice.dto.request.CaptureSimulationRequest;
 import dev.payment.simulatorservice.dto.request.CreateSimulationRequest;
 import dev.payment.simulatorservice.dto.response.SimulationResponse;
-import dev.payment.simulatorservice.repository.SimulationTransactionRepository;
-import org.springframework.http.HttpStatus;
+import dev.payment.simulatorservice.model.SimulationMode;
+import dev.payment.simulatorservice.model.SimulationStatus;
+import dev.payment.simulatorservice.model.SimulationTransaction;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class SimulatorService {
 
-    private final SimulationTransactionRepository simulationTransactionRepository;
-    private final WebhookService webhookService;
+    private final Map<String, SimulationTransaction> transactions = new ConcurrentHashMap<>();
 
-    public SimulatorService(SimulationTransactionRepository simulationTransactionRepository,
-                           WebhookService webhookService) {
-        this.simulationTransactionRepository = simulationTransactionRepository;
-        this.webhookService = webhookService;
-    }
+    @Value("${simulator.delay.ms:100}")
+    private int delayMs;
+
+    @Value("${simulator.success-rate:0.9}")
+    private double successRate;
 
     public SimulationResponse createIntent(CreateSimulationRequest request) {
-        SimulationTransaction transaction = simulationTransactionRepository.findByPaymentReference(request.paymentReference())
-                .orElseGet(SimulationTransaction::new);
+        simulateDelay();
 
-        transaction.setOrderReference(request.orderReference());
-        transaction.setPaymentReference(request.paymentReference());
-        transaction.setProvider(request.provider().toUpperCase());
-        transaction.setAmount(request.amount());
-        transaction.setCurrency(request.currency().toUpperCase());
-        transaction.setSimulationMode(request.simulationMode());
-        transaction.setStatus(SimulationStatus.CREATED);
-        transaction.setProviderOrderId(buildProviderOrderId(request.simulationMode()));
-        transaction.setCheckoutUrl(buildCheckoutUrl(request.simulationMode(), transaction.getProviderOrderId()));
-        transaction.setNotes(request.notes());
-        transaction.setWebhookCallbackUrl(request.webhookCallbackUrl());
+        String transactionId = UUID.randomUUID().toString();
+        String providerOrderId = "sim_" + System.currentTimeMillis();
 
-        simulationTransactionRepository.save(transaction);
-        return toResponse(transaction);
+        SimulationTransaction tx = SimulationTransaction.builder()
+                .id(transactionId)
+                .orderReference(request.orderReference())
+                .paymentReference(request.paymentReference())
+                .provider(request.provider().toUpperCase())
+                .amount(request.amount())
+                .currency(request.currency().toUpperCase())
+                .simulationMode(request.simulationMode())
+                .status(SimulationStatus.PENDING)
+                .providerOrderId(providerOrderId)
+                .checkoutUrl("https://simulator.payflow.dev/checkout/" + providerOrderId)
+                .notes(request.notes())
+                .webhookCallbackUrl(request.webhookCallbackUrl())
+                .createdAt(Instant.now())
+                .build();
+
+        transactions.put(transactionId, tx);
+        log.info("Created simulation transaction: {}", transactionId);
+
+        return toResponse(tx);
     }
 
-    public SimulationResponse capture(String providerOrderId, CaptureSimulationRequest request) {
-        SimulationTransaction transaction = simulationTransactionRepository.findByProviderOrderId(providerOrderId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Simulation transaction not found"));
+    public SimulationResponse capture(String providerOrderId) {
+        simulateDelay();
 
-        transaction.setProviderPaymentId(buildProviderPaymentId(request.simulationMode()));
-        transaction.setProviderSignature(buildSignature(request.simulationMode(), transaction.getProviderOrderId()));
-        transaction.setStatus(SimulationStatus.CAPTURED);
-        simulationTransactionRepository.save(transaction);
+        SimulationTransaction tx = transactions.values().stream()
+                .filter(t -> providerOrderId.equals(t.getProviderOrderId()))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Transaction not found: " + providerOrderId));
 
-        webhookService.sendCallback(
-                transaction.getId(),
-                transaction.getPaymentReference(),
-                transaction.getProviderOrderId(),
-                transaction.getProviderPaymentId(),
-                transaction.getStatus().name(),
-                transaction.getAmount(),
-                transaction.getCurrency()
-        );
+        boolean success = shouldSucceed(tx.getSimulationMode());
+        
+        if (success) {
+            tx.setStatus(SimulationStatus.CAPTURED);
+            tx.setProviderPaymentId("pay_" + System.currentTimeMillis());
+            log.info("Captured transaction: {}", providerOrderId);
+        } else {
+            tx.setStatus(SimulationStatus.FAILED);
+            tx.setNotes("Simulated failure");
+            log.warn("Captured failed for transaction: {}", providerOrderId);
+        }
 
-        return toResponse(transaction);
+        return toResponse(tx);
     }
 
-    public SimulationResponse getTransaction(String providerOrderId) {
-        SimulationTransaction transaction = simulationTransactionRepository.findByProviderOrderId(providerOrderId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Simulation transaction not found"));
-        return toResponse(transaction);
+    public SimulationResponse getStatus(String providerOrderId) {
+        SimulationTransaction tx = transactions.values().stream()
+                .filter(t -> providerOrderId.equals(t.getProviderOrderId()))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Transaction not found: " + providerOrderId));
+
+        return toResponse(tx);
     }
 
     public List<SimulationResponse> getTransactions(SimulationMode mode, SimulationStatus status) {
-        List<SimulationTransaction> transactions;
-        if (mode != null && status != null) {
-            transactions = simulationTransactionRepository.findBySimulationModeAndStatus(mode, status);
-        } else if (mode != null) {
-            transactions = simulationTransactionRepository.findBySimulationMode(mode);
-        } else {
-            transactions = simulationTransactionRepository.findAll();
+        return transactions.values().stream()
+                .filter(t -> mode == null || t.getSimulationMode() == mode)
+                .filter(t -> status == null || t.getStatus() == status)
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    private boolean shouldSucceed(SimulationMode mode) {
+        if (mode == SimulationMode.SUCCESS || mode == SimulationMode.TEST) {
+            return true;
         }
-        return transactions.stream().map(this::toResponse).toList();
+        if (mode == SimulationMode.FAILURE || mode == SimulationMode.CARD_DECLINED) {
+            return false;
+        }
+        return Math.random() < successRate;
     }
 
-    private String buildProviderOrderId(SimulationMode mode) {
-        String prefix = mode == SimulationMode.TEST ? "test_order_" : "prod_order_";
-        return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 18);
+    private void simulateDelay() {
+        try {
+            Thread.sleep(delayMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
-    private String buildProviderPaymentId(SimulationMode mode) {
-        String prefix = mode == SimulationMode.TEST ? "test_pay_" : "live_pay_";
-        return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 18);
-    }
-
-    private String buildSignature(SimulationMode mode, String providerOrderId) {
-        String prefix = mode == SimulationMode.TEST ? "test_sig_" : "live_sig_";
-        return prefix + providerOrderId.substring(Math.max(0, providerOrderId.length() - 12));
-    }
-
-    private String buildCheckoutUrl(SimulationMode mode, String providerOrderId) {
-        String url = mode == SimulationMode.TEST ? "https://simulator.test/checkout/" : "https://checkout.fintech.local/pay/";
-        return url + providerOrderId;
-    }
-
-    private SimulationResponse toResponse(SimulationTransaction transaction) {
-        return new SimulationResponse(
-                transaction.getId(),
-                transaction.getOrderReference(),
-                transaction.getPaymentReference(),
-                transaction.getProvider(),
-                transaction.getProviderOrderId(),
-                transaction.getProviderPaymentId(),
-                transaction.getProviderSignature(),
-                transaction.getSimulationMode().name(),
-                transaction.getStatus().name(),
-                transaction.getAmount(),
-                transaction.getCurrency(),
-                transaction.getCheckoutUrl(),
-                transaction.getSimulationMode() == SimulationMode.TEST,
-                transaction.getNotes(),
-                transaction.getCreatedAt(),
-                transaction.getWebhookCallbackUrl()
-        );
+    private SimulationResponse toResponse(SimulationTransaction tx) {
+        return SimulationResponse.builder()
+                .id(tx.getId())
+                .orderReference(tx.getOrderReference())
+                .paymentReference(tx.getPaymentReference())
+                .provider(tx.getProvider())
+                .providerOrderId(tx.getProviderOrderId())
+                .providerPaymentId(tx.getProviderPaymentId())
+                .status(tx.getStatus().name())
+                .amount(tx.getAmount())
+                .currency(tx.getCurrency())
+                .checkoutUrl(tx.getCheckoutUrl())
+                .testMode(tx.getSimulationMode() == SimulationMode.TEST)
+                .notes(tx.getNotes())
+                .createdAt(tx.getCreatedAt())
+                .build();
     }
 }

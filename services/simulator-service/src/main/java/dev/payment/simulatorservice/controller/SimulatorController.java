@@ -1,7 +1,6 @@
 package dev.payment.simulatorservice.controller;
 
 import dev.payment.common.api.ApiResponse;
-import dev.payment.simulatorservice.dto.request.CaptureSimulationRequest;
 import dev.payment.simulatorservice.dto.request.CreateSimulationRequest;
 import dev.payment.simulatorservice.dto.response.SimulationResponse;
 import dev.payment.simulatorservice.service.SimulatorService;
@@ -29,15 +28,12 @@ public class SimulatorController {
     }
 
     @PostMapping("/{providerOrderId}/capture")
-    public ApiResponse<SimulationResponse> capture(
-            @PathVariable String providerOrderId,
-            @Valid @RequestBody CaptureSimulationRequest request
-    ) {
-        return ApiResponse.success(simulatorService.capture(providerOrderId, request));
+    public ApiResponse<SimulationResponse> capture(@PathVariable String providerOrderId) {
+        return ApiResponse.success(simulatorService.capture(providerOrderId));
     }
 
     @GetMapping("/{providerOrderId}")
     public ApiResponse<SimulationResponse> getTransaction(@PathVariable String providerOrderId) {
-        return ApiResponse.success(simulatorService.getTransaction(providerOrderId));
+        return ApiResponse.success(simulatorService.getStatus(providerOrderId));
     }
 }
