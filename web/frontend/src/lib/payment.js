@@ -1,15 +1,13 @@
-export const PAYMENT_AMOUNT = 500;
-export const PAYMENT_NOTE =
-  "Secure checkout for a production-style fintech payment flow.";
-export const UPI_ID = "nova-demo@upi";
-export const STORAGE_KEY = "nova-checkout-transaction";
+export const DEFAULT_PAYMENT_NOTE = "Payment for order";
+export const UPI_ID = "payflow@upi";
+export const STORAGE_KEY = "payflow-checkout-transaction";
+export const STORAGE_KEY_AUTH = "payflow-auth";
 export const TRANSACTION_MODES = {
   PRODUCTION: "PRODUCTION",
   TEST: "TEST",
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
-// Optional merchantId override for environments where the order API doesn't return it
 const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm the platform is running and try again.";
@@ -23,48 +21,40 @@ function randomToken(length = 12) {
   return Math.random().toString(36).slice(2, 2 + length);
 }
 
-function getSessionValue(key, fallbackFactory) {
-  try {
-    const existing = sessionStorage.getItem(key);
-    if (existing) {
-      return existing;
-    }
-    const created = fallbackFactory();
-    sessionStorage.setItem(key, created);
-    return created;
-  } catch {
-    return fallbackFactory();
-  }
-}
-
-function getSessionKey() {
-  return getSessionValue("nova-checkout-session-key", () => randomToken(10));
-}
-
-function getRequestSeed() {
-  return getSessionValue("nova-checkout-request-seed", () => randomToken(8));
-}
-
 function createCorrelationId(prefix) {
-  return `${prefix}-${getRequestSeed()}-${Date.now().toString(36)}`;
+  return `${prefix}-${randomToken(8)}-${Date.now().toString(36)}`;
 }
 
-function buildCustomerIdentity() {
-  const sessionKey = getSessionKey();
-  const firstName = "Nova";
-  const lastName = "Demo";
-  const identity = {
-    email: `nova.${sessionKey}@example.com`,
-    firstName,
-    lastName,
-    password: `Nova${sessionKey}1234`,
+function buildCustomerIdentity(email, firstName, lastName) {
+  const sessionKey = randomToken(10);
+  return {
+    email: email || `user.${sessionKey}@example.com`,
+    firstName: firstName || "Customer",
+    lastName: lastName || "User",
+    password: `Payflow${sessionKey}123`,
   };
-  console.debug("Built customer identity:", identity.email, "password:", identity.password);
-  return identity;
 }
 
 function persistCheckoutState(value) {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+}
+
+function persistAuth(value) {
+  localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(value));
+}
+
+export function getStoredAuth() {
+  try {
+    const value = localStorage.getItem(STORAGE_KEY_AUTH);
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearAuth() {
+  localStorage.removeItem(STORAGE_KEY_AUTH);
+  sessionStorage.removeItem(STORAGE_KEY);
 }
 
 export function formatCurrency(amount) {
@@ -106,94 +96,107 @@ async function apiRequest(path, options = {}) {
   return payload?.data;
 }
 
-async function ensureAccessToken() {
-  const customer = buildCustomerIdentity();
-  console.debug("Ensuring access token for:", customer.email, "password:", customer.password);
+export async function login(email, password) {
+  const auth = await apiRequest("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
 
-  try {
-    const registerResult = await apiRequest("/auth/register", {
-      method: "POST",
-      body: JSON.stringify(customer),
-    });
-    console.debug("Registered new customer:", customer.email, registerResult);
-  } catch (error) {
-    const errorStr = String(error.message).toLowerCase();
-    console.debug("Register attempt result:", error.message);
-    if (!errorStr.includes("exists")) {
-      console.error("Registration failed:", error.message);
-      throw error;
+  if (!auth || !auth.accessToken) {
+    throw new Error("Login failed - no access token received");
+  }
+
+  const authData = {
+    token: auth.accessToken,
+    refreshToken: auth.refreshToken,
+    user: auth.user,
+    expiresAt: Date.now() + (auth.expiresIn || 3600) * 1000,
+  };
+  persistAuth(authData);
+  return authData;
+}
+
+export async function register(email, password, firstName, lastName) {
+  const customer = buildCustomerIdentity(email, firstName, lastName);
+  if (email) customer.email = email;
+  if (firstName) customer.firstName = firstName;
+  if (lastName) customer.lastName = lastName;
+  if (password) customer.password = password;
+
+  await apiRequest("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(customer),
+  });
+
+  return login(customer.email, customer.password);
+}
+
+export async function ensureAccessToken() {
+  const storedAuth = getStoredAuth();
+  
+  if (storedAuth?.token) {
+    if (storedAuth.expiresAt && Date.now() > storedAuth.expiresAt) {
+      if (storedAuth.refreshToken) {
+        try {
+          const refreshed = await apiRequest("/auth/refresh", {
+            method: "POST",
+            body: JSON.stringify({ refreshToken: storedAuth.refreshToken }),
+          });
+          if (refreshed?.accessToken) {
+            const newAuth = {
+              ...storedAuth,
+              token: refreshed.accessToken,
+              refreshToken: refreshed.refreshToken || storedAuth.refreshToken,
+              expiresAt: Date.now() + (refreshed.expiresIn || 3600) * 1000,
+            };
+            persistAuth(newAuth);
+            return {
+              token: newAuth.token,
+              customer: newAuth.user,
+            };
+          }
+        } catch (e) {
+          console.debug("Token refresh failed, will re-authenticate");
+          clearAuth();
+        }
+      } else {
+        clearAuth();
+      }
+    } else {
+      return {
+        token: storedAuth.token,
+        customer: storedAuth.user,
+      };
     }
-    console.debug("User already exists, attempting login");
   }
-
-  let auth = null;
-  let loginError = null;
-  try {
-    auth = await apiRequest("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({
-        email: customer.email,
-        password: customer.password,
-      }),
-    });
-    console.debug("Login result:", auth);
-  } catch (error) {
-    loginError = error;
-    console.error("Login error:", error.message);
-    console.debug("Attempting retry with new credentials");
-  }
-
-  if (auth && auth.accessToken) {
-    console.debug("Login successful, returning token");
-    return {
-      token: auth.accessToken,
-      customer: {
-        ...customer,
-        id: auth.user?.id,
-      },
-    };
-  }
-
-  console.warn("Login failed or returned no token, clearing session and retrying");
-  sessionStorage.removeItem("nova-checkout-session-key");
-  sessionStorage.removeItem("nova-checkout-request-seed");
-
-  const newCustomer = buildCustomerIdentity();
-  console.debug("Retrying with new customer:", newCustomer.email, "password:", newCustomer.password);
+  
+  const sessionKey = randomToken(10);
+  const customer = buildCustomerIdentity(
+    `user.${sessionKey}@example.com`,
+    "Customer",
+    "User"
+  );
 
   try {
     await apiRequest("/auth/register", {
       method: "POST",
-      body: JSON.stringify(newCustomer),
+      body: JSON.stringify(customer),
     });
-    console.debug("New registration succeeded");
-  } catch (registerError) {
-    if (!String(registerError.message).toLowerCase().includes("exists")) {
-      throw registerError;
+  } catch (error) {
+    if (!String(error.message).toLowerCase().includes("exists")) {
+      throw error;
     }
   }
 
-  const newAuth = await apiRequest("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({
-      email: newCustomer.email,
-      password: newCustomer.password,
-    }),
-  });
-
-  console.debug("Retry login result:", newAuth);
-
-  if (!newAuth || !newAuth.accessToken) {
-    throw new Error("Authentication failed - no access token received");
-  }
-
+  const auth = await login(customer.email, customer.password);
   return {
-    token: newAuth.accessToken,
-    customer: {
-      ...newCustomer,
-      id: newAuth.user?.id,
-    },
+    token: auth.token,
+    customer: auth.user,
   };
+}
+
+export async function logout() {
+  clearAuth();
 }
 
 export async function startCheckout({
@@ -201,9 +204,12 @@ export async function startCheckout({
   method,
   cardholder,
   transactionMode,
+  description,
+  customerEmail,
+  customerName,
 }) {
   const { token, customer } = await ensureAccessToken();
-  const externalReference = `checkout-${Date.now()}`;
+  const externalReference = `pay-${Date.now()}-${randomToken(6)}`;
   const provider =
     transactionMode === TRANSACTION_MODES.TEST
       ? "RAZORPAY_SIMULATOR"
@@ -220,18 +226,11 @@ export async function startCheckout({
       externalReference,
       amount,
       currency: "INR",
-      description: "Nova commerce checkout purchase",
+      description: description || `Payment for order ${externalReference}`,
+      customerEmail: customerEmail || customer?.email,
+      customerName: customerName || `${customer?.firstName} ${customer?.lastName}`.trim(),
       userId: customer?.id,
     }),
-  });
-
-  // Debug: log the payment payload that will be sent to the gateway
-  console.debug("Payments payload prepare", {
-    orderId: order.id,
-    method: method === "upi" ? "UPI" : "CARD",
-    provider,
-    transactionMode,
-    notes: null,
   });
 
   const merchantIdToSend = order?.merchantId ?? DEFAULT_MERCHANT_ID;
@@ -248,10 +247,10 @@ export async function startCheckout({
       method: method === "upi" ? "UPI" : "CARD",
       provider,
       transactionMode,
-        notes:
-          method === "upi"
-            ? "Customer selected UPI"
-            : `Cardholder: ${ (cardholder.trim() || [customer?.firstName, customer?.lastName].filter(Boolean).join(" ")).trim() }`,
+      notes:
+        method === "upi"
+          ? "Customer selected UPI"
+          : `Cardholder: ${(cardholder.trim() || `${customer?.firstName} ${customer?.lastName}`.trim()).trim()}`,
     }),
   });
 
@@ -298,8 +297,8 @@ export async function captureCheckout(checkout) {
     status: payment.status,
     customerLabel:
       checkout.method === "upi"
-        ? checkout.customer.fullName
-        : checkout.cardholder.trim() || checkout.customer.fullName,
+        ? checkout.customer?.fullName || checkout.customer?.firstName
+        : checkout.cardholder.trim() || `${checkout.customer?.firstName} ${checkout.customer?.lastName}`.trim(),
     environmentLabel:
       payment.transactionMode === TRANSACTION_MODES.TEST
         ? "Sandbox lane"
@@ -314,6 +313,24 @@ export async function captureCheckout(checkout) {
 
   persistCheckoutState(transaction);
   return transaction;
+}
+
+export async function getPaymentStatus(paymentId, token) {
+  return apiRequest(`/payments/${paymentId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function getOrderHistory(token, limit = 10, offset = 0) {
+  return apiRequest(`/orders?limit=${limit}&offset=${offset}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function getPaymentHistory(token, limit = 10, offset = 0) {
+  return apiRequest(`/payments?limit=${limit}&offset=${offset}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 export function formatCardNumber(value) {
@@ -412,4 +429,8 @@ export function getStoredTransaction() {
   } catch {
     return null;
   }
+}
+
+export function clearTransaction() {
+  sessionStorage.removeItem(STORAGE_KEY);
 }

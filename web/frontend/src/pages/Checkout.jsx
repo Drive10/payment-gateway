@@ -4,8 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import CardForm from "../components/CardForm";
 import UpiQR from "../components/UpiQR";
 import {
-  PAYMENT_AMOUNT,
-  PAYMENT_NOTE,
+  DEFAULT_PAYMENT_NOTE,
   TRANSACTION_MODES,
   formatCurrency,
   startCheckout,
@@ -46,16 +45,22 @@ export default function Checkout() {
   const [searchParams] = useSearchParams();
   const [method, setMethod] = useState("card");
   const [values, setValues] = useState(initialForm);
-  const [transactionMode, setTransactionMode] = useState(TRANSACTION_MODES.PRODUCTION);
+  const [transactionMode, setTransactionMode] = useState(TRANSACTION_MODES.TEST);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [paymentLinkData, setPaymentLinkData] = useState(null);
   const [loadingLink, setLoadingLink] = useState(false);
   const [paymentLinkChecked, setPaymentLinkChecked] = useState(false);
+  const [amountInput, setAmountInput] = useState("");
+  const [showAmountInput, setShowAmountInput] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
+    const amount = searchParams.get("amount");
+    if (amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0) {
+      setAmountInput(amount);
+    }
     const referenceId = searchParams.get("ref");
     if (referenceId) {
       loadPaymentLink(referenceId);
@@ -71,6 +76,9 @@ export default function Checkout() {
       const data = await response.json();
       if (data.success && data.data) {
         setPaymentLinkData(data.data);
+        if (data.data.amount) {
+          setAmountInput(data.data.amount.toString());
+        }
       } else {
         setSubmitError("Invalid or expired payment link");
       }
@@ -107,7 +115,17 @@ export default function Checkout() {
     setErrors((current) => ({ ...current, [field]: undefined }));
   };
 
+  const handleAmountChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    setAmountInput(value);
+  };
+
   const pay = async () => {
+    if (!amountInput || parseFloat(amountInput) <= 0) {
+      setSubmitError("Please enter a valid payment amount");
+      return;
+    }
+
     if (method === "card") {
       const nextErrors = validateCardForm(values);
       if (Object.keys(nextErrors).length > 0) {
@@ -121,10 +139,11 @@ export default function Checkout() {
 
     try {
       const checkout = await startCheckout({
-        amount: paymentLinkData?.amount ?? PAYMENT_AMOUNT,
+        amount: parseFloat(amountInput),
         method,
         cardholder: values.cardholder,
         transactionMode,
+        description: paymentLinkData?.description || DEFAULT_PAYMENT_NOTE,
       });
       navigate("/processing", { state: { checkout } });
     } catch (error) {
@@ -134,10 +153,15 @@ export default function Checkout() {
     }
   };
 
-  const displayAmount = paymentLinkData?.amount ?? PAYMENT_AMOUNT;
+  const displayAmount = paymentLinkData?.amount ?? (amountInput ? parseFloat(amountInput) : 0);
   const displayCurrency = paymentLinkData?.currency || "INR";
+  const displayMerchant = paymentLinkData?.merchantName || "PayFlow Merchant";
+  const displayDescription = paymentLinkData?.description || DEFAULT_PAYMENT_NOTE;
+  
   const disabled =
     submitting ||
+    !amountInput ||
+    parseFloat(amountInput) <= 0 ||
     (method === "card" &&
       (!values.cardNumber || !values.expiry || !values.cvv || !values.cardholder.trim()));
 
@@ -201,11 +225,11 @@ export default function Checkout() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Merchant</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">Nova Commerce</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{displayMerchant}</p>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Order ID</p>
-                    <p className="mt-1 font-mono text-sm text-slate-900">#{Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
+                    <p className="mt-1 font-mono text-sm text-slate-900">#{Date.now().toString(36).substring(2, 10).toUpperCase()}</p>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Date</p>
@@ -219,7 +243,7 @@ export default function Checkout() {
                   <h3 className="text-sm font-semibold text-slate-900">Payment Details</h3>
                   <div className="mt-4 space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">Subscription Renewal</span>
+                      <span className="text-slate-600">{displayDescription}</span>
                       <span className="font-medium text-slate-900">{formatCurrency(displayAmount)}</span>
                     </div>
                     <div className="flex justify-between border-t border-slate-100 pt-3 text-sm">
@@ -233,13 +257,41 @@ export default function Checkout() {
                   </div>
                 </div>
 
+                {!paymentLinkData && !searchParams.get("amount") && (
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAmountInput(!showAmountInput)}
+                      className="flex items-center gap-2 text-sm font-medium text-cyan-600 hover:text-cyan-700"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      {showAmountInput ? "Hide custom amount" : "Enter custom amount"}
+                    </button>
+                    {showAmountInput && (
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-slate-700">Amount (INR)</label>
+                        <input
+                          type="text"
+                          value={amountInput}
+                          onChange={handleAmountChange}
+                          placeholder="Enter amount"
+                          className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                        />
+                        <p className="mt-1 text-xs text-slate-500">Enter the payment amount in Indian Rupees</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <div className="flex items-start gap-3">
                     <svg className="mt-0.5 h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                     <p className="text-sm text-amber-800">
-                      {PAYMENT_NOTE}
+                      Your payment is secured with PCI-compliant encryption. We never store your card details.
                     </p>
                   </div>
                 </div>
@@ -282,8 +334,8 @@ export default function Checkout() {
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { id: TRANSACTION_MODES.PRODUCTION, label: "Production", desc: "Live transactions" },
                       { id: TRANSACTION_MODES.TEST, label: "Test/Sandbox", desc: "Simulated" },
+                      { id: TRANSACTION_MODES.PRODUCTION, label: "Production", desc: "Live transactions" },
                     ].map((env) => (
                       <button
                         key={env.id}
@@ -336,7 +388,7 @@ export default function Checkout() {
                       Processing...
                     </span>
                   ) : (
-                    `Pay ${formatCurrency(displayAmount)}`
+                    `Pay ${formatCurrency(displayAmount) || "₹0"}`
                   )}
                 </button>
 
