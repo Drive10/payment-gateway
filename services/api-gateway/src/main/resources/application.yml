@@ -17,19 +17,13 @@ spring:
       port: ${CONSUL_PORT:8500}
       discovery:
         enabled: ${CONSUL_ENABLED:false}
-        register: true
-        prefer-ip-address: true
-        instance-id: ${spring.application.name}:${server.port}
-        health-check-path: /actuator/health
-        health-check-interval: 10s
     gateway:
       discovery:
         locator:
-          enabled: true
-          lower-case-service-id: true
+          enabled: false
       routes:
         - id: auth-service
-          uri: lb://auth-service
+          uri: http://localhost:8081
           predicates:
             - Path=/api/v1/auth/**
           filters:
@@ -41,7 +35,7 @@ spring:
                 redis-rate-limiter.requested-tokens: 1
 
         - id: order-service
-          uri: lb://order-service
+          uri: http://localhost:8084
           predicates:
             - Path=/api/v1/orders/**
           filters:
@@ -52,7 +46,7 @@ spring:
                 redis-rate-limiter.burstCapacity: 100
 
         - id: payment-service
-          uri: lb://payment-service
+          uri: http://localhost:8083
           predicates:
             - Path=/api/v1/payments/**,/api/v1/admin/**
           filters:
@@ -64,63 +58,63 @@ spring:
                 redis-rate-limiter.burstCapacity: 200
 
         - id: notification-service
-          uri: lb://notification-service
+          uri: http://localhost:8085
           predicates:
             - Path=/api/v1/notifications/**
           filters:
             - StripPrefix=2
 
         - id: analytics-service
-          uri: lb://analytics-service
+          uri: http://localhost:8089
           predicates:
             - Path=/api/v1/analytics/**
           filters:
             - StripPrefix=2
 
         - id: simulator-service
-          uri: lb://simulator-service
+          uri: http://localhost:8086
           predicates:
             - Path=/api/v1/simulator/**
           filters:
             - StripPrefix=2
 
         - id: internal-auth
-          uri: lb://auth-service
+          uri: http://localhost:8081
           predicates:
             - Path=/platform/auth/**
           filters:
             - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-order
-          uri: lb://order-service
+          uri: http://localhost:8084
           predicates:
             - Path=/platform/order/**
           filters:
             - RewritePath=/platform/order/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-payment
-          uri: lb://payment-service
+          uri: http://localhost:8083
           predicates:
             - Path=/platform/payment/**
           filters:
             - RewritePath=/platform/payment/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-notification
-          uri: lb://notification-service
+          uri: http://localhost:8085
           predicates:
             - Path=/platform/notification/**
           filters:
             - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-analytics
-          uri: lb://analytics-service
+          uri: http://localhost:8089
           predicates:
             - Path=/platform/analytics/**
           filters:
             - RewritePath=/platform/analytics/(?<segment>.*), /internal/platform/${segment}
 
         - id: internal-simulator
-          uri: lb://simulator-service
+          uri: http://localhost:8086
           predicates:
             - Path=/platform/simulator/**
           filters:
@@ -139,4 +133,4 @@ application:
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET:change-me-to-a-secure-base64-encoded-secret-key-that-is-at-least-32-bytes-long}
+    secret-key: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk}

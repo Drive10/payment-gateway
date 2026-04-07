@@ -403,10 +403,11 @@ GitHub Actions workflow includes:
 
 ## Documentation
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Detailed architecture documentation
-- [docs/COMPLIANCE.md](docs/COMPLIANCE.md) - PCI DSS and SOC 2 compliance
-- [SERVICE_COMMUNICATION_GUIDE.md](SERVICE_COMMUNICATION_GUIDE.md) - Inter-service communication patterns
-- [ENGINEERING_SHOWCASE.md](ENGINEERING_SHOWCASE.md) - Portfolio-ready showcase with interview talking points
+- [docs/SERVICES.md](docs/SERVICES.md) - Complete service reference
+- [docs/API.md](docs/API.md) - API endpoints and examples
+- [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) - Infrastructure details
+- [.ai/context/architecture.md](.ai/context/architecture.md) - Architecture overview
+- [.ai/context/services.md](.ai/context/services.md) - Service context
 
 ## License
 

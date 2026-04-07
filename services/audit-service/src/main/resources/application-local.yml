@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: audit-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/audit_db
+      auto-index-creation: true
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: audit-service-group
+      auto-offset-reset: earliest
+
+server:
+  port: ${SERVER_PORT:8088}
+
+logging:
+  level:
+    root: INFO
+    dev.payment: DEBUG

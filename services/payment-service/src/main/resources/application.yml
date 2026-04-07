@@ -117,14 +117,14 @@ management:
       prometheus:
         enabled: true
 
-application:
+  application:
   gateway-trust:
     enabled: true
-    internal-secret: ${INTERNAL_SECRET:}
+    internal-secret: ${INTERNAL_SECRET:internal-gateway-secret}
 
   security:
     jwt:
-      secret-key: ${JWT_SECRET:}
+      secret-key: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk}
       expiration-seconds: 3600
       refresh-expiration-seconds: 2592000
 
@@ -136,13 +136,13 @@ application:
     base-url: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
 
   webhook:
-    service-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+    service-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8085}
 
   order:
-    service-url: lb://order-service
+    service-url: http://localhost:8084
 
   auth:
-    service-url: lb://auth-service
+    service-url: http://localhost:8081
 
   kafka:
     topic:
