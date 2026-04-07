@@ -14,6 +14,11 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@Data
+@EqualsAndHashCode(callSuper = false)
 @Entity
 @Table(name = "simulation_transactions")
 public class SimulationTransaction extends BaseEntity {

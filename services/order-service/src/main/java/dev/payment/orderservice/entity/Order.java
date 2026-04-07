@@ -12,6 +12,11 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@Data
+@EqualsAndHashCode(callSuper = false)
 @Entity
 @Table(name = "orders")
 public class Order extends BaseEntity {

@@ -10,6 +10,11 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
 import java.util.Map;
 
+import lombok.Data;
+import lombok.Builder;
+
+@Data
+@Builder
 @Document(collection = "audit_logs")
 @CompoundIndexes({
     @CompoundIndex(name = "entity_time_idx", def = "{'entityType': 1, 'timestamp': -1}"),

@@ -119,6 +119,7 @@ services:
       CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
     depends_on:
       mariadb:
         condition: service_healthy
@@ -143,6 +144,8 @@ services:
     environment:
       SERVER_PORT: "8080"
       SPRING_PROFILES_ACTIVE: docker
+      SPRING_MAIN_WEB_APPLICATION_TYPE: reactive
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}

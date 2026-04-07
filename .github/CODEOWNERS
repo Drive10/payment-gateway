@@ -5,29 +5,32 @@
 * @Drive10
 
 # Security-critical files
-/.github/workflows/security.yml @Drive10
+/.github/workflows/ @Drive10
 /.github/dependabot.yml @Drive10
 SECURITY.md @Drive10
-docs/SECURITY-CHECKLIST.md @Drive10
 
-# API Gateway (authentication, authorization, rate limiting)
+# Backend Services
 /services/api-gateway/ @Drive10
-
-# Auth Service (authentication, JWT)
 /services/auth-service/ @Drive10
-
-# Payment Service (payment processing, PCI compliance)
+/services/order-service/ @Drive10
 /services/payment-service/ @Drive10
+/services/notification-service/ @Drive10
+/services/simulator-service/ @Drive10
+/services/graphql-gateway/ @Drive10
+/services/search-service/ @Drive10
+/services/analytics-service/ @Drive10
+/services/audit-service/ @Drive10
 
-# Frontend applications
-/web/dashboard/ @Drive10
+# Frontend application
 /web/frontend/ @Drive10
 
+# Shared library
+/libs/common/ @Drive10
+
 # Infrastructure and Docker
-/Dockerfile.build @Drive10
-/docker-compose.yml @Drive10
-/docker-compose.dev.yml @Drive10
-/nginx/ @Drive10
+Dockerfile.build @Drive10
+docker-compose.yml @Drive10
+docker-compose.monitoring.yml @Drive10
 
 # Database migrations
 /services/*/src/main/resources/db/migration/ @Drive10
@@ -37,3 +40,4 @@ docs/SECURITY-CHECKLIST.md @Drive10
 *.yaml @Drive10
 pom.xml @Drive10
 Makefile @Drive10
+.env* @Drive10
