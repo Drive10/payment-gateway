@@ -14,7 +14,7 @@ WORKDIR /app
 COPY --from=builder /app/services/analytics-service/target/*.jar app.jar
 RUN chown -R spring:spring /app
 USER spring:spring
-EXPOSE 8086
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD wget --quiet --tries=1 --spider http://localhost:8086/actuator/health || exit 1
+EXPOSE 8089
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD wget --quiet --tries=1 --spider http://localhost:8089/actuator/health || exit 1
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

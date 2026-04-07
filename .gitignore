@@ -41,10 +41,8 @@ out/
 **/dependency-check-reports/
 
 # Docker volumes
-postgres_data/
-prometheus_data/
-grafana_data/
-loki_data/
+mariadb_data/
+mongodb_data/
 
 # Terraform
 *.tfstate

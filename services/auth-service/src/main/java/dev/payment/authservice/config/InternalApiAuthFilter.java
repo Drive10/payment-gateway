@@ -23,7 +23,7 @@ public class InternalApiAuthFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         
         if (path.startsWith("/internal/platform/")) {
-            String authHeader = request.getHeader("X-Internal-Token");
+            String authHeader = request.getHeader("X-Gateway-Token");
             
             if (authHeader == null || authHeader.isBlank()) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

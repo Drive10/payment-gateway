@@ -1,8 +1,5 @@
 server:
   port: ${SERVER_PORT:8080}
-  tomcat:
-    max-threads: 200
-    accept-count: 100
 
 spring:
   application:
@@ -131,13 +128,15 @@ spring:
 
 application:
   services:
-    auth: lb://auth-service
-    order: lb://order-service
-    payment: lb://payment-service
-    notification: lb://notification-service
-    analytics: lb://analytics-service
-    simulator: lb://simulator-service
+    auth: http://localhost:8081
+    order: http://localhost:8084
+    payment: http://localhost:8083
+    notification: http://localhost:8085
+    analytics: http://localhost:8089
+    simulator: http://localhost:8086
+  gateway:
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET:}
+    secret-key: ${JWT_SECRET:change-me-to-a-secure-base64-encoded-secret-key-that-is-at-least-32-bytes-long}

@@ -10,65 +10,127 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: true
-          lower-case-service-id: true
+          enabled: false
+          lower-case-service-id: false
       routes:
         - id: auth-service
           uri: http://auth-service:8081
           predicates:
             - Path=/api/v1/auth/**
-          metadata:
-            wiretap: "true"
+          filters:
+            - StripPrefix=2
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
 
         - id: order-service
-          uri: lb://order-service
+          uri: http://order-service:8084
           predicates:
             - Path=/api/v1/orders/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
 
         - id: payment-service
-          uri: lb://payment-service
+          uri: http://payment-service:8083
           predicates:
-            - Path=/api/v1/payments/**
-            - Path=/api/v1/admin/**
+            - Path=/api/v1/payments/**,/api/v1/admin/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
+            - AddRequestHeader=X-Gateway-Token,${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
 
         - id: notification-service
-          uri: lb://notification-service
+          uri: http://notification-service:8085
           predicates:
             - Path=/api/v1/notifications/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
 
         - id: simulator-service
-          uri: lb://simulator-service
+          uri: http://simulator-service:8086
           predicates:
             - Path=/api/v1/simulator/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
 
         - id: analytics-service
-          uri: lb://analytics-service
+          uri: http://analytics-service:8089
           predicates:
             - Path=/api/v1/analytics/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
+
+        - id: internal-auth
+          uri: http://auth-service:8081
+          predicates:
+            - Path=/platform/auth/**
+          filters:
+            - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
+            - AddRequestHeader=X-Gateway-Token,${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
+
+        - id: internal-order
+          uri: http://order-service:8084
+          predicates:
+            - Path=/platform/order/**
+          filters:
+            - RewritePath=/platform/order/(?<segment>.*), /internal/platform/${segment}
+            - AddRequestHeader=X-Gateway-Token,${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
+
+        - id: internal-payment
+          uri: http://payment-service:8083
+          predicates:
+            - Path=/platform/payment/**
+          filters:
+            - RewritePath=/platform/payment/(?<segment>.*), /internal/platform/${segment}
+            - AddRequestHeader=X-Gateway-Token,${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
+
+        - id: internal-notification
+          uri: http://notification-service:8085
+          predicates:
+            - Path=/platform/notification/**
+          filters:
+            - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
+            - AddRequestHeader=X-Gateway-Token,${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
+
+        - id: internal-analytics
+          uri: http://analytics-service:8089
+          predicates:
+            - Path=/platform/analytics/**
+          filters:
+            - RewritePath=/platform/analytics/(?<segment>.*), /internal/platform/${segment}
+            - AddRequestHeader=X-Gateway-Token,${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
+
+        - id: internal-simulator
+          uri: http://simulator-service:8086
+          predicates:
+            - Path=/platform/simulator/**
+          filters:
+            - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
+            - AddRequestHeader=X-Gateway-Token,${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
 
       httpclient:
         connect-timeout: 10000
         response-timeout: 30s
 
-eureka:
-  client:
-    enabled: ${EUREKA_ENABLED:-true}
-    service-url:
-      defaultZone: ${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
-    registry-fetch-interval-seconds: 10
-  instance:
-    prefer-ip-address: true
-    instance-id: ${spring.application.name}:${server.port}
+application:
+  services:
+    auth: http://auth-service:8081
+    order: http://order-service:8084
+    payment: http://payment-service:8083
+    notification: http://notification-service:8085
+    analytics: http://analytics-service:8089
+    simulator: http://simulator-service:8086
+  gateway:
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
 
 management:
   endpoints:
@@ -78,6 +140,6 @@ management:
 
 logging:
   level:
-    root: DEBUG
-    org.springframework.cloud.gateway: DEBUG
-    dev.payment.apigateway: DEBUG
+    root: INFO
+    org.springframework.cloud.gateway: INFO
+    dev.payment.apigateway: INFO

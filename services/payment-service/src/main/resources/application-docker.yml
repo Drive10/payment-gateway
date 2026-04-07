@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:mariadb://${DB_HOST:mariadb}:${DB_PORT:3306}/${DB_NAME:payment_gateway}
-    username: payment
-    password: ${DB_PASSWORD:devpassword}
+    username: root
+    password: ${DB_PASSWORD:-rootpassword}
     driver-class-name: org.mariadb.jdbc.Driver
 
   kafka:
@@ -10,16 +10,16 @@ spring:
 
 application:
   simulator:
-    base-url: lb://simulator-service
+    base-url: ${SIMULATOR_SERVICE_URL:http://simulator-service:8086}
   webhook:
-    service-url: lb://notification-service
+    service-url: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
   order:
-    service-url: lb://order-service
+    service-url: ${ORDER_SERVICE_URL:http://order-service:8084}
   auth:
-    service-url: lb://auth-service
+    service-url: ${AUTH_SERVICE_URL:http://auth-service:8081}
 
   gateway-trust:
-    enabled: true
+    enabled: false
 
 logging:
   level:

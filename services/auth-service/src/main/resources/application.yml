@@ -1,8 +1,5 @@
 server:
   port: ${SERVER_PORT:8081}
-  tomcat:
-    max-threads: 150
-    accept-count: 100
 
 spring:
   application:

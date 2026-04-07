@@ -36,20 +36,21 @@ check_docker() {
 
 # Infrastructure management
 infra_up() {
+    check_docker
     log_info "Starting infrastructure services..."
-    docker compose --profile infra up -d
+    docker compose up -d mariadb mongodb redis zookeeper kafka
     log_info "Infrastructure services started!"
     
     log_info "Waiting for services to be ready..."
-    sleep 10
+    sleep 15
     
     log_info "Checking service status:"
-    docker compose --profile infra ps
+    docker compose ps mariadb mongodb redis zookeeper kafka
 }
 
 infra_down() {
     log_info "Stopping infrastructure services..."
-    docker compose --profile infra down
+    docker compose down mariadb mongodb redis zookeeper kafka
     log_info "Infrastructure services stopped!"
 }
 
@@ -58,15 +59,7 @@ backend_start() {
     check_docker
     
     log_info "Starting backend services..."
-    
-    # Start individual services
-    services=(api-gateway auth-service order-service payment-service notification-service simulator-service analytics-service graphql-gateway search-service audit-service)
-    
-    for service in "${services[@]}"; do
-        log_info "Starting $service..."
-        docker compose up -d "$service"
-    done
-    
+    docker compose up -d
     log_info "Backend services started!"
     log_info "Checking service status:"
     docker compose ps
@@ -102,6 +95,7 @@ run_tests() {
     check_docker
     
     log_info "Running backend tests..."
+    cd "$PROJECT_ROOT"
     mvn test
     
     log_info "Running frontend tests..."
@@ -111,32 +105,24 @@ run_tests() {
 
 # Code quality
 lint_code() {
-    log_info "Running backend code quality checks..."
-    # Add your Java linting commands here if needed
-    
     log_info "Running frontend code quality checks..."
     cd "$PROJECT_ROOT/web/frontend"
     npm run lint
 }
 
 format_code() {
-    log_info "Formatting backend code..."
-    # Add your Java formatting commands here if needed
-    
     log_info "Formatting frontend code..."
     cd "$PROJECT_ROOT/web/frontend"
     npm run format
 }
 
 # Database management
-db_migrate() {
-    log_info "Running database migrations..."
-    # Add your database migration commands here
-}
-
-db_seed() {
-    log_info "Seeding database with sample data..."
-    # Add your database seeding commands here
+db_reset() {
+    log_info "Resetting database volumes..."
+    docker compose down -v mariadb mongodb
+    docker compose up -d mariadb mongodb
+    log_info "Database volumes reset. Waiting for services to initialize..."
+    sleep 10
 }
 
 # Help message
@@ -146,18 +132,17 @@ show_help() {
     echo "Usage: ./scripts/dev.sh [command]"
     echo ""
     echo "Commands:"
-    echo "  infra:up          Start infrastructure services (PostgreSQL, MongoDB, Redis, Kafka, etc.)"
+    echo "  infra:up          Start infrastructure services (MariaDB, MongoDB, Redis, Kafka)"
     echo "  infra:down        Stop infrastructure services"
-    echo "  backend:start     Start all backend services"
-    echo "  backend:stop      Stop all backend services"
+    echo "  backend:start     Start all services via docker compose"
+    echo "  backend:stop      Stop all services"
     echo "  frontend:start    Start frontend development server"
     echo "  frontend:build    Build frontend for production"
     echo "  frontend:preview  Preview frontend production build"
     echo "  test              Run all tests (backend and frontend)"
     echo "  lint              Run code quality checks"
     echo "  format            Format code according to project standards"
-    echo "  db:migrate        Run database migrations"
-    echo "  db:seed           Seed database with sample data"
+    echo "  db:reset          Reset database volumes (fresh data)"
     echo "  help              Show this help message"
     echo ""
     echo "Examples:"
@@ -198,11 +183,8 @@ case "$1" in
     format)
         format_code
         ;;
-    db:migrate)
-        db_migrate
-        ;;
-    db:seed)
-        db_seed
+    db:reset)
+        db_reset
         ;;
     help|*)
         show_help

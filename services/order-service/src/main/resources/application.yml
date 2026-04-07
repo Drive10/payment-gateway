@@ -67,9 +67,9 @@ spring:
 # Application-specific configuration (not Spring managed)
 application:
   payment-service:
-    url: http://payment-service:8083
+    url: ${APPLICATION_PAYMENT_SERVICE_URL:http://localhost:8083}
   notification-service:
-    url: lb://notification-service
+    url: ${APPLICATION_NOTIFICATION_SERVICE_URL:http://localhost:8085}
   kafka:
     topic:
       order-events: order.events

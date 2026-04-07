@@ -11,11 +11,9 @@ spring:
 application:
   services:
     auth: http://localhost:8081
-    order: http://localhost:8082
+    order: http://localhost:8084
     payment: http://localhost:8083
-    notification: http://localhost:8084
-    webhook: http://localhost:8084
+    notification: http://localhost:8085
+    webhook: http://localhost:8085
     simulator: http://localhost:8086
-    analytics: http://localhost:8085
-    merchant: http://localhost:8090
-    dispute: http://localhost:8091
+    analytics: http://localhost:8089
