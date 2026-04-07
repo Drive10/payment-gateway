@@ -33,6 +33,75 @@
 │  └─────────────┘  └──────────────┘  └──────────────┘  └─────────────────┘  │
 └─────────────────────────────┬────────────────────────────────────────────────┘
                               │
+                    ┌───────────────────┼───────────────────┬───────────────────┐
+                    ▼                   ▼                   ▼                   ▼
+            ┌──────────────────┐ ┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐
+            │  Auth Service    │ │Order Service │ │  Payment Service  │ │ GraphQL Gateway  │
+            │  (8081)          │ │  (8082)      │ │  (8083)           │ │  (8087)          │
+            │                  │ │              │ │                  │ │                  │
+            │  • JWT Auth     │ │  • Orders   │ │  • Payments     │ │  • GraphQL API   │
+            │  • OAuth2       │ │  • Merchants│ │  • Refunds      │ │  • Federation    │
+            │  • RBAC         │ │  • API Keys │ │  • Webhooks     │ │  • DataLoader    │
+            │  • Sessions     │ │  • KYC      │ │  • Idempotency  │ │                  │
+            └──────────────────┘ └──────────────┘ └──────────────────┘ └──────────────────┘
+                              │
+                    ┌───────────────────┼───────────────────┬───────────────────┐
+                    ▼                   ▼                   ▼                   ▼
+            ┌──────────────────┐ ┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐
+            │ Notification     │ │ Analytics    │ │  Simulator       │ │  Search Service  │
+            │ Service (8084)   │ │ Service      │ │  Service (8086)  │ │  (8088)          │
+            │                  │ │  (8089)      │ │                  │ │                  │
+            │  • Email/SMS    │ │  • Reports  │ │  • Load Testing │ │  • Elasticsearch │
+            │  • Push         │ │  • Metrics  │ │  • Demo Mode    │ │  • Full-text    │
+            │  • Webhooks     │ │  • Dashboards│ │  • Mock Providers│ │  • Aggregations │
+            │  • Feature Flags│ │  • Alerts   │ │                  │ │                  │
+            └──────────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘
+                              │
+                    ┌───────────────────┼───────────────────┐
+                    ▼                   ▼                   ▼
+            ┌───────────────────────────────────────────────────────────────────────────────┐
+            │                        Event-Driven Messaging (Kafka)                          │
+            │  payment.created │ payment.completed │ order.events │ webhook.updates │ audit  │
+            └─────────────────────────────┬────────────────────────────────────────────────┘
+                              │
+                    ┌───────────────────┼───────────────────┬───────────────────┐
+                    ▼                   ▼                   ▼                   ▼
+            ┌──────────────────┐ ┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐
+            │ Notification     │ │ Analytics    │ │  Simulator       │ │  Search Service  │
+            │ Service (8084)   │ │ Service      │ │  Service (8086)  │ │  (8088)          │
+            │                  │ │  (8089)      │ │                  │ │                  │
+            │  • Email/SMS    │ │  • Reports  │ │  • Load Testing │ │  • Elasticsearch │
+            │  • Push         │ │  • Metrics  │ │  • Dashboards│ │  • Mock Providers│ │  • Aggregations │
+            │  • Feature Flags│ │  • Alerts   │ │                  │ │                  │
+            └──────────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘
+                              │
+                              ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                          Audit Service (8089)                                  │
+│                                                                               │
+│  • MongoDB-based audit logging                                                │
+│  • Event sourcing support                                                     │
+│  • Compliance & regulatory requirements                                        │
+│  • User activity tracking                                                     │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                              Client Layer                                      │
+│  ┌──────────────────┐              ┌──────────────────────────────────────┐  │
+│  │  Checkout UI      │              │  GraphQL Playground (GraphiQL)        │  │
+│  │  (web/frontend)   │              │  localhost:8087/graphiql              │  │
+│  └────────┬─────────┘              └──────────────────┬───────────────────┘  │
+└───────────┼─────────────────────────────────────────────┼─────────────────────┘
+            │                                              │
+            ▼                                              ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                     API Gateway (Spring Cloud Gateway)                          │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │
+│  │ JWT Auth    │  │ Rate Limiting│  │ CORS Policy  │  │ Circuit Breaker │  │
+│  │ Validation  │  │ (Redis)      │  │ Security     │  │ (Resilience4j)  │  │
+│  └─────────────┘  └──────────────┘  └──────────────┘  └─────────────────┘  │
+└─────────────────────────────┬────────────────────────────────────────────────┘
+                              │
           ┌───────────────────┼───────────────────┬───────────────────┐
           ▼                   ▼                   ▼                   ▼
 ┌──────────────────┐ ┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐
@@ -108,7 +177,7 @@
 | **api-gateway** | 8080 | Central routing, auth, rate limiting | Spring Cloud Gateway |
 | **auth-service** | 8081 | JWT auth, OAuth2, RBAC, sessions | Spring Security |
 | **order-service** | 8082 | Order management, merchants, KYC, API keys | Spring Data JPA |
-| **payment-service** | 8083 | Payment orchestration, Stripe, Razorpay | Spring Boot |
+| **payment-service** | 8083 | Payment orchestration, multi-provider integration | Spring Boot |
 | **notification-service** | 8084 | Email, SMS, push, webhooks, feature flags | Kafka, Redis |
 | **simulator-service** | 8086 | Payment simulation, load testing, demo mode | Spring Boot |
 | **graphql-gateway** | 8087 | GraphQL API with schema federation | Spring GraphQL |

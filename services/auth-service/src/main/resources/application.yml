@@ -17,7 +17,6 @@ spring:
       max-lifetime: 1200000
       connection-timeout: 25000
       pool-name: AuthHikariPool
-
   jpa:
     hibernate:
       ddl-auto: update
@@ -32,15 +31,12 @@ spring:
           time_zone: UTC
         type:
           deprecated_uuid_char_type: true
-
   flyway:
-    enabled: false
-
+    enabled: true
   cache:
     type: caffeine
     caffeine:
       spec: maximumSize=500,expireAfterWrite=600s
-
   cloud:
     consul:
       host: ${CONSUL_HOST:consul}
@@ -52,57 +48,52 @@ spring:
         instance-id: ${spring.application.name}:${server.port}
         health-check-path: /actuator/health
         health-check-interval: 10s
-
-vault:
-  uri: ${VAULT_ADDR:http://vault:8200}
-  token: ${VAULT_TOKEN:}
-  enabled: ${VAULT_ENABLED:false}
-  ssl:
-    enabled: false
-  kv:
-    enabled: true
-
-jwt:
-  secret: ${JWT_SECRET:}
-  expiration: 86400000
-  refresh-expiration: 604800000
-
-resilience4j:
-  ratelimiter:
-    instances:
-      login:
-        limit-for-period: 100
-        limit-refresh-period: 60s
-        timeout-duration: 10s
-        register-health-indicator: true
-        event-consumer-buffer-size: 100
-      register:
-        limit-for-period: 100
-        limit-refresh-period: 60s
-        timeout-duration: 30s
-        register-health-indicator: true
-      refresh:
-        limit-for-period: 100
-        limit-refresh-period: 60s
-        timeout-duration: 5s
-        register-health-indicator: true
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: when_authorized
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-
-logging:
-  level:
-    root: INFO
-    dev.payment: INFO
-    org.springframework.security: INFO
-    org.springframework.vault: DEBUG
+  vault:
+    uri: ${VAULT_ADDR:http://vault:8200}
+    token: ${VAULT_TOKEN:}
+    enabled: ${VAULT_ENABLED:false}
+    ssl:
+      enabled: false
+    kv:
+      enabled: true
+  jwt:
+    secret: ${JWT_SECRET:}
+    expiration: 86400000
+    refresh-expiration: 604800000
+  resilience4j:
+    ratelimiter:
+      instances:
+        login:
+          limit-for-period: 100
+          limit-refresh-period: 60s
+          timeout-duration: 10s
+          register-health-indicator: true
+          event-consumer-buffer-size: 100
+        register:
+          limit-for-period: 100
+          limit-refresh-period: 60s
+          timeout-duration: 30s
+          register-health-indicator: true
+        refresh:
+          limit-for-period: 100
+          limit-refresh-period: 60s
+          timeout-duration: 5s
+          register-health-indicator: true
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: health,info,metrics,prometheus
+    endpoint:
+      health:
+        show-details: when_authorized
+    metrics:
+      export:
+        prometheus:
+          enabled: true
+  logging:
+    level:
+      root: INFO
+      dev.payment: INFO
+      org.springframework.security: INFO
+      org.springframework.vault: DEBUG

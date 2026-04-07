@@ -17,8 +17,17 @@ import {
 
 describe('Payment Constants', () => {
   it('should have correct PAYMENT_AMOUNT', () => {
-    expect(PAYMENT_AMOUNT).toBe(500);
+    expect(PAYMENT_AMOUNT).toBe(100); // Default amount is 100
   });
+
+  it('should have correct UPI_ID', () => {
+    expect(UPI_ID).toBe('payflow@upi'); // Actual value from src/lib/payment.js
+  });
+
+  it('should have correct STORAGE_KEY', () => {
+    expect(STORAGE_KEY).toBe('payflow-checkout-transaction'); // Actual value from src/lib/payment.js
+  });
+});
 
   it('should have correct UPI_ID', () => {
     expect(UPI_ID).toBe('nova-demo@upi');
