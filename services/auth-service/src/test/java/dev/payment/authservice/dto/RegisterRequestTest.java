@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.Set;
@@ -16,6 +17,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
+@TestPropertySource(properties = {
+    "jwt.secret=dGVzdC1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLWhtYWMtc2hhLTI1Ni13aGljaC1yZXF1aXJlcy1hdC1sZWFzdC0zMi1jaGFyYWN0ZXJz",
+    "jwt.expiration=86400000",
+    "jwt.refresh-expiration=604800000"
+})
 class RegisterRequestTest {
 
     private Validator validator;

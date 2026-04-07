@@ -11,7 +11,6 @@ public class RiskAssessment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(name = "transaction_id", nullable = false)

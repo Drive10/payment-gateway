@@ -50,7 +50,7 @@ RUN mkdir -p /app/logs && chown -R appuser:appgroup /app
 COPY --from=build --chown=appuser:appgroup /build/services/api-gateway/target/*.jar /app/service.jar
 USER appuser
 EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=10 \
     CMD wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseZGC"
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:TieredStopAtLevel=1 -Xshare:on -Dspring.main.lazy-initialization=true"
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/service.jar"]

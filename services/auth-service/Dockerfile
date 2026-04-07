@@ -54,7 +54,7 @@ COPY --from=builder /app/services/auth-service/target/auth-service-*.jar app.jar
 RUN chown -R spring:spring /app
 USER spring:spring
 EXPOSE 8081
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=10 \
     CMD wget --quiet --tries=1 --spider http://localhost:8081/actuator/health || exit 1
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:TieredStopAtLevel=1 -Xshare:on -Dspring.main.lazy-initialization=true"
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

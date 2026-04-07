@@ -10,7 +10,6 @@ public class DisputeEvidence {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(name = "dispute_id", nullable = false)

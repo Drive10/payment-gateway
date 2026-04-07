@@ -1,14 +1,14 @@
 -- Initialize PayFlow database
--- This script seeds initial data for development
+-- This script seeds initial data for development (PostgreSQL)
 
-USE payment_gateway;
+\c payment_gateway;
 
 -- Insert default roles (if not exists)
 INSERT INTO roles (id, name) VALUES 
     (1, 'ROLE_USER'),
     (2, 'ROLE_ADMIN'),
     (3, 'ROLE_MERCHANT')
-ON DUPLICATE KEY UPDATE name = VALUES(name);
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- Insert a demo admin user (password: admin123)
 INSERT INTO users (id, email, password_hash, first_name, last_name, created_at, updated_at) 
@@ -21,7 +21,7 @@ VALUES (
     NOW(),
     NOW()
 )
-ON DUPLICATE KEY UPDATE email = email;
+ON CONFLICT (id) DO NOTHING;
 
 -- Assign admin role
 INSERT INTO user_roles (user_id, role_id)
@@ -38,7 +38,7 @@ VALUES (
     NOW(),
     NOW()
 )
-ON DUPLICATE KEY UPDATE name = name;
+ON CONFLICT (id) DO NOTHING;
 
 -- Insert demo API key for merchant
 INSERT INTO api_keys (id, merchant_id, key_hash, name, active, created_at)
@@ -50,7 +50,7 @@ VALUES (
     true,
     NOW()
 )
-ON DUPLICATE KEY UPDATE active = true;
+ON CONFLICT (id) DO UPDATE SET active = true;
 
 -- Insert demo feature flags
 INSERT INTO feature_flags (id, name, enabled, description)
@@ -61,6 +61,6 @@ VALUES
     (4, 'NOTIFICATION_SMS_ENABLED', false, 'Enable SMS notifications (requires provider)'),
     (5, 'ANALYTICS_ENABLED', true, 'Enable analytics tracking'),
     (6, 'DEBUG_MODE', true, 'Enable debug logging')
-ON DUPLICATE KEY UPDATE enabled = VALUES(enabled);
+ON CONFLICT (id) DO UPDATE SET enabled = EXCLUDED.enabled;
 
 SELECT 'Database initialization complete!' as status;

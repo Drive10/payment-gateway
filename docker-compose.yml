@@ -3,24 +3,24 @@ services:
   # Infrastructure Services
   # ============================================
 
-  mariadb:
-    image: mariadb:10.11
-    command: --default-authentication-plugin=mysql_native_password
+  postgres:
+    image: postgres:16-alpine
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: payment_gateway
+      POSTGRES_USER: ${DB_USERNAME:-payflow}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-payflow}
+      POSTGRES_DB: ${DB_NAME:-payflow}
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - payflow-network
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-payflow}"]
+      interval: 3s
+      timeout: 2s
       retries: 5
-      start_period: 10s
+      start_period: 5s
 
   mongodb:
     image: mongo:7
@@ -34,10 +34,10 @@ services:
       - payflow-network
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
+      interval: 3s
+      timeout: 2s
       retries: 5
-      start_period: 10s
+      start_period: 5s
 
   redis:
     image: redis:7-alpine
@@ -48,10 +48,10 @@ services:
       - payflow-network
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-devpassword}", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 3s
+      timeout: 2s
       retries: 5
-      start_period: 5s
+      start_period: 3s
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -64,10 +64,10 @@ services:
       - payflow-network
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 10s
-      timeout: 5s
+      interval: 3s
+      timeout: 2s
       retries: 5
-      start_period: 10s
+      start_period: 5s
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -84,14 +84,19 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 100
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_LOG_SEGMENT_BYTES: 16777216
     networks:
       - payflow-network
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   # ============================================
   # Backend Services
@@ -106,11 +111,12 @@ services:
       - "8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: root
-      DB_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
+      SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
@@ -120,8 +126,10 @@ services:
       SPRING_CLOUD_CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
       SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
+      SPRING_MAIN_LAZY_INITIALIZATION: "true"
+      JAVA_OPTS: "-XX:+UseZGC -XX:TieredStopAtLevel=1 -Xshare:on -Dspring.main.lazy-initialization=true"
     depends_on:
-      mariadb:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -129,10 +137,10 @@ services:
       - payflow-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 90s
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
 
   api-gateway:
     build:
@@ -164,10 +172,10 @@ services:
       - payflow-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 90s
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
 
   payment-service:
     build:
@@ -179,11 +187,12 @@ services:
     environment:
       SERVER_PORT: "8083"
       SPRING_PROFILES_ACTIVE: docker
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: root
-      DB_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
+      SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
@@ -195,13 +204,12 @@ services:
       CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SIMULATOR_SERVICE_URL: http://simulator-service:8086
       NOTIFICATION_SERVICE_URL: http://notification-service:8085
       ORDER_SERVICE_URL: http://order-service:8084
       AUTH_SERVICE_URL: http://auth-service:8081
     depends_on:
-      mariadb:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -214,7 +222,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+      start_period: 30s
 
   order-service:
     build:
@@ -226,11 +234,12 @@ services:
     environment:
       SERVER_PORT: "8084"
       SPRING_PROFILES_ACTIVE: docker
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: root
-      DB_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
+      SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
@@ -239,11 +248,10 @@ services:
       CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       APPLICATION_PAYMENT_SERVICE_URL: http://payment-service:8083
       APPLICATION_NOTIFICATION_SERVICE_URL: http://notification-service:8085
     depends_on:
-      mariadb:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -256,7 +264,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+      start_period: 30s
 
   notification-service:
     build:
@@ -268,11 +276,12 @@ services:
     environment:
       SERVER_PORT: "8085"
       SPRING_PROFILES_ACTIVE: docker
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: root
-      DB_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
+      SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
@@ -282,10 +291,9 @@ services:
       CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       APPLICATION_PAYMENT_SERVICE_URL: http://payment-service:8083
     depends_on:
-      mariadb:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -298,7 +306,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+      start_period: 30s
 
   analytics-service:
     build:
@@ -310,11 +318,12 @@ services:
     environment:
       SERVER_PORT: "8089"
       SPRING_PROFILES_ACTIVE: docker
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: root
-      DB_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
+      SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
@@ -324,9 +333,8 @@ services:
       CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
-      mariadb:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -339,7 +347,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+      start_period: 30s
 
   simulator-service:
     build:
@@ -351,11 +359,12 @@ services:
     environment:
       SERVER_PORT: "8086"
       SPRING_PROFILES_ACTIVE: docker
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: payment_gateway
-      DB_USERNAME: root
-      DB_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-payflow}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-payflow}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-payflow}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 50
+      SPRING_JPA_OPEN_IN_VIEW: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
@@ -363,10 +372,9 @@ services:
       CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_ENABLED: "false"
       SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       NOTIFICATION_SERVICE_URL: http://notification-service:8085
     depends_on:
-      mariadb:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -377,7 +385,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+      start_period: 30s
 
   audit-service:
     build:
@@ -403,7 +411,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+      start_period: 30s
 
   # ============================================
   # Frontend
@@ -429,5 +437,5 @@ networks:
     driver: bridge
 
 volumes:
-  mariadb_data:
+  postgres_data:
   mongodb_data:

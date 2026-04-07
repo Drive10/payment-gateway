@@ -19,9 +19,7 @@
         <module>services/notification-service</module>
         <module>services/audit-service</module>
         <module>services/analytics-service</module>
-        <module>services/search-service</module>
         <module>services/simulator-service</module>
-        <module>services/graphql-gateway</module>
     </modules>
 
     <properties>
@@ -86,6 +84,11 @@
                 <groupId>org.springframework.vault</groupId>
                 <artifactId>spring-vault-core</artifactId>
                 <version>3.1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>42.7.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

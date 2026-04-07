@@ -25,7 +25,6 @@ public class SimulationTransaction extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(name = "order_reference", nullable = false, length = 64)

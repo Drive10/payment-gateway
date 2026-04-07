@@ -19,7 +19,6 @@ public class PaymentOutboxEvent extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(name = "aggregate_type", nullable = false, length = 40)

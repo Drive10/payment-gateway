@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:payment_gateway}
-    username: ${DB_USERNAME:payment}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:payflow}
+    username: ${DB_USERNAME:payflow}
     password: ${DB_PASSWORD:devpassword}
-    driver-class-name: org.mariadb.jdbc.Driver
+    driver-class-name: org.postgresql.Driver
   flyway:
     validate-on-migrate: false

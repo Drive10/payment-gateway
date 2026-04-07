@@ -38,19 +38,19 @@ check_docker() {
 infra_up() {
     check_docker
     log_info "Starting infrastructure services..."
-    docker compose up -d mariadb mongodb redis zookeeper kafka
+    docker compose up -d postgres mongodb redis zookeeper kafka
     log_info "Infrastructure services started!"
     
     log_info "Waiting for services to be ready..."
     sleep 15
     
     log_info "Checking service status:"
-    docker compose ps mariadb mongodb redis zookeeper kafka
+    docker compose ps postgres mongodb redis zookeeper kafka
 }
 
 infra_down() {
     log_info "Stopping infrastructure services..."
-    docker compose down mariadb mongodb redis zookeeper kafka
+    docker compose down postgres mongodb redis zookeeper kafka
     log_info "Infrastructure services stopped!"
 }
 
@@ -119,8 +119,8 @@ format_code() {
 # Database management
 db_reset() {
     log_info "Resetting database volumes..."
-    docker compose down -v mariadb mongodb
-    docker compose up -d mariadb mongodb
+    docker compose down -v postgres mongodb
+    docker compose up -d postgres mongodb
     log_info "Database volumes reset. Waiting for services to initialize..."
     sleep 10
 }
@@ -132,7 +132,7 @@ show_help() {
     echo "Usage: ./scripts/dev.sh [command]"
     echo ""
     echo "Commands:"
-    echo "  infra:up          Start infrastructure services (MariaDB, MongoDB, Redis, Kafka)"
+    echo "  infra:up          Start infrastructure services (PostgreSQL, MongoDB, Redis, Kafka)"
     echo "  infra:down        Stop infrastructure services"
     echo "  backend:start     Start all services via docker compose"
     echo "  backend:stop      Stop all services"

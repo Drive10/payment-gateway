@@ -12,7 +12,6 @@ public class MerchantSettlement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(name = "merchant_id", unique = true, nullable = false)

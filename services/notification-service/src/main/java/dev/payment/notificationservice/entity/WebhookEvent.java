@@ -24,7 +24,6 @@ public class WebhookEvent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(name = "event_type", nullable = false, length = 64)

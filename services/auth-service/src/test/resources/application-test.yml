@@ -1,0 +1,4 @@
+jwt:
+  secret: dGVzdC1zZWNyZXQta2V5LXRoYXQtLXRleHQtYmVpbmctbG9uZy1lbnVnLWVub3VnaC1mb3ItaG1hYy1zaGEyNTYtY2hhcmFjdGVy
+  expiration: 86400000
+  refresh-expiration: 604800000

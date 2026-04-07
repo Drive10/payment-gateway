@@ -16,7 +16,6 @@ public class PaymentLink {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(name = "reference_id", unique = true, nullable = false)
