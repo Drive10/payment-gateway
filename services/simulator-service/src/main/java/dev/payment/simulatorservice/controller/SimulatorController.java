@@ -28,12 +28,12 @@ public class SimulatorController {
     }
 
     @PostMapping("/{providerOrderId}/capture")
-    public ApiResponse<SimulationResponse> capture(@PathVariable String providerOrderId) {
+    public ApiResponse<SimulationResponse> capture(@PathVariable("providerOrderId") String providerOrderId) {
         return ApiResponse.success(simulatorService.capture(providerOrderId));
     }
 
     @GetMapping("/{providerOrderId}")
-    public ApiResponse<SimulationResponse> getTransaction(@PathVariable String providerOrderId) {
+    public ApiResponse<SimulationResponse> getTransaction(@PathVariable("providerOrderId") String providerOrderId) {
         return ApiResponse.success(simulatorService.getStatus(providerOrderId));
     }
 }

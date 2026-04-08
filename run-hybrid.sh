@@ -29,15 +29,32 @@ start_frontend() {
   fi
 
   echo "[hybrid] starting frontend on :5173"
-  nohup npm --prefix "$ROOT_DIR/web/frontend" run dev -- --host 0.0.0.0 --port 5173 \
+  local frontend_api_base_url="${VITE_API_BASE_URL:-http://localhost:8080}"
+  local frontend_api_url="${VITE_API_URL:-$frontend_api_base_url/api/v1}"
+  nohup VITE_API_BASE_URL="$frontend_api_base_url" VITE_API_URL="$frontend_api_url" \
+    npm --prefix "$ROOT_DIR/web/frontend" run dev -- --host 0.0.0.0 --port 5173 \
     > "$LOG_DIR/frontend-hybrid.log" 2>&1 &
 }
 
 cd "$ROOT_DIR"
 
+if [ -f "$ROOT_DIR/.env.hybrid" ]; then
+  set -a
+  . "$ROOT_DIR/.env.hybrid"
+  set +a
+fi
+
 "$ROOT_DIR/scripts/dev-hybrid.sh"
 
 # In hybrid mode, auth/order run locally and gateway/payment/etc run in Docker.
+# Local JVM services should reach dockerized infra via localhost published ports.
+export DB_HOST=localhost
+export DB_PORT=5432
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+export KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+export MONGODB_URI=mongodb://localhost:27017/audit_db
+
 start_java_service "auth-service" "services/auth-service" 8081 hybrid
 start_java_service "order-service" "services/order-service" 8082 hybrid
 

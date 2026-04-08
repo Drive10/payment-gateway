@@ -2,18 +2,46 @@ services:
   api-gateway:
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_healthy
+      payment-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      simulator-service:
+        condition: service_started
+      analytics-service:
+        condition: service_started
+      audit-service:
+        condition: service_started
+      zipkin:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: hybrid
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://host.docker.internal:8081}
-      ORDER_SERVICE_URL: ${ORDER_SERVICE_URL:-http://host.docker.internal:8082}
+      AUTH_SERVICE_URL: http://host.docker.internal:8081
+      ORDER_SERVICE_URL: http://host.docker.internal:8082
 
   payment-service:
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      simulator-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      zipkin:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: hybrid
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://host.docker.internal:8081}
-      ORDER_SERVICE_URL: ${ORDER_SERVICE_URL:-http://host.docker.internal:8082}
+      AUTH_SERVICE_URL: http://host.docker.internal:8081
+      ORDER_SERVICE_URL: http://host.docker.internal:8082
 
   order-service:
     extra_hosts:

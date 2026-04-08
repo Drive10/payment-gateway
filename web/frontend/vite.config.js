@@ -5,20 +5,24 @@ export default defineConfig(() => {
   return {
     plugins: [react()],
     server: {
-      port: 3000,
+      port: 5173,
+      strictPort: true,
       proxy: {
         "/api/v1": {
-          target: "http://localhost:8080",
+          target: "http://127.0.0.1:8080",
           changeOrigin: true,
+          secure: false,
         },
         "/platform": {
-          target: "http://localhost:8080",
+          target: "http://127.0.0.1:8080",
           changeOrigin: true,
+          secure: false,
         },
       },
     },
     preview: {
-      port: 3000,
+      port: 5173,
+      strictPort: true,
     },
     build: {
       rollupOptions: {

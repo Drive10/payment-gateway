@@ -6,8 +6,13 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_ROOT"
 
+ENV_FILE=".env"
+if [ ! -f "$ENV_FILE" ]; then
+  ENV_FILE=".env.example"
+fi
+
 echo "[local] starting infrastructure in docker..."
-docker compose --env-file .env up -d postgres mongodb redis zookeeper kafka zipkin loki promtail prometheus grafana
+docker compose --env-file "$ENV_FILE" up -d postgres mongodb redis zookeeper kafka zipkin loki promtail prometheus grafana
 
 echo "[local] all services should run on host with SPRING_PROFILES_ACTIVE=local"
 echo "Example:"

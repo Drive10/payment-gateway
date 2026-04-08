@@ -5,11 +5,11 @@ import dev.payment.orderservice.dto.InitiatePaymentResponse;
 import dev.payment.orderservice.dto.OrderResponse;
 import dev.payment.orderservice.entity.OrderStatus;
 import dev.payment.orderservice.exception.OrderException;
+import dev.payment.orderservice.config.ServiceConfig;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -31,11 +31,10 @@ public class PaymentOrchestrator {
     public PaymentOrchestrator(
             OrderService orderService,
             WebClient.Builder webClientBuilder,
-            @Value("${application.payment-service.url}") String paymentServiceUrl,
-            @Value("${application.payment-service.request-timeout-ms:5000}") long requestTimeoutMs) {
+            ServiceConfig serviceConfig) {
         this.orderService = orderService;
-        this.webClient = webClientBuilder.baseUrl(paymentServiceUrl).build();
-        this.requestTimeoutMs = requestTimeoutMs;
+        this.webClient = webClientBuilder.baseUrl(serviceConfig.getPaymentService().getUrl()).build();
+        this.requestTimeoutMs = serviceConfig.getPaymentService().getRequestTimeoutMs();
     }
 
     @Retry(name = "paymentService")

@@ -77,6 +77,9 @@ public class SimulatorPaymentReconciliationProvider implements PaymentReconcilia
                     body.currency(),
                     body.simulated()
             ));
+        } catch (PaymentReconciliationClient.ProviderPaymentMissingException exception) {
+            // Old provider order ids may no longer exist in simulator memory; treat as non-fatal.
+            return Optional.empty();
         } catch (RestClientException exception) {
             throw exception;
         }

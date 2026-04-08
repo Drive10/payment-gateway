@@ -17,6 +17,13 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
+function createApiError(message, status, code) {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  return error;
+}
+
 function randomToken(length = 12) {
   return Math.random().toString(36).slice(2, 2 + length);
 }
@@ -82,7 +89,10 @@ async function apiRequest(path, options = {}) {
         continue;
       }
       clearTimeout(timeoutId);
-      throw new Error(error.name === "AbortError" ? "Request timed out" : DEFAULT_ERROR_MESSAGE);
+      if (error.name === "AbortError") {
+        throw createApiError("Request timed out", 408, "REQUEST_TIMEOUT");
+      }
+      throw createApiError(DEFAULT_ERROR_MESSAGE, 0, "NETWORK_ERROR");
     }
   }
   clearTimeout(timeoutId);
@@ -97,7 +107,7 @@ async function apiRequest(path, options = {}) {
       (typeof payload?.error === "string" ? payload.error : null) ||
       DEFAULT_ERROR_MESSAGE;
     const finalMessage = code ? `[${code}] ${message}` : message;
-    throw new Error(finalMessage);
+    throw createApiError(finalMessage, response.status, code || "API_ERROR");
   }
 
   return payload?.data;
@@ -214,64 +224,85 @@ export async function startCheckout({
   customerName,
 }) {
   const { token, customer } = await ensureAccessToken();
-  const externalReference = `pay-${Date.now()}-${randomToken(6)}`;
-  const provider =
-    transactionMode === TRANSACTION_MODES.TEST
-      ? "RAZORPAY_SIMULATOR"
-      : "RAZORPAY_PRIMARY";
-  const correlationId = createCorrelationId("payment");
+  const executeCheckout = async (sessionToken, sessionCustomer) => {
+    const externalReference = `pay-${Date.now()}-${randomToken(6)}`;
+    const provider =
+      transactionMode === TRANSACTION_MODES.TEST
+        ? "RAZORPAY_SIMULATOR"
+        : "RAZORPAY_PRIMARY";
+    const correlationId = createCorrelationId("payment");
 
-  const order = await apiRequest("/orders", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "X-Request-Id": correlationId,
-    },
-    body: JSON.stringify({
-      externalReference,
+    const order = await apiRequest("/orders", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionToken}`,
+        "X-Request-Id": correlationId,
+      },
+      body: JSON.stringify({
+        externalReference,
+        amount,
+        currency: "INR",
+        description: description || `Payment for order ${externalReference}`,
+        customerEmail: customerEmail || sessionCustomer?.email,
+        customerName: customerName || `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim(),
+        userId: sessionCustomer?.id,
+      }),
+    });
+
+    const merchantIdToSend = order?.merchantId ?? DEFAULT_MERCHANT_ID;
+    const payment = await apiRequest("/payments", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionToken}`,
+        "Idempotency-Key": `pay-${sessionCustomer.email}-${externalReference}`,
+        "X-Request-Id": correlationId,
+      },
+      body: JSON.stringify({
+        orderId: order.id,
+        merchantId: merchantIdToSend,
+        method: method === "upi" ? "UPI" : "CARD",
+        provider,
+        transactionMode,
+        notes:
+          method === "upi"
+            ? "Customer selected UPI"
+            : `Cardholder: ${(cardholder.trim() || `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim()).trim()}`,
+      }),
+    });
+
+    const checkout = {
+      token: sessionToken,
+      customer: sessionCustomer,
+      order,
+      payment,
       amount,
-      currency: "INR",
-      description: description || `Payment for order ${externalReference}`,
-      customerEmail: customerEmail || customer?.email,
-      customerName: customerName || `${customer?.firstName} ${customer?.lastName}`.trim(),
-      userId: customer?.id,
-    }),
-  });
+      method,
+      cardholder,
+      correlationId,
+    };
 
-  const merchantIdToSend = order?.merchantId ?? DEFAULT_MERCHANT_ID;
-  const payment = await apiRequest("/payments", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Idempotency-Key": `pay-${customer.email}-${externalReference}`,
-      "X-Request-Id": correlationId,
-    },
-    body: JSON.stringify({
-      orderId: order.id,
-      merchantId: merchantIdToSend,
-      method: method === "upi" ? "UPI" : "CARD",
-      provider,
-      transactionMode,
-      notes:
-        method === "upi"
-          ? "Customer selected UPI"
-          : `Cardholder: ${(cardholder.trim() || `${customer?.firstName} ${customer?.lastName}`.trim()).trim()}`,
-    }),
-  });
-
-  const checkout = {
-    token,
-    customer,
-    order,
-    payment,
-    amount,
-    method,
-    cardholder,
-    correlationId,
+    persistCheckoutState(checkout);
+    return checkout;
   };
 
-  persistCheckoutState(checkout);
-  return checkout;
+  try {
+    return await executeCheckout(token, customer);
+  } catch (error) {
+    const shouldRetryWithFreshAuth =
+      error?.status === 401 ||
+      error?.status === 403 ||
+      error?.code === "INVALID_AUTH_TOKEN" ||
+      error?.code === "MISSING_AUTH_TOKEN" ||
+      error?.code === "UNTRUSTED_GATEWAY";
+
+    if (!shouldRetryWithFreshAuth) {
+      throw error;
+    }
+
+    clearAuth();
+    const refreshedSession = await ensureAccessToken();
+    return executeCheckout(refreshedSession.token, refreshedSession.customer);
+  }
 }
 
 export async function captureCheckout(checkout, onStatusChange) {

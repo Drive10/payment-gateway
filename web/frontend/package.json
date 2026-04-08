@@ -26,6 +26,7 @@
     "test:coverage": "vitest --coverage --reporter=json --outputFile=coverage/vitest-report.json",
     "test:coverage:sonar": "vitest run --coverage --coverage.reporter=json --coverage.reporter=text --coverage.reporter=lcov --outputFile=coverage/vitest-report.json",
     "test:e2e": "playwright test",
+    "test:e2e:fullstack": "playwright test tests/e2e/specs/fullstack-checkout.spec.ts --config=playwright.local.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",

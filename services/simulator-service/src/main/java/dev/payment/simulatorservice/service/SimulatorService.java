@@ -6,8 +6,10 @@ import dev.payment.simulatorservice.model.SimulationMode;
 import dev.payment.simulatorservice.model.SimulationStatus;
 import dev.payment.simulatorservice.model.SimulationTransaction;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
@@ -62,7 +64,7 @@ public class SimulatorService {
         SimulationTransaction tx = transactions.values().stream()
                 .filter(t -> providerOrderId.equals(t.getProviderOrderId()))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Transaction not found: " + providerOrderId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found: " + providerOrderId));
 
         boolean success = shouldSucceed(tx.getSimulationMode());
         
@@ -83,7 +85,7 @@ public class SimulatorService {
         SimulationTransaction tx = transactions.values().stream()
                 .filter(t -> providerOrderId.equals(t.getProviderOrderId()))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Transaction not found: " + providerOrderId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found: " + providerOrderId));
 
         return toResponse(tx);
     }

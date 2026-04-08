@@ -2,19 +2,6 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_DIR="$ROOT_DIR/.runlogs"
-mkdir -p "$LOG_DIR"
-
-start_frontend() {
-  if lsof -nP -iTCP:5173 -sTCP:LISTEN >/dev/null 2>&1; then
-    echo "[docker] frontend already running on :5173"
-    return
-  fi
-
-  echo "[docker] starting frontend on :5173"
-  nohup npm --prefix "$ROOT_DIR/web/frontend" run dev -- --host 0.0.0.0 --port 5173 \
-    > "$LOG_DIR/frontend-docker.log" 2>&1 &
-}
 
 cd "$ROOT_DIR"
 
@@ -30,7 +17,10 @@ cd "$ROOT_DIR"
   http://localhost:8090 \
   http://localhost:8080
 
-start_frontend
+echo "[wait] http://localhost:5173/"
+until curl -fsS "http://localhost:5173/" >/dev/null; do
+  sleep 2
+done
 
 echo "[docker] ready"
 echo "  frontend: http://localhost:5173"

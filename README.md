@@ -36,8 +36,8 @@
                      ┌───────────────────┼───────────────────┬───────────────────┐
                      ▼                   ▼                   ▼                   ▼
              ┌──────────────────┐ ┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐
-             │  Auth Service    │ │Order Service │ │  Payment Service  │ │ GraphQL Gateway  │
-             │  (8081)          │ │  (8084)      │ │  (8083)           │ │  (8087)          │
+              │  Auth Service    │ │Order Service │ │  Payment Service  │ │ GraphQL Gateway  │
+              │  (8081)          │ │  (8082)      │ │  (8083)           │ │  (8087)          │
              │                  │ │              │ │                  │ │                  │
              │  • JWT Auth     │ │  • Orders   │ │  • Payments     │ │  • GraphQL API   │
              │  • OAuth2       │ │  • Merchants│ │  • Refunds      │ │  • Federation    │
@@ -111,7 +111,7 @@
 | **auth-service** | 8081 | JWT auth, OAuth2, RBAC, sessions | Spring Security |
 | **order-service** | 8082 | Order management, merchants, KYC, API keys | Spring Data JPA |
 | **payment-service** | 8083 | Payment orchestration, multi-provider integration | Spring Boot |
-| **notification-service** | 8085 | Email, SMS, push, webhooks, feature flags | Kafka, Redis |
+| **notification-service** | 8084 | Email, SMS, push, webhooks, feature flags | Kafka, Redis |
 | **simulator-service** | 8086 | Payment simulation, load testing, demo mode | Spring Boot |
 | **graphql-gateway** | 8087 | GraphQL API with schema federation | Spring GraphQL |
 | **search-service** | 8088 | Full-text search, aggregations | Elasticsearch |

@@ -3,7 +3,6 @@ package dev.payment.orderservice.config;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -17,9 +16,9 @@ import java.util.concurrent.TimeUnit;
 public class WebClientConfig {
 
     @Bean
-    public WebClient.Builder webClientBuilder(
-            @Value("${application.payment-service.connect-timeout-ms:3000}") int connectTimeoutMs,
-            @Value("${application.payment-service.read-timeout-ms:5000}") int readTimeoutMs) {
+    public WebClient.Builder webClientBuilder(ServiceConfig serviceConfig) {
+        int connectTimeoutMs = serviceConfig.getPaymentService().getConnectTimeoutMs();
+        int readTimeoutMs = serviceConfig.getPaymentService().getReadTimeoutMs();
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMs)
                 .responseTimeout(Duration.ofMillis(readTimeoutMs))

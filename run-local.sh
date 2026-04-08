@@ -29,11 +29,20 @@ start_frontend() {
   fi
 
   echo "[local] starting frontend on :5173"
-  nohup npm --prefix "$ROOT_DIR/web/frontend" run dev -- --host 0.0.0.0 --port 5173 \
+  local frontend_api_base_url="${VITE_API_BASE_URL:-http://localhost:8080}"
+  local frontend_api_url="${VITE_API_URL:-$frontend_api_base_url/api/v1}"
+  nohup VITE_API_BASE_URL="$frontend_api_base_url" VITE_API_URL="$frontend_api_url" \
+    npm --prefix "$ROOT_DIR/web/frontend" run dev -- --host 0.0.0.0 --port 5173 \
     > "$LOG_DIR/frontend.log" 2>&1 &
 }
 
 cd "$ROOT_DIR"
+
+if [ -f "$ROOT_DIR/.env" ]; then
+  set -a
+  . "$ROOT_DIR/.env"
+  set +a
+fi
 
 "$ROOT_DIR/scripts/dev-local.sh"
 

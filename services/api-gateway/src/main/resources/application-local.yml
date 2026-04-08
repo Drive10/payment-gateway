@@ -19,7 +19,7 @@ spring:
       predicates:
         - Path=/api/v1/auth/**
       filters:
-        - StripPrefix=2
+        - RewritePath=/api/v1/auth/(?<segment>.*), /auth/${segment}
     - id: order-service
       uri: ${ORDER_SERVICE_URL:http://localhost:8082}
       predicates:

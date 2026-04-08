@@ -7,7 +7,8 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
 echo "[hybrid] starting infra + selected services in docker..."
-docker compose --env-file .env.docker -f docker-compose.yml -f docker-compose.hybrid.yml up -d \
+docker compose --env-file .env.hybrid -f docker-compose.yml -f docker-compose.hybrid.yml up -d \
+  --no-deps \
   postgres mongodb redis zookeeper kafka zipkin \
   payment-service notification-service simulator-service analytics-service audit-service api-gateway
 
