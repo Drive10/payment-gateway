@@ -84,6 +84,26 @@ frontend_build() {
     npm run build
 }
 
+frontend_build_dev() {
+    log_info "Building frontend for development..."
+    cd "$PROJECT_ROOT/web/frontend"
+    npm run build:dev
+}
+
+frontend_build_docker() {
+    log_info "Building frontend for Docker..."
+    cd "$PROJECT_ROOT/web/frontend"
+    npm run build:docker
+}
+
+frontend_build_all() {
+    log_info "Building frontend (all modes)..."
+    cd "$PROJECT_ROOT/web/frontend"
+    npm run build:dev
+    npm run build:docker
+    log_info "Frontend builds complete!"
+}
+
 frontend_preview() {
     log_info "Previewing frontend production build..."
     cd "$PROJECT_ROOT/web/frontend"
@@ -132,23 +152,26 @@ show_help() {
     echo "Usage: ./scripts/dev.sh [command]"
     echo ""
     echo "Commands:"
-    echo "  infra:up          Start infrastructure services (PostgreSQL, MongoDB, Redis, Kafka)"
-    echo "  infra:down        Stop infrastructure services"
-    echo "  backend:start     Start all services via docker compose"
-    echo "  backend:stop      Stop all services"
-    echo "  frontend:start    Start frontend development server"
-    echo "  frontend:build    Build frontend for production"
-    echo "  frontend:preview  Preview frontend production build"
-    echo "  test              Run all tests (backend and frontend)"
-    echo "  lint              Run code quality checks"
-    echo "  format            Format code according to project standards"
-    echo "  db:reset          Reset database volumes (fresh data)"
-    echo "  help              Show this help message"
+    echo "  infra:up              Start infrastructure services (PostgreSQL, MongoDB, Redis, Kafka)"
+    echo "  infra:down            Stop infrastructure services"
+    echo "  backend:start        Start all services via docker compose"
+    echo "  backend:stop        Stop all services"
+    echo "  frontend:start       Start frontend development server"
+    echo "  frontend:build       Build frontend for production"
+    echo "  frontend:build:dev   Build frontend for development"
+    echo "  frontend:build:docker Build frontend for Docker"
+    echo "  frontend:preview     Preview frontend production build"
+    echo "  test                 Run all tests (backend and frontend)"
+    echo "  lint                 Run code quality checks"
+    echo "  format               Format code according to project standards"
+    echo "  db:reset             Reset database volumes (fresh data)"
+    echo "  help                 Show this help message"
     echo ""
     echo "Examples:"
     echo "  ./scripts/dev.sh infra:up"
     echo "  ./scripts/dev.sh backend:start"
     echo "  ./scripts/dev.sh frontend:start"
+    echo "  ./scripts/dev.sh frontend:build:docker"
 }
 
 # Main script logic
@@ -170,6 +193,12 @@ case "$1" in
         ;;
     frontend:build)
         frontend_build
+        ;;
+    frontend:build:dev)
+        frontend_build_dev
+        ;;
+    frontend:build:docker)
+        frontend_build_docker
         ;;
     frontend:preview)
         frontend_preview
