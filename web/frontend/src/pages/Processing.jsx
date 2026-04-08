@@ -24,7 +24,7 @@ export default function Processing() {
     const processPayment = async () => {
       try {
         setStatus("processing");
-        const transaction = await captureCheckout(checkout, (currentStatus, attempt, max) => {
+        const transaction = await captureCheckout(checkout, (currentStatus, attempt) => {
           setPollAttempt(attempt);
         });
         

@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   startCheckout,
   captureCheckout,
-  formatCardNumber,
   formatExpiry,
   detectCardBrand,
   isValidCardNumber,
@@ -41,9 +40,8 @@ describe('Payment Constants', () => {
     expect(TRANSACTION_MODES.PRODUCTION).toBe('PRODUCTION');
     expect(TRANSACTION_MODES.TEST).toBe('TEST');
   });
-});
 
-describe('formatCurrency', () => {
+  describe('formatCurrency', () => {
   it('should format amount in INR', () => {
     expect(formatCurrency(500)).toBe('₹500');
     expect(formatCurrency(1000)).toBe('₹1,000');

@@ -37,7 +37,9 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setFirstName(firstName);
         user.setLastName(lastName);
+        user.setFullName(((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim());
         user.setEnabled(true);
+        user.setActive(true);
 
         String roleName = (role != null && !role.isBlank()) ? role : "USER";
         if (!roleName.startsWith("ROLE_")) {

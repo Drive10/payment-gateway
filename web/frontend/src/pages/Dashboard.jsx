@@ -1,26 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { getStoredAuth, logout, getOrderHistory, getPaymentHistory, formatCurrency } from "../lib/payment";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [auth, setAuth] = useState(getStoredAuth());
+  const [auth] = useState(getStoredAuth());
   const [orders, setOrders] = useState([]);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("orders");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!auth?.token) {
-      navigate("/login");
-      return;
-    }
-    loadData();
-  }, [auth]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!auth?.token) return;
     setLoading(true);
     setError("");
     try {
@@ -35,7 +28,15 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [auth?.token]);
+
+  useEffect(() => {
+    if (!auth?.token) {
+      navigate("/login");
+      return;
+    }
+    loadData();
+  }, [auth, navigate, loadData]);
 
   const handleLogout = () => {
     logout();
