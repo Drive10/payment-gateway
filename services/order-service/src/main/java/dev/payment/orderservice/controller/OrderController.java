@@ -56,7 +56,13 @@ public class OrderController {
     ) {
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
         Page<OrderResponse> orders = orderService.getUserOrders(userId, status, pageable);
-        return ApiResponse.success(PageResponse.from(orders));
+        return ApiResponse.success(new PageResponse<>(
+                orders.getContent(),
+                orders.getNumber(),
+                orders.getSize(),
+                orders.getTotalElements(),
+                orders.getTotalPages(),
+                orders.isLast()));
     }
 
     @PostMapping("/{id}/initiate-payment")

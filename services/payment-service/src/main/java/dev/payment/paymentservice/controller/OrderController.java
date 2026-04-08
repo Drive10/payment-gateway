@@ -50,6 +50,12 @@ public class OrderController {
         User actor = authService.getCurrentUser(authentication.getName());
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
         Page<OrderResponse> orders = orderService.getOrders(actor, status, pageable, false);
-        return ApiResponse.success(PageResponse.from(orders));
+        return ApiResponse.success(new PageResponse<>(
+                orders.getContent(),
+                orders.getNumber(),
+                orders.getSize(),
+                orders.getTotalElements(),
+                orders.getTotalPages(),
+                orders.isLast()));
     }
 }

@@ -138,7 +138,13 @@ public class PaymentController {
         User actor = authService.getCurrentUser(authentication.getName());
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
         Page<PaymentResponse> payments = paymentService.getPayments(actor, status, pageable, false);
-        return ApiResponse.success(PageResponse.from(payments));
+        return ApiResponse.success(new PageResponse<>(
+                payments.getContent(),
+                payments.getNumber(),
+                payments.getSize(),
+                payments.getTotalElements(),
+                payments.getTotalPages(),
+                payments.isLast()));
     }
 
     @GetMapping("/{paymentId}")

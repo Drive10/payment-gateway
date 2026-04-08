@@ -5,7 +5,8 @@ import dev.payment.orderservice.dto.InitiatePaymentResponse;
 import dev.payment.orderservice.dto.OrderResponse;
 import dev.payment.orderservice.entity.OrderStatus;
 import dev.payment.orderservice.exception.OrderException;
-import jakarta.annotation.PostConstruct;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,21 +24,22 @@ import java.util.UUID;
 public class PaymentOrchestrator {
     private static final Logger log = LoggerFactory.getLogger(PaymentOrchestrator.class);
 
-    private WebClient webClient;
+    private final WebClient webClient;
     private final OrderService orderService;
+    private final long requestTimeoutMs;
 
-    @Value("${application.payment-service.url}")
-    private String paymentServiceUrl;
-
-    public PaymentOrchestrator(OrderService orderService) {
+    public PaymentOrchestrator(
+            OrderService orderService,
+            WebClient.Builder webClientBuilder,
+            @Value("${application.payment-service.url}") String paymentServiceUrl,
+            @Value("${application.payment-service.request-timeout-ms:5000}") long requestTimeoutMs) {
         this.orderService = orderService;
+        this.webClient = webClientBuilder.baseUrl(paymentServiceUrl).build();
+        this.requestTimeoutMs = requestTimeoutMs;
     }
 
-    @PostConstruct
-    public void init() {
-        this.webClient = WebClient.builder().baseUrl(paymentServiceUrl).build();
-    }
-
+    @Retry(name = "paymentService")
+    @CircuitBreaker(name = "paymentService", fallbackMethod = "initiatePaymentFallback")
     public InitiatePaymentResponse initiatePayment(InitiatePaymentRequest request) {
         OrderResponse order = orderService.getOrder(request.orderId());
 
@@ -65,7 +67,7 @@ public class PaymentOrchestrator {
                     .bodyValue(paymentRequest)
                     .retrieve()
                     .bodyToMono(InitiatePaymentResponse.class)
-                    .timeout(Duration.ofSeconds(30))
+                    .timeout(Duration.ofMillis(requestTimeoutMs))
                     .onErrorResume(e -> Mono.error(new OrderException("Failed to initiate payment: " + e.getMessage())))
                     .block();
 
@@ -74,6 +76,12 @@ public class PaymentOrchestrator {
             log.error("Payment orchestration failed: {}", e.getMessage(), e);
             throw new OrderException("Payment service unavailable: " + e.getMessage());
         }
+    }
+
+    @SuppressWarnings("unused")
+    private InitiatePaymentResponse initiatePaymentFallback(InitiatePaymentRequest request, Throwable throwable) {
+        log.warn("Payment service fallback triggered for order {}: {}", request.orderId(), throwable.getMessage());
+        throw new OrderException("Payment service is currently unavailable. Please retry shortly.");
     }
 
     public void handlePaymentCallback(UUID orderId, String paymentStatus) {

@@ -74,7 +74,14 @@ public class AdminController {
     ) {
         User actor = authService.getCurrentUser(authentication.getName());
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
-        return ApiResponse.success(PageResponse.from(paymentService.getPayments(actor, status, pageable, true)));
+        var payments = paymentService.getPayments(actor, status, pageable, true);
+        return ApiResponse.success(new PageResponse<>(
+                payments.getContent(),
+                payments.getNumber(),
+                payments.getSize(),
+                payments.getTotalElements(),
+                payments.getTotalPages(),
+                payments.isLast()));
     }
 
     @GetMapping("/orders")
@@ -86,7 +93,14 @@ public class AdminController {
     ) {
         User actor = authService.getCurrentUser(authentication.getName());
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
-        return ApiResponse.success(PageResponse.from(orderService.getOrders(actor, status, pageable, true)));
+        var orders = orderService.getOrders(actor, status, pageable, true);
+        return ApiResponse.success(new PageResponse<>(
+                orders.getContent(),
+                orders.getNumber(),
+                orders.getSize(),
+                orders.getTotalElements(),
+                orders.getTotalPages(),
+                orders.isLast()));
     }
 
     @GetMapping("/audit-logs")
@@ -97,7 +111,14 @@ public class AdminController {
     ) {
         authService.getCurrentUser(authentication.getName());
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
-        return ApiResponse.success(PageResponse.from(auditService.getAuditLogs(pageable)));
+        var auditLogs = auditService.getAuditLogs(pageable);
+        return ApiResponse.success(new PageResponse<>(
+                auditLogs.getContent(),
+                auditLogs.getNumber(),
+                auditLogs.getSize(),
+                auditLogs.getTotalElements(),
+                auditLogs.getTotalPages(),
+                auditLogs.isLast()));
     }
 
     @PostMapping("/fee-configs")
@@ -145,7 +166,13 @@ public class AdminController {
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
         Dispute.DisputeStatus disputeStatus = status != null ? Dispute.DisputeStatus.valueOf(status) : null;
         Page<Dispute> disputes = disputeService.getAllDisputes(disputeStatus, pageable);
-        return ApiResponse.success(PageResponse.from(disputes));
+        return ApiResponse.success(new PageResponse<>(
+                disputes.getContent(),
+                disputes.getNumber(),
+                disputes.getSize(),
+                disputes.getTotalElements(),
+                disputes.getTotalPages(),
+                disputes.isLast()));
     }
 
     @PostMapping("/disputes/{disputeId}/accept")
