@@ -22,13 +22,13 @@
 |---------|------|--------------|
 | **api-gateway** | 8080 | /actuator/health |
 | **auth-service** | 8081 | /actuator/health |
+| **order-service** | 8082 | /actuator/health |
 | **payment-service** | 8083 | /actuator/health |
-| **order-service** | 8084 | /actuator/health |
-| **notification-service** | 8085 | /actuator/health |
+| **notification-service** | 8084 | /actuator/health |
 | **simulator-service** | 8086 | /actuator/health |
 | **analytics-service** | 8089 | /actuator/health |
-| **audit-service** | 8088 | /actuator/health |
-| **frontend** | 3000 | N/A |
+| **audit-service** | 8090 | /actuator/health |
+| **frontend** | 5173 | N/A |
 
 ---
 

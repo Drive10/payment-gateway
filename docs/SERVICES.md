@@ -10,12 +10,12 @@
 |---------|------|------|-------------|
 | **api-gateway** | 8080 | Spring Cloud Gateway | Central routing, JWT auth, rate limiting |
 | **auth-service** | 8081 | Spring Boot 3 | User auth, JWT, RBAC, sessions |
+| **order-service** | 8082 | Spring Boot 3 | Order management, merchants |
 | **payment-service** | 8083 | Spring Boot 3 | Payment orchestration, multi-provider |
-| **order-service** | 8084 | Spring Boot 3 | Order management, merchants |
-| **notification-service** | 8085 | Spring Boot 3 | Email, SMS, push, webhooks |
+| **notification-service** | 8084 | Spring Boot 3 | Email, SMS, push, webhooks |
 | **simulator-service** | 8086 | Spring Boot 3 | Payment simulation, testing |
 | **analytics-service** | 8089 | Spring Boot 3 | Risk, settlements, reports |
-| **audit-service** | 8088 | Spring Boot 3 | MongoDB audit logging |
+| **audit-service** | 8090 | Spring Boot 3 | MongoDB audit logging |
 
 ---
 
@@ -98,7 +98,7 @@
 
 ---
 
-## Order Service (8084)
+## Order Service (8082)
 
 ### Functionality
 - Order creation and management
@@ -108,7 +108,7 @@
 
 ---
 
-## Notification Service (8085)
+## Notification Service (8084)
 
 ### Functionality
 - Email notifications
@@ -178,7 +178,7 @@
 
 ---
 
-## Audit Service (8088)
+## Audit Service (8090)
 
 ### Document
 - `AuditLog` - MongoDB audit log document
@@ -231,9 +231,9 @@
 |---------|-----------|----------|
 | api-gateway | 8080 | Redis |
 | auth-service | 8081 | PostgreSQL, Redis |
+| order-service | 8082 | PostgreSQL, Redis |
 | payment-service | 8083 | PostgreSQL, Redis |
-| order-service | 8084 | PostgreSQL, Redis |
-| notification-service | 8085 | PostgreSQL, Redis |
+| notification-service | 8084 | PostgreSQL, Redis |
 | simulator-service | 8086 | None |
 | analytics-service | 8089 | PostgreSQL, Redis |
-| audit-service | 8088 | MongoDB |
+| audit-service | 8090 | MongoDB |

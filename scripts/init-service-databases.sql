@@ -15,3 +15,6 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'analytics_db')\gexec
 
 SELECT 'CREATE DATABASE simulator_db'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'simulator_db')\gexec
+
+SELECT 'CREATE DATABASE sonarqube'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'sonarqube')\gexec

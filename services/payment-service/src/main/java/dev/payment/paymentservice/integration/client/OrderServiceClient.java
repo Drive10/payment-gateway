@@ -45,6 +45,7 @@ public class OrderServiceClient {
                 throw new ApiException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Order not found in order-service");
             }
 
+            @SuppressWarnings("unchecked")
             Map<String, Object> data = (Map<String, Object>) response.get("data");
             Order order = new Order();
             order.setId(UUID.fromString((String) data.get("id")));

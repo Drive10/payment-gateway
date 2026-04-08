@@ -502,6 +502,51 @@ services:
       retries: 10
       start_period: 45s
 
+  frontend:
+    build:
+      context: ./web/frontend
+      dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "5173:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - payflow-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  sonarqube:
+    image: sonarqube:10.5.1-community
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+      SONARQUBE_JDBC_USERNAME: sonar
+      SONARQUBE_JDBC_PASSWORD: sonar
+      SONARQUBE_JDBC_URL: jdbc:postgresql://postgres:5432/sonarqube
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - payflow-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/api/system/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
 networks:
   payflow-network:
     driver: bridge
@@ -512,3 +557,6 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:

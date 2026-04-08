@@ -20,6 +20,7 @@ public class GatewayJwtService {
         this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
     }
 
+    @SuppressWarnings("unchecked")
     public GatewayPrincipal validateAccessToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(secretKey)
