@@ -109,14 +109,14 @@
 |---------|------|-------------|------|
 | **api-gateway** | 8080 | Central routing, auth, rate limiting | Spring Cloud Gateway |
 | **auth-service** | 8081 | JWT auth, OAuth2, RBAC, sessions | Spring Security |
-| **order-service** | 8084 | Order management, merchants, KYC, API keys | Spring Data JPA |
+| **order-service** | 8082 | Order management, merchants, KYC, API keys | Spring Data JPA |
 | **payment-service** | 8083 | Payment orchestration, multi-provider integration | Spring Boot |
 | **notification-service** | 8085 | Email, SMS, push, webhooks, feature flags | Kafka, Redis |
 | **simulator-service** | 8086 | Payment simulation, load testing, demo mode | Spring Boot |
 | **graphql-gateway** | 8087 | GraphQL API with schema federation | Spring GraphQL |
 | **search-service** | 8088 | Full-text search, aggregations | Elasticsearch |
 | **analytics-service** | 8089 | Risk scoring, settlements, disputes, reports | Kafka, JPA |
-| **audit-service** | 8088 | Audit logging, compliance | MongoDB |
+| **audit-service** | 8089 | Audit logging, compliance | MongoDB |
 
 ## Features
 

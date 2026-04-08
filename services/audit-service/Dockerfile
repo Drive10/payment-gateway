@@ -54,6 +54,6 @@ WORKDIR /app
 COPY --from=builder /build/services/audit-service/target/*.jar app.jar
 RUN chown -R spring:spring /app
 USER spring:spring
-EXPOSE 8088
+EXPOSE 8089
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
