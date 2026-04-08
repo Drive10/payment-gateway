@@ -98,6 +98,26 @@ services:
       retries: 5
       start_period: 30s
 
+  sonarqube:
+    image: sonarqube:community
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+      - SONARQUBE_WEB_CONTEXT=/
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    networks:
+      - payflow-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
 networks:
   payflow-network:
     driver: bridge
@@ -105,3 +125,6 @@ networks:
 volumes:
   postgres_data:
   mongodb_data:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
