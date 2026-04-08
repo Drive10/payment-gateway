@@ -1,0 +1,71 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  sonarcloud:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.projectKey=Drive10_payflow
+            -Dsonar.organization=drive10
+            -Dsonar.sources=services,libs
+            -Dsonar.tests=services
+            -Dsonar.java.binaries=target/classes
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+  frontend-scan:
+    name: Frontend Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'web/frontend/node_modules'
+
+      - name: Install frontend dependencies
+        run: cd web/frontend && npm ci
+
+      - name: Run ESLint
+        run: cd web/frontend && npm run lint
+
+      - name: Run Tests
+        run: cd web/frontend && npm run test -- --coverage
+
+      - name: SonarCloud Frontend Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: web/frontend
+          args: >
+            -Dsonar.projectKey=payflow_frontend
+            -Dsonar.organization=drive10
+            -Dsonar.sources=src
+            -Dsonar.tests=tests
+            -Dsonar.testExecutionReportPaths=coverage/vitest-report.xml
