@@ -125,7 +125,7 @@ services:
   grafana:
     image: grafana/grafana:11.0.0
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
@@ -138,7 +138,7 @@ services:
     depends_on:
       - prometheus
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
