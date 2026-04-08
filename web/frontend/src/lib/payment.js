@@ -63,22 +63,29 @@ export function formatCurrency(amount) {
 
 async function apiRequest(path, options = {}) {
   let response;
-  const { headers: customHeaders = {}, ...restOptions } = options;
-  const requestId =
-    customHeaders["X-Request-Id"] ?? createCorrelationId("checkout");
+  const { headers: customHeaders = {}, timeout = 30000, retries = 2, ...restOptions } = options;
+  const requestId = customHeaders["X-Request-Id"] ?? createCorrelationId("checkout");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: {
-        "Content-Type": "application/json",
-        "X-Request-Id": requestId,
-        ...customHeaders,
-      },
-      ...restOptions,
-    });
-  } catch {
-    throw new Error(DEFAULT_ERROR_MESSAGE);
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      response = await fetch(`${API_BASE_URL}${path}`, {
+        headers: { "Content-Type": "application/json", "X-Request-Id": requestId, ...customHeaders },
+        ...restOptions,
+        signal: controller.signal,
+      });
+      break;
+    } catch (error) {
+      if (attempt < retries && (error.name === "TypeError" || error.message.includes("network"))) {
+        await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+        continue;
+      }
+      clearTimeout(timeoutId);
+      throw new Error(error.name === "AbortError" ? "Request timed out" : DEFAULT_ERROR_MESSAGE);
+    }
   }
+  clearTimeout(timeoutId);
 
   const payload = await response.json().catch(() => null);
 
@@ -135,7 +142,11 @@ export async function ensureAccessToken() {
   const storedAuth = getStoredAuth();
   
   if (storedAuth?.token) {
-    if (storedAuth.expiresAt && Date.now() > storedAuth.expiresAt) {
+    const bufferTime = 5 * 60 * 1000;
+    const isExpiringSoon = storedAuth.expiresAt && (Date.now() + bufferTime > storedAuth.expiresAt);
+    const isExpired = storedAuth.expiresAt && Date.now() > storedAuth.expiresAt;
+    
+    if (isExpired || isExpiringSoon) {
       if (storedAuth.refreshToken) {
         try {
           const refreshed = await apiRequest("/auth/refresh", {
@@ -150,10 +161,7 @@ export async function ensureAccessToken() {
               expiresAt: Date.now() + (refreshed.expiresIn || 3600) * 1000,
             };
             persistAuth(newAuth);
-            return {
-              token: newAuth.token,
-              customer: newAuth.user,
-            };
+            return { token: newAuth.token, customer: newAuth.user };
           }
         } catch (e) {
           console.debug("Token refresh failed, will re-authenticate");
@@ -163,10 +171,7 @@ export async function ensureAccessToken() {
         clearAuth();
       }
     } else {
-      return {
-        token: storedAuth.token,
-        customer: storedAuth.user,
-      };
+      return { token: storedAuth.token, customer: storedAuth.user };
     }
   }
   
@@ -269,50 +274,63 @@ export async function startCheckout({
   return checkout;
 }
 
-export async function captureCheckout(checkout) {
-  const payment = await apiRequest(`/payments/${checkout.payment.id}/capture`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${checkout.token}`,
-      "X-Request-Id": checkout.correlationId ?? createCorrelationId("capture"),
-    },
-    body: JSON.stringify({}),
-  });
+export async function captureCheckout(checkout, onStatusChange) {
+  const maxAttempts = 10;
+  const pollInterval = 3000;
+  
+  for (let attempt = 0; attempt <= maxAttempts; attempt++) {
+    try {
+      const payment = await apiRequest(`/payments/${checkout.payment.id}/capture`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${checkout.token}`,
+          "X-Request-Id": checkout.correlationId ?? createCorrelationId("capture"),
+        },
+        body: JSON.stringify({}),
+      });
 
-  const createdAt = payment.createdAt ? new Date(payment.createdAt) : new Date();
-  const methodLabel = checkout.method === "upi" ? "UPI" : "Card";
+      if (payment.status !== "PROCESSING") {
+        const createdAt = payment.createdAt ? new Date(payment.createdAt) : new Date();
+        const methodLabel = checkout.method === "upi" ? "UPI" : "Card";
 
-  const transaction = {
-    id: payment.id,
-    orderId: payment.orderId,
-    orderReference: payment.orderReference,
-    providerOrderId: payment.providerOrderId,
-    providerPaymentId: payment.providerPaymentId,
-    transactionMode: payment.transactionMode,
-    simulated: payment.simulated,
-    amount: checkout.amount,
-    amountLabel: formatCurrency(checkout.amount),
-    method: checkout.method,
-    methodLabel,
-    status: payment.status,
-    customerLabel:
-      checkout.method === "upi"
-        ? checkout.customer?.fullName || checkout.customer?.firstName
-        : checkout.cardholder.trim() || `${checkout.customer?.firstName} ${checkout.customer?.lastName}`.trim(),
-    environmentLabel:
-      payment.transactionMode === TRANSACTION_MODES.TEST
-        ? "Sandbox lane"
-        : "Primary processor",
-    createdAt: createdAt.toISOString(),
-    dateLabel: createdAt.toLocaleString("en-IN", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }),
-    correlationId: checkout.correlationId,
-  };
+        const transaction = {
+          id: payment.id,
+          orderId: payment.orderId,
+          orderReference: payment.orderReference,
+          providerOrderId: payment.providerOrderId,
+          providerPaymentId: payment.providerPaymentId,
+          transactionMode: payment.transactionMode,
+          simulated: payment.simulated,
+          amount: checkout.amount,
+          amountLabel: formatCurrency(checkout.amount),
+          method: checkout.method,
+          methodLabel,
+          status: payment.status,
+          customerLabel: checkout.method === "upi" ? checkout.customer?.fullName || checkout.customer?.firstName : checkout.cardholder.trim() || `${checkout.customer?.firstName} ${checkout.customer?.lastName}`.trim(),
+          environmentLabel: payment.transactionMode === TRANSACTION_MODES.TEST ? "Sandbox lane" : "Primary processor",
+          createdAt: createdAt.toISOString(),
+          dateLabel: createdAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
+          correlationId: checkout.correlationId,
+          errorMessage: payment.errorMessage,
+          errorCode: payment.errorCode,
+        };
 
-  persistCheckoutState(transaction);
-  return transaction;
+        persistCheckoutState(transaction);
+        return transaction;
+      }
+
+      if (onStatusChange) onStatusChange(payment.status, attempt + 1, maxAttempts);
+      if (attempt < maxAttempts) await new Promise(r => setTimeout(r, pollInterval));
+    } catch (error) {
+      if (attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, pollInterval));
+        continue;
+      }
+      throw error;
+    }
+  }
+  
+  throw new Error("Payment verification timed out. Please check payment status in your dashboard.");
 }
 
 export async function getPaymentStatus(paymentId, token) {
