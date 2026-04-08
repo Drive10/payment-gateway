@@ -7,7 +7,7 @@ export const TRANSACTION_MODES = {
   TEST: "TEST",
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api/v1";
 const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm the platform is running and try again.";

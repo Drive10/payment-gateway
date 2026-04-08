@@ -21,7 +21,7 @@ describe('Checkout Page', () => {
 
   // Mock import.meta.env for Vite environment variables
   vi.stubGlobal('import.meta.env', {
-    VITE_API_URL: '/api',
+    VITE_API_URL: '/api/v1',
     VITE_MERCHANT_ID: null,
   });
 
