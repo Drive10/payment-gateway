@@ -10,7 +10,15 @@ spring:
     compatibility-verifier:
       enabled: false
   autoconfigure:
-    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+    exclude: 
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+  security:
+    user:
+      name: admin
+      password: admin
+    csrf:
+      enabled: false
   data:
     redis:
       host: localhost
@@ -30,7 +38,7 @@ spring.cloud.gateway:
         - StripPrefix=1
 
     - id: order-service
-      uri: http://localhost:8084
+      uri: http://localhost:8082
       predicates:
         - Path=/api/v1/orders/**
       filters:
@@ -44,7 +52,7 @@ spring.cloud.gateway:
         - StripPrefix=1
 
     - id: notification-service
-      uri: http://localhost:8085
+      uri: http://localhost:8084
       predicates:
         - Path=/api/v1/notifications/**
       filters:
@@ -61,6 +69,13 @@ spring.cloud.gateway:
       uri: http://localhost:8086
       predicates:
         - Path=/api/v1/simulator/**
+      filters:
+        - StripPrefix=1
+
+    - id: audit-service
+      uri: http://localhost:8090
+      predicates:
+        - Path=/api/v1/audit/**
       filters:
         - StripPrefix=1
 

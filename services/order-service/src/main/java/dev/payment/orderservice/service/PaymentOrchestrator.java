@@ -1,51 +1,23 @@
 package dev.payment.orderservice.service;
 
 import dev.payment.orderservice.dto.InitiatePaymentRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import dev.payment.orderservice.dto.InitiatePaymentResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import dev.payment.orderservice.dto.OrderResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import dev.payment.orderservice.entity.OrderStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import dev.payment.orderservice.exception.OrderException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.time.Duration;
-import org.slf4j.LoggerFactory;
-import java.util.UUID;
-import org.slf4j.LoggerFactory;
-import java.util.Map;
 import java.util.HashMap;
-import java.time.Duration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Map;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Service
 public class PaymentOrchestrator {

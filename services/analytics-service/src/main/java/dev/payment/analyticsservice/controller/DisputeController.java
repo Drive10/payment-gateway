@@ -1,9 +1,9 @@
 package dev.payment.analyticsservice.controller;
-import jakarta.validation.Valid;
 
 import dev.payment.analyticsservice.entity.Dispute;
 import dev.payment.analyticsservice.service.DisputeService;
 import dev.payment.common.api.ApiResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +16,14 @@ import java.util.UUID;
 @RequestMapping("/api/v1/disputes")
 public class DisputeController {
 
+    private static final String FIELD_PAYMENT_ID = "paymentId";
+    private static final String FIELD_MERCHANT_ID = "merchantId";
+    private static final String FIELD_AMOUNT = "amount";
+    private static final String FIELD_DISPUTE_REASON = "disputeReason";
+    private static final String FIELD_DISPUTE_TYPE = "disputeType";
+    private static final String VALUE_SYSTEM = "SYSTEM";
+    private static final String FIELD_RESOLVED_BY = "resolvedBy";
+
     private final DisputeService disputeService;
 
     public DisputeController(DisputeService disputeService) {
@@ -27,14 +35,14 @@ public class DisputeController {
         validateCreateRequest(request);
 
         Dispute dispute = new Dispute();
-        dispute.setPaymentId(getStringRequired(request, "paymentId"));
+        dispute.setPaymentId(getStringRequired(request, FIELD_PAYMENT_ID));
         dispute.setOrderId(getString(request, "orderId"));
-        dispute.setMerchantId(UUID.fromString(getStringRequired(request, "merchantId")));
+        dispute.setMerchantId(UUID.fromString(getStringRequired(request, FIELD_MERCHANT_ID)));
         dispute.setCustomerId(getString(request, "customerId"));
-        dispute.setAmount(new BigDecimal(getStringRequired(request, "amount")));
+        dispute.setAmount(new BigDecimal(getStringRequired(request, FIELD_AMOUNT)));
         dispute.setCurrency(getStringOrDefault(request, "currency", "INR"));
-        dispute.setDisputeReason(getStringRequired(request, "disputeReason"));
-        dispute.setDisputeType(getStringRequired(request, "disputeType"));
+        dispute.setDisputeReason(getStringRequired(request, FIELD_DISPUTE_REASON));
+        dispute.setDisputeType(getStringRequired(request, FIELD_DISPUTE_TYPE));
         dispute.setPriority(getStringOrDefault(request, "priority", "NORMAL"));
 
         Dispute created = disputeService.createDispute(dispute);
@@ -94,7 +102,7 @@ public class DisputeController {
             @PathVariable UUID id,
             @RequestBody(required = false) Map<String, Object> request) {
 
-        String resolvedBy = request != null ? getStringOrDefault(request, "resolvedBy", "SYSTEM") : "SYSTEM";
+        String resolvedBy = request != null ? getStringOrDefault(request, FIELD_RESOLVED_BY, VALUE_SYSTEM) : VALUE_SYSTEM;
         Dispute accepted = disputeService.acceptDispute(id, resolvedBy);
         return ResponseEntity.ok(ApiResponse.success(accepted));
     }
@@ -105,7 +113,7 @@ public class DisputeController {
             @RequestBody @Valid Map<String, Object> request) {
 
         String evidenceNotes = getStringOrDefault(request, "evidenceNotes", "");
-        String resolvedBy = getStringOrDefault(request, "resolvedBy", "MERCHANT");
+        String resolvedBy = getStringOrDefault(request, FIELD_RESOLVED_BY, "MERCHANT");
         Dispute contested = disputeService.contestDispute(id, evidenceNotes, resolvedBy);
         return ResponseEntity.ok(ApiResponse.success(contested));
     }
@@ -115,7 +123,7 @@ public class DisputeController {
             @PathVariable UUID id,
             @RequestBody(required = false) Map<String, Object> request) {
 
-        String resolvedBy = request != null ? getStringOrDefault(request, "resolvedBy", "SYSTEM") : "SYSTEM";
+        String resolvedBy = request != null ? getStringOrDefault(request, FIELD_RESOLVED_BY, VALUE_SYSTEM) : VALUE_SYSTEM;
         Dispute won = disputeService.winDispute(id, resolvedBy);
         return ResponseEntity.ok(ApiResponse.success(won));
     }
@@ -126,7 +134,7 @@ public class DisputeController {
             @RequestBody(required = false) Map<String, Object> request) {
 
         String notes = request != null ? getStringOrDefault(request, "notes", "") : "";
-        String resolvedBy = request != null ? getStringOrDefault(request, "resolvedBy", "SYSTEM") : "SYSTEM";
+        String resolvedBy = request != null ? getStringOrDefault(request, FIELD_RESOLVED_BY, VALUE_SYSTEM) : VALUE_SYSTEM;
         Dispute closed = disputeService.updateDisputeStatus(id, "CLOSED", notes, resolvedBy);
         return ResponseEntity.ok(ApiResponse.success(closed));
     }
@@ -148,20 +156,20 @@ public class DisputeController {
     }
 
     private void validateCreateRequest(Map<String, Object> request) {
-        if (!request.containsKey("paymentId") || request.get("paymentId") == null) {
-            throw new IllegalArgumentException("paymentId is required");
+        if (!request.containsKey(FIELD_PAYMENT_ID) || request.get(FIELD_PAYMENT_ID) == null) {
+            throw new IllegalArgumentException(FIELD_PAYMENT_ID + " is required");
         }
-        if (!request.containsKey("merchantId") || request.get("merchantId") == null) {
-            throw new IllegalArgumentException("merchantId is required");
+        if (!request.containsKey(FIELD_MERCHANT_ID) || request.get(FIELD_MERCHANT_ID) == null) {
+            throw new IllegalArgumentException(FIELD_MERCHANT_ID + " is required");
         }
-        if (!request.containsKey("amount") || request.get("amount") == null) {
-            throw new IllegalArgumentException("amount is required");
+        if (!request.containsKey(FIELD_AMOUNT) || request.get(FIELD_AMOUNT) == null) {
+            throw new IllegalArgumentException(FIELD_AMOUNT + " is required");
         }
-        if (!request.containsKey("disputeReason") || request.get("disputeReason") == null) {
-            throw new IllegalArgumentException("disputeReason is required");
+        if (!request.containsKey(FIELD_DISPUTE_REASON) || request.get(FIELD_DISPUTE_REASON) == null) {
+            throw new IllegalArgumentException(FIELD_DISPUTE_REASON + " is required");
         }
-        if (!request.containsKey("disputeType") || request.get("disputeType") == null) {
-            throw new IllegalArgumentException("disputeType is required");
+        if (!request.containsKey(FIELD_DISPUTE_TYPE) || request.get(FIELD_DISPUTE_TYPE) == null) {
+            throw new IllegalArgumentException(FIELD_DISPUTE_TYPE + " is required");
         }
     }
 

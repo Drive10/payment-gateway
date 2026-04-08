@@ -1,12 +1,23 @@
 package dev.payment.analyticsservice.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "risk_assessments")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class RiskAssessment {
 
     @Id
@@ -23,17 +34,21 @@ public class RiskAssessment {
     private BigDecimal amount;
 
     @Column(nullable = false, length = 3)
+    @Builder.Default
     private String currency = "INR";
 
     @Column(name = "risk_score", nullable = false)
+    @Builder.Default
     private Integer riskScore = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "risk_level", nullable = false, length = 20)
+    @Builder.Default
     private RiskLevel riskLevel = RiskLevel.LOW;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Builder.Default
     private Decision decision = Decision.APPROVE;
 
     @Column(columnDefinition = "jsonb")
@@ -52,33 +67,6 @@ public class RiskAssessment {
     protected void onCreate() {
         assessedAt = LocalDateTime.now();
     }
-
-    public RiskAssessment() {}
-
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-    public UUID getTransactionId() { return transactionId; }
-    public void setTransactionId(UUID transactionId) { this.transactionId = transactionId; }
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
-    public BigDecimal getAmount() { return amount; }
-    public void setAmount(BigDecimal amount) { this.amount = amount; }
-    public String getCurrency() { return currency; }
-    public void setCurrency(String currency) { this.currency = currency; }
-    public Integer getRiskScore() { return riskScore; }
-    public void setRiskScore(Integer riskScore) { this.riskScore = riskScore; }
-    public RiskLevel getRiskLevel() { return riskLevel; }
-    public void setRiskLevel(RiskLevel riskLevel) { this.riskLevel = riskLevel; }
-    public Decision getDecision() { return decision; }
-    public void setDecision(Decision decision) { this.decision = decision; }
-    public String getTriggeredRules() { return triggeredRules; }
-    public void setTriggeredRules(String triggeredRules) { this.triggeredRules = triggeredRules; }
-    public String getFlags() { return flags; }
-    public void setFlags(String flags) { this.flags = flags; }
-    public String getMetadata() { return metadata; }
-    public void setMetadata(String metadata) { this.metadata = metadata; }
-    public LocalDateTime getAssessedAt() { return assessedAt; }
-    public void setAssessedAt(LocalDateTime assessedAt) { this.assessedAt = assessedAt; }
 
     public enum RiskLevel {
         LOW, MEDIUM, HIGH, CRITICAL

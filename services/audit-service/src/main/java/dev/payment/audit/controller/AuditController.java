@@ -18,6 +18,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AuditController {
 
+    private static final String FIELD_TIMESTAMP = "timestamp";
+
     private final AuditService auditService;
 
     @GetMapping("/user/{userId}")
@@ -26,7 +28,7 @@ public class AuditController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(auditService.getLogsByUser(userId, 
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"))));
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, FIELD_TIMESTAMP))));
     }
 
     @GetMapping("/entity/{entityType}/{entityId}")
@@ -36,7 +38,7 @@ public class AuditController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(auditService.getLogsByEntity(entityType, entityId,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"))));
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, FIELD_TIMESTAMP))));
     }
 
     @GetMapping("/service/{service}")
@@ -45,7 +47,7 @@ public class AuditController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(auditService.getLogsByService(service,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"))));
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, FIELD_TIMESTAMP))));
     }
 
     @GetMapping("/range")
@@ -63,7 +65,7 @@ public class AuditController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(auditService.searchLogs(action, start, end,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"))));
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, FIELD_TIMESTAMP))));
     }
 
     @PostMapping

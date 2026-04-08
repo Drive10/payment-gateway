@@ -7,7 +7,6 @@ import dev.payment.analyticsservice.entity.Metric;
 import dev.payment.analyticsservice.entity.Report;
 import dev.payment.analyticsservice.service.AnalyticsService;
 import dev.payment.common.api.ApiResponse;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +19,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/analytics")
 public class AnalyticsController {
+
+    private static final String FIELD_MERCHANT_ID = "merchantId";
+    private static final String FIELD_VALUE = "value";
 
     private final AnalyticsService analyticsService;
 
@@ -35,7 +37,7 @@ public class AnalyticsController {
                 getString(request, "eventType"),
                 getString(request, "category"),
                 getMap(request, "data"),
-                getString(request, "merchantId"),
+                getString(request, FIELD_MERCHANT_ID),
                 getString(request, "orderId"),
                 getString(request, "paymentId"),
                 getString(request, "userId"),
@@ -54,8 +56,8 @@ public class AnalyticsController {
         Metric metric = analyticsService.recordMetric(
                 getString(request, "metricName"),
                 getString(request, "metricType"),
-                getDoubleRequired(request, "value"),
-                getString(request, "merchantId"),
+                getDoubleRequired(request, FIELD_VALUE),
+                getString(request, FIELD_MERCHANT_ID),
                 getString(request, "currency"),
                 getString(request, "status"),
                 getStringOrDefault(request, "period", "hour")
@@ -122,7 +124,7 @@ public class AnalyticsController {
                 getStringRequired(request, "reportType"),
                 getStringRequired(request, "reportName"),
                 getMap(request, "params"),
-                getString(request, "merchantId"),
+                getString(request, FIELD_MERCHANT_ID),
                 getString(request, "createdBy")
         );
 
@@ -157,9 +159,9 @@ public class AnalyticsController {
 
         analyticsService.updateKpi(
                 getStringRequired(request, "kpiName"),
-                getDoubleRequired(request, "value"),
+                getDoubleRequired(request, FIELD_VALUE),
                 getString(request, "unit"),
-                getString(request, "merchantId")
+                getString(request, FIELD_MERCHANT_ID)
         );
 
         return ResponseEntity.ok(ApiResponse.success(null));

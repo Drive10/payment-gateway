@@ -23,6 +23,18 @@ import java.util.UUID;
 @RequestMapping("/api/v1/merchants")
 public class MerchantController {
 
+    private static final String FIELD_EMAIL = "email";
+    private static final String FIELD_BUSINESS_NAME = "businessName";
+    private static final String FIELD_DOCUMENT_TYPE = "documentType";
+    private static final String FIELD_DOCUMENT_NUMBER = "documentNumber";
+    private static final String FIELD_FILE_URL = "fileUrl";
+    private static final String FIELD_FILE_KEY = "fileKey";
+    private static final String FIELD_ACCOUNT_HOLDER_NAME = "accountHolderName";
+    private static final String FIELD_BANK_NAME = "bankName";
+    private static final String FIELD_ACCOUNT_NUMBER = "accountNumber";
+    private static final String FIELD_ACCOUNT_TYPE = "accountType";
+    private static final String VALUE_SYSTEM = "SYSTEM";
+
     private final MerchantService merchantService;
     private final KycService kycService;
     private final ApiKeyService apiKeyService;
@@ -38,9 +50,9 @@ public class MerchantController {
         validateCreateRequest(request);
 
         Merchant merchant = new Merchant();
-        merchant.setBusinessName(getString(request, "businessName"));
+        merchant.setBusinessName(getString(request, FIELD_BUSINESS_NAME));
         merchant.setLegalName(getString(request, "legalName"));
-        merchant.setEmail(getStringRequired(request, "email"));
+        merchant.setEmail(getStringRequired(request, FIELD_EMAIL));
         merchant.setPhone(getString(request, "phone"));
         merchant.setWebsite(getString(request, "website"));
         merchant.setBusinessType(getString(request, "businessType"));
@@ -104,7 +116,7 @@ public class MerchantController {
             @PathVariable UUID id,
             @RequestBody @Valid Map<String, Object> request) {
 
-        String verifiedBy = getStringOrDefault(request, "verifiedBy", "SYSTEM");
+        String verifiedBy = getStringOrDefault(request, "verifiedBy", VALUE_SYSTEM);
         String notes = getString(request, "notes");
 
         Merchant updated = merchantService.updateKycStatus(id, "VERIFIED", verifiedBy, notes);
@@ -116,7 +128,7 @@ public class MerchantController {
             @PathVariable UUID id,
             @RequestBody @Valid Map<String, Object> request) {
 
-        String reason = getStringRequired(request, "reason");
+        String reason = getStringRequired(request, FIELD_BUSINESS_NAME);
 
         Merchant updated = merchantService.updateKycStatus(id, "REJECTED", "SYSTEM", reason);
         return ResponseEntity.ok(ApiResponse.success(updated));

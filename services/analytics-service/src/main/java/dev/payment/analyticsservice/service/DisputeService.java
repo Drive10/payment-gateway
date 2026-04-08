@@ -20,6 +20,7 @@ public class DisputeService {
 
     private static final Logger log = LoggerFactory.getLogger(DisputeService.class);
     private static final SecureRandom random = new SecureRandom();
+    private static final String ERROR_DISPUTE_NOT_FOUND = "Dispute not found: ";
 
     private final DisputeRepository disputeRepository;
 
@@ -66,7 +67,7 @@ public class DisputeService {
 
     public Dispute updateDisputeStatus(UUID id, String status, String notes, String resolvedBy) {
         Dispute dispute = disputeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Dispute not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(ERROR_DISPUTE_NOT_FOUND + id));
 
         dispute.setStatus(status);
         
@@ -82,7 +83,7 @@ public class DisputeService {
 
     public Dispute acceptDispute(UUID id, String resolvedBy) {
         Dispute dispute = disputeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Dispute not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(ERROR_DISPUTE_NOT_FOUND + id));
 
         dispute.setStatus("LOST");
         dispute.setResolvedAt(Instant.now());
@@ -93,9 +94,9 @@ public class DisputeService {
         return disputeRepository.save(dispute);
     }
 
-    public Dispute contestDispute(UUID id, String evidenceNotes, String resolvedBy) {
+    public Dispute contestDispute(UUID id, String evidenceNotes, @SuppressWarnings("unused") String resolvedBy) {
         Dispute dispute = disputeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Dispute not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(ERROR_DISPUTE_NOT_FOUND + id));
 
         dispute.setStatus("UNDER_REVIEW");
         dispute.setResolutionNotes(evidenceNotes);
@@ -106,7 +107,7 @@ public class DisputeService {
 
     public Dispute winDispute(UUID id, String resolvedBy) {
         Dispute dispute = disputeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Dispute not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(ERROR_DISPUTE_NOT_FOUND + id));
 
         dispute.setStatus("WON");
         dispute.setResolvedAt(Instant.now());
@@ -120,7 +121,7 @@ public class DisputeService {
 
     public Dispute assignDispute(UUID id, String assignedTo) {
         Dispute dispute = disputeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Dispute not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(ERROR_DISPUTE_NOT_FOUND + id));
 
         dispute.setAssignedTo(assignedTo);
         log.info("Dispute {} assigned to: {}", dispute.getDisputeId(), "REDACTED");

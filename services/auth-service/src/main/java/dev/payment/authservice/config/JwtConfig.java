@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "application.jwt")
 public class JwtConfig {
-    private String secret = System.getenv("JWT_SECRET") != null ? System.getenv("JWT_SECRET") : "YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY";
+    private String secret = System.getenv("JWT_SECRET") != null ? System.getenv("JWT_SECRET") : "Q00qVqgM+A1zSb7FBfSGx6vzK9sUZhpxP5aBzWlLvp0=";
     private long expiration = 86400000;
     private long refreshExpiration = 604800000;
 

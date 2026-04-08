@@ -1,12 +1,23 @@
 package dev.payment.analyticsservice.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "settlements")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Settlement {
 
     @Id
@@ -23,25 +34,32 @@ public class Settlement {
     private String merchantName;
 
     @Column(name = "total_transactions", nullable = false)
+    @Builder.Default
     private Integer totalTransactions = 0;
 
     @Column(name = "total_amount", nullable = false, precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
     @Column(name = "total_fees", nullable = false, precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal totalFees = BigDecimal.ZERO;
 
     @Column(name = "total_refunds", nullable = false, precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal totalRefunds = BigDecimal.ZERO;
 
     @Column(name = "net_amount", nullable = false, precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal netAmount = BigDecimal.ZERO;
 
     @Column(nullable = false, length = 3)
+    @Builder.Default
     private String currency = "INR";
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Builder.Default
     private SettlementStatus status = SettlementStatus.PENDING;
 
     @Column(name = "period_start", nullable = false)
@@ -87,51 +105,6 @@ public class Settlement {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
-    public Settlement() {}
-
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-    public String getSettlementReference() { return settlementReference; }
-    public void setSettlementReference(String settlementReference) { this.settlementReference = settlementReference; }
-    public UUID getMerchantId() { return merchantId; }
-    public void setMerchantId(UUID merchantId) { this.merchantId = merchantId; }
-    public String getMerchantName() { return merchantName; }
-    public void setMerchantName(String merchantName) { this.merchantName = merchantName; }
-    public Integer getTotalTransactions() { return totalTransactions; }
-    public void setTotalTransactions(Integer totalTransactions) { this.totalTransactions = totalTransactions; }
-    public BigDecimal getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
-    public BigDecimal getTotalFees() { return totalFees; }
-    public void setTotalFees(BigDecimal totalFees) { this.totalFees = totalFees; }
-    public BigDecimal getTotalRefunds() { return totalRefunds; }
-    public void setTotalRefunds(BigDecimal totalRefunds) { this.totalRefunds = totalRefunds; }
-    public BigDecimal getNetAmount() { return netAmount; }
-    public void setNetAmount(BigDecimal netAmount) { this.netAmount = netAmount; }
-    public String getCurrency() { return currency; }
-    public void setCurrency(String currency) { this.currency = currency; }
-    public SettlementStatus getStatus() { return status; }
-    public void setStatus(SettlementStatus status) { this.status = status; }
-    public LocalDateTime getPeriodStart() { return periodStart; }
-    public void setPeriodStart(LocalDateTime periodStart) { this.periodStart = periodStart; }
-    public LocalDateTime getPeriodEnd() { return periodEnd; }
-    public void setPeriodEnd(LocalDateTime periodEnd) { this.periodEnd = periodEnd; }
-    public String getBankAccountNumber() { return bankAccountNumber; }
-    public void setBankAccountNumber(String bankAccountNumber) { this.bankAccountNumber = bankAccountNumber; }
-    public String getBankIfsc() { return bankIfsc; }
-    public void setBankIfsc(String bankIfsc) { this.bankIfsc = bankIfsc; }
-    public String getBankName() { return bankName; }
-    public void setBankName(String bankName) { this.bankName = bankName; }
-    public String getPayoutReference() { return payoutReference; }
-    public void setPayoutReference(String payoutReference) { this.payoutReference = payoutReference; }
-    public LocalDateTime getPayoutDate() { return payoutDate; }
-    public void setPayoutDate(LocalDateTime payoutDate) { this.payoutDate = payoutDate; }
-    public LocalDateTime getProcessedAt() { return processedAt; }
-    public void setProcessedAt(LocalDateTime processedAt) { this.processedAt = processedAt; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public enum SettlementStatus {
         PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED

@@ -1,13 +1,25 @@
 package dev.payment.analyticsservice.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "merchant_settlements")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class MerchantSettlement {
+
     private static final BigDecimal DEFAULT_MINIMUM_SETTLEMENT = new BigDecimal("1000");
 
     @Id
@@ -30,21 +42,27 @@ public class MerchantSettlement {
     private String bankName;
 
     @Column(name = "current_balance", nullable = false, precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal currentBalance = BigDecimal.ZERO;
 
     @Column(name = "pending_balance", nullable = false, precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal pendingBalance = BigDecimal.ZERO;
 
     @Column(name = "total_settled", nullable = false, precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal totalSettled = BigDecimal.ZERO;
 
     @Column(name = "settlement_frequency", nullable = false, length = 20)
+    @Builder.Default
     private String settlementFrequency = "DAILY";
 
     @Column(name = "auto_settle", nullable = false)
+    @Builder.Default
     private Boolean autoSettle = true;
 
     @Column(name = "minimum_settlement", nullable = false, precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal minimumSettlement = DEFAULT_MINIMUM_SETTLEMENT;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -63,35 +81,4 @@ public class MerchantSettlement {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
-    public MerchantSettlement() {}
-
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-    public UUID getMerchantId() { return merchantId; }
-    public void setMerchantId(UUID merchantId) { this.merchantId = merchantId; }
-    public String getMerchantName() { return merchantName; }
-    public void setMerchantName(String merchantName) { this.merchantName = merchantName; }
-    public String getBankAccountNumber() { return bankAccountNumber; }
-    public void setBankAccountNumber(String bankAccountNumber) { this.bankAccountNumber = bankAccountNumber; }
-    public String getBankIfsc() { return bankIfsc; }
-    public void setBankIfsc(String bankIfsc) { this.bankIfsc = bankIfsc; }
-    public String getBankName() { return bankName; }
-    public void setBankName(String bankName) { this.bankName = bankName; }
-    public BigDecimal getCurrentBalance() { return currentBalance; }
-    public void setCurrentBalance(BigDecimal currentBalance) { this.currentBalance = currentBalance; }
-    public BigDecimal getPendingBalance() { return pendingBalance; }
-    public void setPendingBalance(BigDecimal pendingBalance) { this.pendingBalance = pendingBalance; }
-    public BigDecimal getTotalSettled() { return totalSettled; }
-    public void setTotalSettled(BigDecimal totalSettled) { this.totalSettled = totalSettled; }
-    public String getSettlementFrequency() { return settlementFrequency; }
-    public void setSettlementFrequency(String settlementFrequency) { this.settlementFrequency = settlementFrequency; }
-    public Boolean getAutoSettle() { return autoSettle; }
-    public void setAutoSettle(Boolean autoSettle) { this.autoSettle = autoSettle; }
-    public BigDecimal getMinimumSettlement() { return minimumSettlement; }
-    public void setMinimumSettlement(BigDecimal minimumSettlement) { this.minimumSettlement = minimumSettlement; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

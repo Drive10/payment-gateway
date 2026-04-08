@@ -14,6 +14,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/internal/platform/settlement")
 public class SettlementController {
+
+    private static final String FIELD_MERCHANT_ID = "merchantId";
     
     private final SettlementService settlementService;
     
@@ -25,7 +27,7 @@ public class SettlementController {
     public ResponseEntity<ApiResponse<Settlement>> createSettlement(@RequestBody Map<String, Object> request) {
         validateCreateRequest(request);
 
-        UUID merchantId = UUID.fromString(getStringRequired(request, "merchantId"));
+        UUID merchantId = UUID.fromString(getStringRequired(request, FIELD_MERCHANT_ID));
         String merchantName = getStringRequired(request, "merchantName");
         
         Settlement settlement = settlementService.createSettlement(
