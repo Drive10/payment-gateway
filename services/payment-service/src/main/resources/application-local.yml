@@ -35,6 +35,6 @@ application:
     enabled: false
   security:
     jwt:
-      secret-key: swvCyTYU5b02Np0Eq8u9dkjXGGzlHkiERfJVJqFDZ0U=
+      secret-key: YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY
       expiration-seconds: 86400
       refresh-expiration-seconds: 604800
