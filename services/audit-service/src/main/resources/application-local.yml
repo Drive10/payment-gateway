@@ -4,11 +4,11 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017/audit_db
+      uri: ${MONGODB_URI:mongodb://localhost:27017/audit_db}
       auto-index-creation: true
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: audit-service-group
       auto-offset-reset: earliest

@@ -110,6 +110,21 @@ frontend_preview() {
     npm run preview
 }
 
+mode_local() {
+    log_info "Starting local mode (infra in Docker, services local)..."
+    "$SCRIPT_DIR/dev-local.sh"
+}
+
+mode_hybrid() {
+    log_info "Starting hybrid mode (some services Docker, some local)..."
+    "$SCRIPT_DIR/dev-hybrid.sh"
+}
+
+mode_docker() {
+    log_info "Starting full Docker mode..."
+    "$SCRIPT_DIR/dev-docker.sh"
+}
+
 # Testing
 run_tests() {
     check_docker
@@ -165,6 +180,9 @@ show_help() {
     echo "  lint                 Run code quality checks"
     echo "  format               Format code according to project standards"
     echo "  db:reset             Reset database volumes (fresh data)"
+    echo "  mode:local           Infra in Docker + run services locally"
+    echo "  mode:hybrid          Mixed mode (some Docker, some local)"
+    echo "  mode:docker          Full Docker mode"
     echo "  help                 Show this help message"
     echo ""
     echo "Examples:"
@@ -214,6 +232,15 @@ case "$1" in
         ;;
     db:reset)
         db_reset
+        ;;
+    mode:local)
+        mode_local
+        ;;
+    mode:hybrid)
+        mode_hybrid
+        ;;
+    mode:docker)
+        mode_docker
         ;;
     help|*)
         show_help

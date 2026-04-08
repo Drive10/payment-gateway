@@ -9,6 +9,8 @@ server:
 spring:
   application:
     name: payment-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:payflow}
@@ -109,16 +111,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,metrics
   metrics:
     export:
       prometheus:
         enabled: true
 
-  application:
+application:
   gateway-trust:
     enabled: true
-    internal-secret: ${INTERNAL_SECRET:internal-gateway-secret}
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
 
   security:
     jwt:
@@ -128,19 +130,21 @@ management:
 
   payment:
     default-provider: RAZORPAY_SIMULATOR
-    checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:3000}
+    checkout-base-url: ${CHECKOUT_BASE_URL:http://localhost:5173}
 
   simulator:
     base-url: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
 
   webhook:
-    service-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8085}
+    service-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+    max-retries: ${WEBHOOK_MAX_RETRIES:3}
+    timeout-ms: ${WEBHOOK_TIMEOUT_MS:5000}
 
   order:
-    service-url: http://localhost:8084
+    service-url: ${ORDER_SERVICE_URL:http://localhost:8082}
 
   auth:
-    service-url: http://localhost:8081
+    service-url: ${AUTH_SERVICE_URL:http://localhost:8081}
 
   kafka:
     topic:

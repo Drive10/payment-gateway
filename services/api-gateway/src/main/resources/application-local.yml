@@ -1,74 +1,58 @@
-server:
-  port: ${SERVER_PORT:8080}
-
 spring:
-  application:
-    name: api-gateway
+  config:
+    activate:
+      on-profile: local
   main:
     web-application-type: reactive
   cloud:
     compatibility-verifier:
       enabled: false
-  autoconfigure:
-    exclude: 
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
   data:
     redis:
-      host: localhost
-      port: 6379
-      password: devpassword
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:devpassword}
 
-spring.cloud.gateway:
-  discovery:
-    locator:
-      enabled: false
-  routes:
+  cloud.gateway.routes:
     - id: auth-service
-      uri: http://localhost:8081
+      uri: ${AUTH_SERVICE_URL:http://localhost:8081}
       predicates:
         - Path=/api/v1/auth/**
       filters:
         - StripPrefix=2
-
     - id: order-service
-      uri: http://localhost:8082
+      uri: ${ORDER_SERVICE_URL:http://localhost:8082}
       predicates:
         - Path=/api/v1/orders/**
       filters:
         - StripPrefix=2
-
     - id: payment-service
-      uri: http://localhost:8083
+      uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
       predicates:
         - Path=/api/v1/payments/**,/api/v1/admin/**
       filters:
         - StripPrefix=2
         - AddRequestHeader=X-Gateway-Token,${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
-
     - id: notification-service
-      uri: http://localhost:8084
+      uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
       predicates:
         - Path=/api/v1/notifications/**
       filters:
         - StripPrefix=2
-
     - id: analytics-service
-      uri: http://localhost:8089
+      uri: ${ANALYTICS_SERVICE_URL:http://localhost:8089}
       predicates:
         - Path=/api/v1/analytics/**
       filters:
         - StripPrefix=2
-
     - id: simulator-service
-      uri: http://localhost:8086
+      uri: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
       predicates:
         - Path=/api/v1/simulator/**
       filters:
         - StripPrefix=2
-
     - id: audit-service
-      uri: http://localhost:8090
+      uri: ${AUDIT_SERVICE_URL:http://localhost:8090}
       predicates:
         - Path=/api/v1/audit/**
       filters:
@@ -76,8 +60,8 @@ spring.cloud.gateway:
 
 application:
   gateway:
-    internal-secret: internal-gateway-secret
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
 
 security:
   jwt:
-    secret-key: YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY
+    secret-key: ${JWT_SECRET:YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY}

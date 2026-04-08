@@ -10,10 +10,10 @@ spring:
 
 application:
   services:
-    auth: http://localhost:8081
-    order: http://localhost:8084
-    payment: http://localhost:8083
-    notification: http://localhost:8085
-    webhook: http://localhost:8085
-    simulator: http://localhost:8086
-    analytics: http://localhost:8089
+    auth: ${AUTH_SERVICE_URL:http://localhost:8081}
+    order: ${ORDER_SERVICE_URL:http://localhost:8082}
+    payment: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+    notification: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+    webhook: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+    simulator: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+    analytics: ${ANALYTICS_SERVICE_URL:http://localhost:8089}

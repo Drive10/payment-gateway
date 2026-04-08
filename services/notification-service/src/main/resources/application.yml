@@ -1,8 +1,10 @@
 server:
-  port: ${SERVER_PORT:8085}
+  port: ${SERVER_PORT:8084}
   shutdown: graceful
 
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:payflow}
     username: ${DB_USERNAME:payflow}
@@ -86,7 +88,7 @@ logging:
 # Application-specific configuration
 application:
   payment-service:
-    url: http://payment-service:8083
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
   kafka:
     topic:
       notification-events: notification.events

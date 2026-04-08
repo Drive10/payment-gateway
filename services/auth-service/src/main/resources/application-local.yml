@@ -5,9 +5,9 @@ spring:
   application:
     name: auth-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/payflow
-    username: payflow
-    password: payflow
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:auth_db}
+    username: ${DB_USERNAME:payflow}
+    password: ${DB_PASSWORD:payflow}
     hikari:
       maximum-pool-size: 15
       minimum-idle: 3
@@ -36,7 +36,7 @@ spring:
 
 application:
   jwt:
-    secret: YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY
+    secret: ${JWT_SECRET:YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY}
     expiration: 86400000
     refresh-expiration: 604800000
 

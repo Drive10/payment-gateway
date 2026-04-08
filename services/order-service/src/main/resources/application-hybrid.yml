@@ -1,0 +1,13 @@
+server:
+  port: ${SERVER_PORT:8082}
+
+spring:
+  config:
+    activate:
+      on-profile: hybrid
+
+application:
+  payment-service:
+    url: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+  notification-service:
+    url: ${NOTIFICATION_SERVICE_URL:http://notification-service:8084}

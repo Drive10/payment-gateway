@@ -1,5 +1,6 @@
 package dev.payment.paymentservice.integration.client;
 
+import dev.payment.paymentservice.config.ServiceConfig;
 import dev.payment.paymentservice.domain.Order;
 import dev.payment.paymentservice.domain.enums.OrderStatus;
 import dev.payment.paymentservice.exception.ApiException;
@@ -7,7 +8,6 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -25,7 +25,8 @@ public class OrderServiceClient {
 
     private final RestClient restClient;
 
-    public OrderServiceClient(@Value("${application.order.service-url}") String baseUrl) {
+    public OrderServiceClient(ServiceConfig serviceConfig) {
+        String baseUrl = serviceConfig.getOrder().getServiceUrl();
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .build();

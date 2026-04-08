@@ -6,7 +6,7 @@ spring:
   application:
     name: order-service
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:payflow}
@@ -67,9 +67,9 @@ spring:
 # Application-specific configuration (not Spring managed)
 application:
   payment-service:
-    url: ${APPLICATION_PAYMENT_SERVICE_URL:http://localhost:8083}
+    url: ${PAYMENT_SERVICE_URL:${APPLICATION_PAYMENT_SERVICE_URL:http://localhost:8083}}
   notification-service:
-    url: ${APPLICATION_NOTIFICATION_SERVICE_URL:http://localhost:8085}
+    url: ${NOTIFICATION_SERVICE_URL:${APPLICATION_NOTIFICATION_SERVICE_URL:http://localhost:8084}}
   kafka:
     topic:
       order-events: order.events

@@ -183,7 +183,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      SPRING_PROFILES_ACTIVE: prod,docker
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8081
       DB_HOST: postgres
       DB_PORT: 5432
@@ -216,10 +216,10 @@ services:
       context: .
       dockerfile: services/order-service/Dockerfile
     ports:
-      - "8084:8084"
+      - "8082:8082"
     environment:
-      SPRING_PROFILES_ACTIVE: prod,docker
-      SERVER_PORT: 8084
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8082
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: order_db
@@ -229,8 +229,8 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      APPLICATION_PAYMENT_SERVICE_URL: http://payment-service:8083
-      APPLICATION_NOTIFICATION_SERVICE_URL: http://notification-service:8085
+      PAYMENT_SERVICE_URL: http://payment-service:8083
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       LOG_PATH: /var/log/payflow/order-service
@@ -248,7 +248,7 @@ services:
     networks:
       - payflow-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8084/actuator/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8082/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -261,7 +261,7 @@ services:
     ports:
       - "8083:8083"
     environment:
-      SPRING_PROFILES_ACTIVE: prod,docker
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8083
       DB_HOST: postgres
       DB_PORT: 5432
@@ -273,10 +273,10 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SIMULATOR_SERVICE_URL: http://simulator-service:8086
-      NOTIFICATION_SERVICE_URL: http://notification-service:8085
-      ORDER_SERVICE_URL: http://order-service:8084
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
+      ORDER_SERVICE_URL: http://order-service:8082
       AUTH_SERVICE_URL: http://auth-service:8081
-      INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-internal-gateway-secret}
+      GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-internal-gateway-secret}
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       LOG_PATH: /var/log/payflow/payment-service
@@ -311,10 +311,10 @@ services:
       context: .
       dockerfile: services/notification-service/Dockerfile
     ports:
-      - "8085:8085"
+      - "8084:8084"
     environment:
-      SPRING_PROFILES_ACTIVE: prod,docker
-      SERVER_PORT: 8085
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8084
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: notification_db
@@ -341,7 +341,7 @@ services:
     networks:
       - payflow-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8085/actuator/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8084/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -354,14 +354,14 @@ services:
     ports:
       - "8086:8086"
     environment:
-      SPRING_PROFILES_ACTIVE: prod,docker
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8086
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: simulator_db
       DB_USERNAME: ${DB_USERNAME:-payflow}
       DB_PASSWORD: ${DB_PASSWORD:-payflow}
-      NOTIFICATION_SERVICE_URL: http://notification-service:8085
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
       LOG_PATH: /var/log/payflow/simulator-service
@@ -388,7 +388,7 @@ services:
     ports:
       - "8089:8089"
     environment:
-      SPRING_PROFILES_ACTIVE: prod,docker
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8089
       DB_HOST: postgres
       DB_PORT: 5432
@@ -427,10 +427,10 @@ services:
       context: .
       dockerfile: services/audit-service/Dockerfile
     ports:
-      - "8088:8088"
+      - "8090:8090"
     environment:
-      SPRING_PROFILES_ACTIVE: prod,docker
-      SERVER_PORT: 8088
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8090
       MONGODB_URI: mongodb://mongodb:27017/audit_db
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
@@ -448,7 +448,7 @@ services:
     networks:
       - payflow-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8088/actuator/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8090/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -461,7 +461,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: prod,docker
+      SPRING_PROFILES_ACTIVE: docker
       SERVER_PORT: 8080
       REDIS_HOST: redis
       REDIS_PORT: 6379

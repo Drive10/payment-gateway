@@ -1,12 +1,13 @@
 package dev.payment.paymentservice.service;
 
+import dev.payment.paymentservice.config.ServiceConfig;
 import dev.payment.paymentservice.domain.WebhookDelivery;
 import dev.payment.paymentservice.domain.enums.WebhookStatus;
 import dev.payment.paymentservice.repository.WebhookDeliveryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -20,20 +21,21 @@ public class WebhookService {
     private static final Logger log = LoggerFactory.getLogger(WebhookService.class);
 
     private final WebhookDeliveryRepository webhookDeliveryRepository;
+    private final String webhookBaseUrl;
+    private final int maxRetries;
+    private final int timeoutMs;
     private final RestTemplate restTemplate;
-    
-    @Value("${application.webhook.base-url:http://notification-service:8084}")
-    private String webhookBaseUrl;
 
-    @Value("${application.webhook.max-retries:3}")
-    private int maxRetries;
-
-    @Value("${application.webhook.timeout-ms:5000}")
-    private int timeoutMs;
-
-    public WebhookService(WebhookDeliveryRepository webhookDeliveryRepository) {
+    public WebhookService(WebhookDeliveryRepository webhookDeliveryRepository, ServiceConfig serviceConfig) {
         this.webhookDeliveryRepository = webhookDeliveryRepository;
-        this.restTemplate = new RestTemplate();
+        this.webhookBaseUrl = serviceConfig.getWebhook().getServiceUrl();
+        this.maxRetries = serviceConfig.getWebhook().getMaxRetries();
+        this.timeoutMs = serviceConfig.getWebhook().getTimeoutMs();
+
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(timeoutMs);
+        requestFactory.setReadTimeout(timeoutMs);
+        this.restTemplate = new RestTemplate(requestFactory);
     }
 
     @Async

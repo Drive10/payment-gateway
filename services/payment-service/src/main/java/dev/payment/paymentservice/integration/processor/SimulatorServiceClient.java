@@ -1,12 +1,12 @@
 package dev.payment.paymentservice.integration.processor;
 
+import dev.payment.paymentservice.config.ServiceConfig;
 import dev.payment.paymentservice.domain.Payment;
 import dev.payment.paymentservice.domain.enums.TransactionMode;
 import dev.payment.paymentservice.dto.request.CapturePaymentRequest;
 import dev.payment.paymentservice.exception.ApiException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -23,7 +23,8 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
 
     private final WebClient webClient;
 
-    public SimulatorServiceClient(@Value("${application.simulator.base-url}") String baseUrl) {
+    public SimulatorServiceClient(ServiceConfig serviceConfig) {
+        String baseUrl = serviceConfig.getSimulator().getBaseUrl();
         this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
                 .build();

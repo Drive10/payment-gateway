@@ -1,6 +1,8 @@
 spring:
   application:
     name: audit-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://mongodb:27017/audit_db}
@@ -19,7 +21,7 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 server:
-  port: ${SERVER_PORT:8089}
+  port: ${SERVER_PORT:8090}
 
 management:
   endpoints:

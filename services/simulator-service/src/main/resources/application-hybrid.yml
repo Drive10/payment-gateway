@@ -1,0 +1,7 @@
+spring:
+  config:
+    activate:
+      on-profile: hybrid
+
+webhook:
+  service-url: ${NOTIFICATION_SERVICE_URL:http://notification-service:8084}

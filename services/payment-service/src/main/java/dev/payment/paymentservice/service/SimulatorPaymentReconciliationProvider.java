@@ -1,10 +1,10 @@
 package dev.payment.paymentservice.service;
 
 import dev.payment.common.api.ApiResponse;
+import dev.payment.paymentservice.config.ServiceConfig;
 import dev.payment.paymentservice.domain.Payment;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -24,7 +24,8 @@ public class SimulatorPaymentReconciliationProvider implements PaymentReconcilia
     private final RestClient simulatorClient;
     private final boolean simulatorEnabled;
 
-    public SimulatorPaymentReconciliationProvider(@Value("${application.simulator.base-url:}") String simulatorBaseUrl) {
+    public SimulatorPaymentReconciliationProvider(ServiceConfig serviceConfig) {
+        String simulatorBaseUrl = serviceConfig.getSimulator().getBaseUrl();
         this.simulatorEnabled = simulatorBaseUrl != null && !simulatorBaseUrl.isBlank();
         if (!simulatorEnabled) {
             this.simulatorClient = null;

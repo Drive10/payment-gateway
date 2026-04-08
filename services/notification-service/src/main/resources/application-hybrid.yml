@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile: hybrid
+
+server:
+  port: ${SERVER_PORT:8084}
+
+application:
+  payment-service:
+    url: ${PAYMENT_SERVICE_URL:http://payment-service:8083}

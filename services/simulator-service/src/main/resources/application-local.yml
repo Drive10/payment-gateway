@@ -11,3 +11,6 @@ logging:
   level:
     root: INFO
     dev.payment: DEBUG
+
+webhook:
+  service-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
