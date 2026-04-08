@@ -5,9 +5,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConfigurationProperties(prefix = "jwt")
+@ConfigurationProperties(prefix = "application.jwt")
 public class JwtConfig {
-    private String secret = System.getenv("JWT_SECRET") != null ? System.getenv("JWT_SECRET") : "change-me-to-a-secure-base64-encoded-secret-key-that-is-at-least-32-bytes-long";
+    private String secret = System.getenv("JWT_SECRET") != null ? System.getenv("JWT_SECRET") : "YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY";
     private long expiration = 86400000;
     private long refreshExpiration = 604800000;
 

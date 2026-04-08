@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UPI_ID } from "../lib/payment";
-import { QRCodeSVG } from "qrcode.react";
 
 export default function UpiQR() {
   const [showQR, setShowQR] = useState(false);
+  const [QRCodeSVG, setQRCodeSVG] = useState(null);
+
+  useEffect(() => {
+    if (showQR) {
+      import("qrcode.react").then((module) => setQRCodeSVG(() => module.QRCodeSVG));
+    }
+  }, [showQR]);
 
   return (
     <div className="space-y-4">
@@ -25,13 +31,13 @@ export default function UpiQR() {
             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1-1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1-1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1-1v2a1 1 0 001 1z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1-1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1-1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
             </svg>
             Show QR Code
           </button>
-        ) : (
-          <div className="mt-4">
-            <div className="mx-auto">
+        ) : QRCodeSVG ? (
+          <div className="mt-4 flex flex-col items-center justify-center">
+            <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-white p-4">
               <QRCodeSVG
                 value={`upi://pay?pa=${UPI_ID}&pn=PayFlow Merchant&am=100&cu=INR`}
                 size={180}
@@ -44,6 +50,10 @@ export default function UpiQR() {
             <p className="mt-3 text-xs text-slate-500">
               Scan with any UPI app to complete payment
             </p>
+          </div>
+        ) : (
+          <div className="mt-4 flex items-center justify-center">
+            <div className="h-[180px] w-[180px] animate-pulse rounded-lg bg-slate-200"></div>
           </div>
         )}
       </div>

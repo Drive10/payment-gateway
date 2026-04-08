@@ -13,6 +13,7 @@ export default function Processing() {
   const checkout = location.state?.checkout ?? getStoredTransaction();
   const [error, setError] = useState(null);
   const [status, setStatus] = useState("processing");
+  const [pollAttempt, setPollAttempt] = useState(0);
 
   useEffect(() => {
     if (!checkout?.payment?.id) {
@@ -23,7 +24,9 @@ export default function Processing() {
     const processPayment = async () => {
       try {
         setStatus("processing");
-        const transaction = await captureCheckout(checkout);
+        const transaction = await captureCheckout(checkout, (currentStatus, attempt, max) => {
+          setPollAttempt(attempt);
+        });
         
         if (transaction.status === "FAILED") {
           setStatus("failed");
@@ -43,11 +46,7 @@ export default function Processing() {
       }
     };
 
-    const timer = setTimeout(() => {
-      processPayment();
-    }, 1800);
-
-    return () => window.clearTimeout(timer);
+    processPayment();
   }, [checkout, navigate]);
 
   return (
@@ -76,8 +75,9 @@ export default function Processing() {
                   Processing payment
                 </h1>
                 <p className="mt-3 text-sm leading-6 text-slate-300">
-                  Confirming provider authorization, publishing the payment event,
-                  and waiting for ledger-safe completion.
+                  {pollAttempt > 0 
+                    ? `Verifying payment (attempt ${pollAttempt}/10)`
+                    : "Confirming provider authorization, publishing the payment event, and waiting for ledger-safe completion."}
                 </p>
               </>
             )}

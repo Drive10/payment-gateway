@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: api-gateway
+  main:
+    web-application-type: reactive
+  cloud:
+    compatibility-verifier:
+      enabled: false
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
   data:
@@ -65,4 +70,4 @@ application:
 
 security:
   jwt:
-    secret-key: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
+    secret-key: swvCyTYU5b02Np0Eq8u9dkjXGGzlHkiERfJVJqFDZ0U=

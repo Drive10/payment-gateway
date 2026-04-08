@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import CardForm from "../components/CardForm";
 import UpiQR from "../components/UpiQR";
@@ -12,6 +12,7 @@ import {
 } from "../lib/payment";
 
 const API_BASE_URL = window.__ENV__?.API_BASE_URL || "/api";
+const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION || false;
 
 const initialForm = {
   cardNumber: "",
@@ -55,6 +56,14 @@ export default function Checkout() {
   const [amountInput, setAmountInput] = useState("");
   const [showAmountInput, setShowAmountInput] = useState(false);
   const navigate = useNavigate();
+
+  const { orderId, today } = useMemo(() => {
+    const now = new Date();
+    return {
+      orderId: `ORD-${now.getTime().toString(36).substring(2, 10).toUpperCase()}`,
+      today: now.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    };
+  }, []);
 
   useEffect(() => {
     const amount = searchParams.get("amount");
@@ -120,9 +129,24 @@ export default function Checkout() {
     setAmountInput(value);
   };
 
+  const MIN_AMOUNT = 10;
+  const MAX_AMOUNT = 100000;
+
   const pay = async () => {
-    if (!amountInput || parseFloat(amountInput) <= 0) {
+    const amount = parseFloat(amountInput);
+    
+    if (!amountInput || amount <= 0) {
       setSubmitError("Please enter a valid payment amount");
+      return;
+    }
+
+    if (amount < MIN_AMOUNT) {
+      setSubmitError(`Minimum payment amount is ₹${MIN_AMOUNT}`);
+      return;
+    }
+
+    if (amount > MAX_AMOUNT) {
+      setSubmitError(`Maximum payment amount is ₹${MAX_AMOUNT.toLocaleString()}`);
       return;
     }
 
@@ -139,7 +163,7 @@ export default function Checkout() {
 
     try {
       const checkout = await startCheckout({
-        amount: parseFloat(amountInput),
+        amount,
         method,
         cardholder: values.cardholder,
         transactionMode,
@@ -158,10 +182,13 @@ export default function Checkout() {
   const displayMerchant = paymentLinkData?.merchantName || "PayFlow Merchant";
   const displayDescription = paymentLinkData?.description || DEFAULT_PAYMENT_NOTE;
   
+  const amount = parseFloat(amountInput) || 0;
+  const isValidAmount = amount >= MIN_AMOUNT && amount <= MAX_AMOUNT;
+  
   const disabled =
     submitting ||
     !amountInput ||
-    parseFloat(amountInput) <= 0 ||
+    !isValidAmount ||
     (method === "card" &&
       (!values.cardNumber || !values.expiry || !values.cvv || !values.cardholder.trim()));
 
@@ -229,13 +256,11 @@ export default function Checkout() {
                   </div>
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Order ID</p>
-                    <p className="mt-1 font-mono text-sm text-slate-900">#{Date.now().toString(36).substring(2, 10).toUpperCase()}</p>
+                    <p className="mt-1 font-mono text-sm text-slate-900">#{orderId}</p>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Date</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
-                      {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{today}</p>
                   </div>
                 </div>
 
@@ -277,9 +302,15 @@ export default function Checkout() {
                           value={amountInput}
                           onChange={handleAmountChange}
                           placeholder="Enter amount"
-                          className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                          className={`mt-1 block w-full rounded-lg border-2 px-3 py-2 text-slate-900 placeholder-slate-400 outline-none transition-colors ${
+                            submitError && (parseFloat(amountInput) < MIN_AMOUNT || parseFloat(amountInput) > MAX_AMOUNT)
+                              ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+                              : "border-slate-300 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                          }`}
                         />
-                        <p className="mt-1 text-xs text-slate-500">Enter the payment amount in Indian Rupees</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Minimum: ₹{MIN_AMOUNT.toLocaleString()} | Maximum: ₹{MAX_AMOUNT.toLocaleString()}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -328,6 +359,7 @@ export default function Checkout() {
                   ))}
                 </div>
 
+                {!IS_PRODUCTION && (
                 <div className="mb-6">
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     Processing Environment
@@ -354,6 +386,7 @@ export default function Checkout() {
                     ))}
                   </div>
                 </div>
+                )}
 
                 <div className="mb-6">
                   {method === "card" ? (

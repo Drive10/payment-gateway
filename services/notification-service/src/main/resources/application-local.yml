@@ -5,8 +5,6 @@ server:
 spring:
   application:
     name: notification-service
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
 
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow

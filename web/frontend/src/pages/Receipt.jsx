@@ -1,4 +1,4 @@
-import jsPDF from "jspdf";
+import { useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getStoredTransaction } from "../lib/payment";
 
@@ -6,10 +6,12 @@ export default function Receipt() {
   const location = useLocation();
   const receipt = location.state?.transaction ?? getStoredTransaction();
 
-  const downloadPDF = () => {
+  const downloadPDF = useCallback(async () => {
     if (!receipt) {
       return;
     }
+
+    const jsPDF = (await import("jspdf")).default;
 
     const doc = new jsPDF();
 
@@ -28,7 +30,7 @@ export default function Receipt() {
     }
 
     doc.save(`${receipt.id}.pdf`);
-  };
+  }, [receipt]);
 
   if (!receipt) {
     return (

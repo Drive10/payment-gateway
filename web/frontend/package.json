@@ -13,6 +13,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:prod": "vite build --mode production",
+    "build:dev": "vite build --mode development",
+    "build:docker": "vite build --mode production",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",

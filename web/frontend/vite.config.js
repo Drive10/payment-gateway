@@ -20,5 +20,23 @@ export default defineConfig(() => {
     preview: {
       port: 3000,
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom", "react-router-dom"],
+            "vendor-motion": ["framer-motion"],
+            "vendor-forms": ["react-hook-form", "@hookform/resolvers", "zod"],
+            "vendor-axios": ["axios"],
+          },
+        },
+      },
+      chunkSizeWarningLimit: 500,
+      minify: "esbuild",
+      target: "esnext",
+    },
+    optimizeDeps: {
+      include: ["react", "react-dom", "react-router-dom", "axios"],
+    },
   };
 });

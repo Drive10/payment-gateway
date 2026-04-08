@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { detectCardBrand, formatCardNumber, formatExpiry, isValidCardNumber } from "../lib/payment";
 
 const cardBrands = {
@@ -23,9 +24,11 @@ function Field({ label, hint, error, children }) {
   );
 }
 
-export default function CardForm({ values, errors, onChange }) {
-  const cardBrand = detectCardBrand(values.cardNumber);
-  const isCardComplete = isValidCardNumber(values.cardNumber);
+const FieldMemo = memo(Field);
+
+export default memo(function CardForm({ values, errors, onChange }) {
+  const cardBrand = useMemo(() => detectCardBrand(values.cardNumber), [values.cardNumber]);
+  const isCardComplete = useMemo(() => isValidCardNumber(values.cardNumber), [values.cardNumber]);
 
   return (
     <div className="space-y-4">
@@ -55,7 +58,7 @@ export default function CardForm({ values, errors, onChange }) {
         </div>
       </div>
 
-      <Field
+      <FieldMemo
         label="Card Number"
         error={errors.cardNumber}
         hint={isCardComplete ? "✓ Card number is valid" : "Enter 16-digit card number"}
@@ -87,10 +90,10 @@ export default function CardForm({ values, errors, onChange }) {
             )}
           </div>
         </div>
-      </Field>
+      </FieldMemo>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Expiry Date" error={errors.expiry} hint="MM/YY format">
+        <FieldMemo label="Expiry Date" error={errors.expiry} hint="MM/YY format">
           <input
             className={`w-full rounded-xl border-2 bg-slate-50 px-4 py-3 font-mono text-slate-900 outline-none transition ${
               errors.expiry ? "border-red-300 focus:border-red-500" : "border-slate-200 focus:border-cyan-500"
@@ -101,9 +104,9 @@ export default function CardForm({ values, errors, onChange }) {
             onChange={(event) => onChange("expiry", formatExpiry(event.target.value))}
             maxLength={5}
           />
-        </Field>
+        </FieldMemo>
 
-        <Field label="CVV" error={errors.cvv} hint="3 digits on card back">
+        <FieldMemo label="CVV" error={errors.cvv} hint="3 digits on card back">
           <div className="relative">
             <input
               className={`w-full rounded-xl border-2 bg-slate-50 px-4 py-3 font-mono text-slate-900 outline-none transition ${
@@ -120,10 +123,10 @@ export default function CardForm({ values, errors, onChange }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-        </Field>
+        </FieldMemo>
       </div>
 
-      <Field
+      <FieldMemo
         label="Cardholder Name"
         error={errors.cardholder}
         hint="Name as shown on card"
@@ -136,7 +139,7 @@ export default function CardForm({ values, errors, onChange }) {
           value={values.cardholder}
           onChange={(event) => onChange("cardholder", event.target.value)}
         />
-      </Field>
+      </FieldMemo>
 
       <div className="flex items-center gap-2 rounded-lg bg-slate-100 p-3">
         <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -148,4 +151,4 @@ export default function CardForm({ values, errors, onChange }) {
       </div>
     </div>
   );
-}
+});
