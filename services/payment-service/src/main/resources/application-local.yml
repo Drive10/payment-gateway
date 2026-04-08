@@ -15,6 +15,9 @@ spring:
       password: ${REDIS_PASSWORD:devpassword}
 
 application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET:YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY}
   simulator:
     base-url: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
   webhook:

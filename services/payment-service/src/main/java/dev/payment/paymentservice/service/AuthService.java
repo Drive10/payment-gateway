@@ -46,9 +46,14 @@ public class AuthService {
         log.info("event=user_not_found_locally email={} attempting sync from auth-service", email);
         User user = new User();
         user.setEmail(email.toLowerCase());
-        user.setFullName(email.split("@")[0]);
+        String nameSeed = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+        user.setFirstName(nameSeed);
+        user.setLastName("User");
+        user.setFullName(nameSeed);
         user.setPassword("");
+        user.setPasswordHash("");
         user.setActive(true);
+        user.setEnabled(true);
         return user;
     }
 

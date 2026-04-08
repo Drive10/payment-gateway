@@ -34,7 +34,7 @@ public class PaymentLinkService {
                 request.customerPhone(),
                 request.successUrl(),
                 request.cancelUrl(),
-                creator.getId()
+                Math.abs(creator.getId().getLeastSignificantBits())
         );
 
         PaymentLink saved = paymentLinkRepository.save(paymentLink);

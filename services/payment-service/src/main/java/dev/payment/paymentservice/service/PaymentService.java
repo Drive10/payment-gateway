@@ -88,7 +88,7 @@ public class PaymentService {
     @Transactional
     public PaymentResponse createPayment(CreatePaymentRequest request, String idempotencyKey, User actor, boolean adminView) {
         IdempotencyService.IdempotencyResult<PaymentResponse> idempotency =
-                idempotencyService.begin("PAYMENT_CREATE", idempotencyKey, actor.getId(), Map.of(
+                idempotencyService.begin("PAYMENT_CREATE", idempotencyKey, actorIdKey(actor), Map.of(
                         "actor", actor.getEmail(),
                         "request", request
                 ), PaymentResponse.class);
@@ -112,6 +112,9 @@ public class PaymentService {
         payment.setPricingTier("STANDARD");
 
         PaymentProcessorIntentResponse processorIntent = paymentProcessorClient.createIntent(payment, order.getOrderReference(), payment.getTransactionMode());
+        if (processorIntent == null) {
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "PROCESSOR_EMPTY_RESPONSE", "Payment processor returned no intent");
+        }
         payment.setProviderOrderId(processorIntent.providerOrderId());
         payment.setCheckoutUrl(processorIntent.checkoutUrl());
         payment.setSimulated(processorIntent.simulated());
@@ -222,7 +225,7 @@ public class PaymentService {
     @Transactional
     public RefundResponse refundPayment(UUID paymentId, CreateRefundRequest request, String idempotencyKey, User actor, boolean adminView) {
         IdempotencyService.IdempotencyResult<RefundResponse> idempotency =
-                idempotencyService.begin("PAYMENT_REFUND", idempotencyKey, actor.getId(), Map.of(
+                idempotencyService.begin("PAYMENT_REFUND", idempotencyKey, actorIdKey(actor), Map.of(
                         "actor", actor.getEmail(),
                         "paymentId", paymentId,
                         "request", request
@@ -335,6 +338,10 @@ public class PaymentService {
     private Payment getOwnedPayment(UUID paymentId, User actor, boolean adminView) {
         return paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Payment not found"));
+    }
+
+    private long actorIdKey(User actor) {
+        return Math.abs(actor.getId().getLeastSignificantBits());
     }
 
     void createSystemTransaction(Payment payment, TransactionType type, TransactionStatus status, String remarks, String providerReference, java.math.BigDecimal amount) {

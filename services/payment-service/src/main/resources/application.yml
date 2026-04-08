@@ -84,7 +84,8 @@ spring:
       spec: maximumSize=1000,expireAfterWrite=300s
 
   flyway:
-    enabled: false
+    enabled: true
+    baseline-on-migrate: true
 
   cloud:
     consul:

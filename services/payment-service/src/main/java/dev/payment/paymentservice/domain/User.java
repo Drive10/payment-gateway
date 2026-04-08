@@ -18,6 +18,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.util.HashSet;
 import java.time.Instant;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users")
@@ -25,8 +26,8 @@ import java.util.Set;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -39,14 +40,26 @@ public class User {
     @Column(nullable = false, unique = true, length = 120)
     private String email;
 
+    @Column(name = "first_name", nullable = false, length = 120)
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false, length = 120)
+    private String lastName;
+
     @Column(nullable = false, name = "full_name", length = 120)
     private String fullName;
 
     @Column(nullable = false)
     private String password;
 
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
+
     @Column(nullable = false)
     private boolean active = true;
+
+    @Column(name = "enabled", nullable = false)
+    private boolean enabled = true;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -56,11 +69,11 @@ public class User {
     )
     private Set<Role> roles = new HashSet<>();
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -104,12 +117,44 @@ public class User {
         this.password = password;
     }
 
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
     public boolean isActive() {
         return active;
     }
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public Set<Role> getRoles() {

@@ -50,8 +50,12 @@ public class BootstrapDataInitializer {
             userRepository.findByEmailIgnoreCase(adminEmail).orElseGet(() -> {
                 User admin = new User();
                 admin.setEmail(adminEmail.toLowerCase());
+                admin.setFirstName("Platform");
+                admin.setLastName("Admin");
                 admin.setFullName("Platform Admin");
                 admin.setPassword(passwordEncoder.encode(adminPassword));
+                admin.setPasswordHash(admin.getPassword());
+                admin.setEnabled(true);
                 admin.getRoles().add(adminRole);
                 admin.getRoles().add(userRole);
                 log.info("event=bootstrap_admin_created email={}", admin.getEmail());

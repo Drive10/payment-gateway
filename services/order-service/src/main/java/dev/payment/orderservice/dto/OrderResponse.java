@@ -9,10 +9,14 @@ import java.util.UUID;
 public record OrderResponse(
         UUID id,
         UUID userId,
+        String orderReference,
+        String externalReference,
+        String merchantId,
         BigDecimal amount,
         String currency,
         OrderStatus status,
         String description,
-        Instant createdAt
+        Instant createdAt,
+        String customerEmail
 ) {
 }

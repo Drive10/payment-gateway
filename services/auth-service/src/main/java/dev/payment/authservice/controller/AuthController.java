@@ -1,5 +1,6 @@
 package dev.payment.authservice.controller;
 
+import dev.payment.common.api.ApiResponse;
 import dev.payment.authservice.dto.AuthResponse;
 import dev.payment.authservice.dto.LoginRequest;
 import dev.payment.authservice.dto.RegisterRequest;
@@ -27,26 +28,26 @@ public class AuthController {
 
     @PostMapping("/register")
     @RateLimiter(name = "register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
     @PostMapping("/login")
     @RateLimiter(name = "login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/refresh")
     @RateLimiter(name = "refresh")
-    public ResponseEntity<AuthResponse> refresh(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(@RequestBody Map<String, String> request) {
         String refreshToken = request.get("refreshToken");
         if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
         AuthResponse response = authService.refreshToken(refreshToken);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

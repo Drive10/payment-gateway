@@ -55,10 +55,11 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
                                         "SIMULATOR_ERROR",
                                         "Simulator error: " + body))))
                 .bodyToMono(SimulatorEnvelope.class)
-                .map(envelope -> new PaymentProcessorIntentResponse(
-                        envelope.data().providerOrderId(),
-                        envelope.data().checkoutUrl(),
-                        envelope.data().simulated()))
+                .map(this::requireEnvelopeData)
+                .map(data -> new PaymentProcessorIntentResponse(
+                        data.providerOrderId(),
+                        data.checkoutUrl(),
+                        resolveSimulatedFlag(data)))
                 .timeout(Duration.ofSeconds(5))
                 .block();
     }
@@ -90,11 +91,12 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
                                         "SIMULATOR_ERROR",
                                         "Simulator capture error: " + body))))
                 .bodyToMono(SimulatorEnvelope.class)
-                .map(envelope -> new PaymentProcessorCaptureResponse(
-                        envelope.data().providerPaymentId(),
-                        envelope.data().providerSignature(),
-                        envelope.data().providerPaymentId(),
-                        envelope.data().simulated()))
+                .map(this::requireEnvelopeData)
+                .map(data -> new PaymentProcessorCaptureResponse(
+                        data.providerPaymentId(),
+                        data.providerSignature(),
+                        data.providerPaymentId(),
+                        resolveSimulatedFlag(data)))
                 .timeout(Duration.ofSeconds(5))
                 .block();
     }
@@ -134,7 +136,25 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
             String providerPaymentId,
             String providerSignature,
             String checkoutUrl,
-            boolean simulated
+            Boolean simulated,
+            Boolean testMode
     ) {
+    }
+
+    private SimulatorData requireEnvelopeData(SimulatorEnvelope envelope) {
+        if (envelope == null || envelope.data() == null) {
+            throw new ApiException(
+                    HttpStatus.BAD_GATEWAY,
+                    "SIMULATOR_EMPTY_RESPONSE",
+                    "Simulator returned an empty response payload");
+        }
+        return envelope.data();
+    }
+
+    private boolean resolveSimulatedFlag(SimulatorData data) {
+        if (data.simulated() != null) {
+            return data.simulated();
+        }
+        return Boolean.TRUE.equals(data.testMode());
     }
 }

@@ -38,6 +38,9 @@ public class Order {
     @Column(name = "external_reference", length = 100)
     private String externalReference;
 
+    @Column(name = "order_reference", nullable = false, unique = true, length = 40)
+    private String orderReference;
+
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 

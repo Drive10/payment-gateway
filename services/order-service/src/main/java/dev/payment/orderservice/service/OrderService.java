@@ -13,10 +13,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
 public class OrderService {
+    private static final UUID DEFAULT_MERCHANT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     private final OrderRepository orderRepository;
     private final ObjectMapper objectMapper;
@@ -32,9 +34,13 @@ public class OrderService {
     public OrderResponse createOrder(CreateOrderRequest request) {
         Order order = new Order();
         order.setUserId(request.userId());
+        order.setOrderReference(generateOrderReference());
+        order.setExternalReference(resolveExternalReference(request.externalReference()));
+        order.setMerchantId(DEFAULT_MERCHANT_ID.toString());
         order.setAmount(request.amount());
         order.setCurrency(request.currency());
         order.setDescription(request.description());
+        order.setCustomerEmail(request.customerEmail());
         order.setStatus(OrderStatus.PENDING);
         
         if (request.metadata() != null) {
@@ -87,11 +93,26 @@ public class OrderService {
         return new OrderResponse(
                 order.getId(),
                 order.getUserId(),
+                order.getOrderReference(),
+                order.getExternalReference(),
+                order.getMerchantId(),
                 order.getAmount(),
                 order.getCurrency(),
                 order.getStatus(),
                 order.getDescription(),
-                order.getCreatedAt()
+                order.getCreatedAt(),
+                order.getCustomerEmail()
         );
+    }
+
+    private String generateOrderReference() {
+        return "ORD-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
+    }
+
+    private String resolveExternalReference(String externalReference) {
+        if (externalReference != null && !externalReference.isBlank()) {
+            return externalReference;
+        }
+        return "EXT-" + Instant.now().toEpochMilli();
     }
 }
