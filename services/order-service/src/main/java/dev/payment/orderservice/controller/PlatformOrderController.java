@@ -24,14 +24,14 @@ public class PlatformOrderController {
     }
 
     @GetMapping("/orders/{orderId}")
-    public ApiResponse<OrderResponse> getOrder(@PathVariable UUID orderId) {
+    public ApiResponse<OrderResponse> getOrder(@PathVariable("orderId") UUID orderId) {
         return ApiResponse.success(orderService.getOrder(orderId));
     }
 
     @PutMapping("/orders/{orderId}/status")
     public ApiResponse<OrderResponse> updateOrderStatus(
-            @PathVariable UUID orderId,
-            @RequestParam OrderStatus status
+            @PathVariable("orderId") UUID orderId,
+            @RequestParam("status") OrderStatus status
     ) {
         return ApiResponse.success(orderService.updateOrderStatus(orderId, status));
     }

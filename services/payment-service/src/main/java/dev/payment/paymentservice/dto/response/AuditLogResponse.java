@@ -2,8 +2,10 @@ package dev.payment.paymentservice.dto.response;
 
 import java.time.Instant;
 
+import java.util.UUID;
+
 public record AuditLogResponse(
-        Long id,
+        UUID id,
         String action,
         String actor,
         String resourceType,

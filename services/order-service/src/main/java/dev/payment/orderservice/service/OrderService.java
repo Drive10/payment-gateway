@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -31,16 +32,17 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderResponse createOrder(CreateOrderRequest request) {
+    public OrderResponse createOrder(CreateOrderRequest request, String authenticatedUser) {
         Order order = new Order();
-        order.setUserId(request.userId());
+        UUID userId = resolveUserId(request.userId(), authenticatedUser);
+        order.setUserId(userId);
         order.setOrderReference(generateOrderReference());
         order.setExternalReference(resolveExternalReference(request.externalReference()));
         order.setMerchantId(DEFAULT_MERCHANT_ID.toString());
         order.setAmount(request.amount());
         order.setCurrency(request.currency());
         order.setDescription(request.description());
-        order.setCustomerEmail(request.customerEmail());
+        order.setCustomerEmail(resolveCustomerEmail(request.customerEmail(), authenticatedUser));
         order.setStatus(OrderStatus.PENDING);
         
         if (request.metadata() != null) {
@@ -114,5 +116,25 @@ public class OrderService {
             return externalReference;
         }
         return "EXT-" + Instant.now().toEpochMilli();
+    }
+
+    private UUID resolveUserId(UUID requestedUserId, String authenticatedUser) {
+        if (requestedUserId != null) {
+            return requestedUserId;
+        }
+        if (authenticatedUser != null && !authenticatedUser.isBlank()) {
+            return UUID.nameUUIDFromBytes(authenticatedUser.trim().toLowerCase().getBytes(StandardCharsets.UTF_8));
+        }
+        throw new OrderException("Unable to resolve user id for order request");
+    }
+
+    private String resolveCustomerEmail(String requestedCustomerEmail, String authenticatedUser) {
+        if (requestedCustomerEmail != null && !requestedCustomerEmail.isBlank()) {
+            return requestedCustomerEmail;
+        }
+        if (authenticatedUser != null && !authenticatedUser.isBlank()) {
+            return authenticatedUser.trim().toLowerCase();
+        }
+        return null;
     }
 }

@@ -18,10 +18,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @RestController
@@ -38,24 +40,38 @@ public class OrderController {
     }
 
     @PostMapping
-    public ApiResponse<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
-        return ApiResponse.success(orderService.createOrder(request));
+    public ApiResponse<OrderResponse> createOrder(
+            @Valid @RequestBody CreateOrderRequest request,
+            @RequestHeader(value = "X-Authenticated-User", required = false) String authenticatedUser
+    ) {
+        return ApiResponse.success(orderService.createOrder(request, authenticatedUser));
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<OrderResponse> getOrder(@PathVariable UUID id) {
+    public ApiResponse<OrderResponse> getOrder(@PathVariable("id") UUID id) {
         return ApiResponse.success(orderService.getOrder(id));
     }
 
     @GetMapping
     public ApiResponse<PageResponse<OrderResponse>> getOrders(
-            @RequestParam(required = false) UUID userId,
-            @RequestParam(required = false) OrderStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(name = "userId", required = false) UUID userId,
+            @RequestParam(name = "status", required = false) OrderStatus status,
+            @RequestParam(name = "limit", required = false) Integer limit,
+            @RequestParam(name = "offset", required = false) Integer offset,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestHeader(value = "X-Authenticated-User", required = false) String authenticatedUser
     ) {
-        Pageable pageable = PageRequest.of(page, Math.min(size, 100));
-        Page<OrderResponse> orders = orderService.getUserOrders(userId, status, pageable);
+        int resolvedSize = Math.min(limit != null ? limit : size, 100);
+        int resolvedPage = offset != null ? Math.max(offset, 0) / Math.max(resolvedSize, 1) : Math.max(page, 0);
+        UUID resolvedUserId = userId != null
+                ? userId
+                : (authenticatedUser != null && !authenticatedUser.isBlank()
+                ? UUID.nameUUIDFromBytes(authenticatedUser.trim().toLowerCase().getBytes(StandardCharsets.UTF_8))
+                : null);
+
+        Pageable pageable = PageRequest.of(resolvedPage, Math.max(resolvedSize, 1));
+        Page<OrderResponse> orders = orderService.getUserOrders(resolvedUserId, status, pageable);
         return ApiResponse.success(new PageResponse<>(
                 orders.getContent(),
                 orders.getNumber(),
@@ -67,7 +83,7 @@ public class OrderController {
 
     @PostMapping("/{id}/initiate-payment")
     public ApiResponse<InitiatePaymentResponse> initiatePayment(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @Valid @RequestBody InitiatePaymentRequest request
     ) {
         return ApiResponse.success(paymentOrchestrator.initiatePayment(request));

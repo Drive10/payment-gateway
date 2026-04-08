@@ -75,7 +75,7 @@ public class PaymentController {
 
     @GetMapping("/links")
     public ApiResponse<java.util.List<PaymentLinkResponse>> getPaymentLinks(
-            @RequestParam UUID merchantId,
+            @RequestParam("merchantId") UUID merchantId,
             Authentication authentication
     ) {
         authService.getCurrentUser(authentication.getName());
@@ -85,7 +85,7 @@ public class PaymentController {
     // ===== Public Payment Link Endpoint (Frontend) =====
 
     @GetMapping("/link/{referenceId}")
-    public ApiResponse<PaymentLinkResponse> getPublicPaymentLink(@PathVariable String referenceId) {
+    public ApiResponse<PaymentLinkResponse> getPublicPaymentLink(@PathVariable("referenceId") String referenceId) {
         return ApiResponse.success(paymentLinkService.getPaymentLink(referenceId));
     }
 
@@ -106,7 +106,7 @@ public class PaymentController {
 
     @PostMapping("/{paymentId}/capture")
     public ApiResponse<PaymentResponse> capturePayment(
-            @PathVariable UUID paymentId,
+            @PathVariable("paymentId") UUID paymentId,
             @Valid @RequestBody CapturePaymentRequest request,
             Authentication authentication
     ) {
@@ -116,7 +116,7 @@ public class PaymentController {
 
     @PostMapping("/{paymentId}/refunds")
     public ApiResponse<RefundResponse> refundPayment(
-            @PathVariable UUID paymentId,
+            @PathVariable("paymentId") UUID paymentId,
             @Valid @RequestBody CreateRefundRequest request,
             @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication authentication
@@ -130,13 +130,22 @@ public class PaymentController {
 
     @GetMapping
     public ApiResponse<PageResponse<PaymentResponse>> getPayments(
-            @RequestParam(required = false) PaymentStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(name = "status", required = false) PaymentStatus status,
+            @RequestParam(name = "limit", required = false) Integer limit,
+            @RequestParam(name = "offset", required = false) Integer offset,
+            @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "size", required = false) Integer size,
             Authentication authentication
     ) {
         User actor = authService.getCurrentUser(authentication.getName());
-        Pageable pageable = PageRequest.of(page, Math.min(size, 100));
+        int resolvedSize = (limit != null && limit > 0)
+                ? Math.min(limit, 100)
+                : Math.min(size != null ? size : 10, 100);
+        resolvedSize = Math.max(resolvedSize, 1);
+        int resolvedPage = (offset != null && offset >= 0)
+                ? offset / Math.max(resolvedSize, 1)
+                : Math.max(page != null ? page : 0, 0);
+        Pageable pageable = PageRequest.of(resolvedPage, resolvedSize);
         Page<PaymentResponse> payments = paymentService.getPayments(actor, status, pageable, false);
         return ApiResponse.success(new PageResponse<>(
                 payments.getContent(),
@@ -148,19 +157,19 @@ public class PaymentController {
     }
 
     @GetMapping("/{paymentId}")
-    public ApiResponse<PaymentResponse> getPayment(@PathVariable UUID paymentId, Authentication authentication) {
+    public ApiResponse<PaymentResponse> getPayment(@PathVariable("paymentId") UUID paymentId, Authentication authentication) {
         User actor = authService.getCurrentUser(authentication.getName());
         return ApiResponse.success(paymentService.getPayment(paymentId, actor, false));
     }
 
     @GetMapping("/{paymentId}/detail")
-    public ApiResponse<PaymentDetailResponse> getPaymentDetail(@PathVariable UUID paymentId, Authentication authentication) {
+    public ApiResponse<PaymentDetailResponse> getPaymentDetail(@PathVariable("paymentId") UUID paymentId, Authentication authentication) {
         User actor = authService.getCurrentUser(authentication.getName());
         return ApiResponse.success(paymentService.getPaymentDetail(paymentId, actor, false));
     }
 
     @GetMapping("/balance/{merchantId}")
-    public ApiResponse<MerchantBalanceResponse> getMerchantBalance(@PathVariable UUID merchantId) {
+    public ApiResponse<MerchantBalanceResponse> getMerchantBalance(@PathVariable("merchantId") UUID merchantId) {
         java.math.BigDecimal available = ledgerService.getMerchantBalance(merchantId);
         java.math.BigDecimal pending = ledgerService.getMerchantReceivable(merchantId);
         java.math.BigDecimal total = available.add(pending);
@@ -168,14 +177,14 @@ public class PaymentController {
     }
 
     @GetMapping("/analytics/{merchantId}")
-    public ApiResponse<Map<String, Object>> getMerchantAnalytics(@PathVariable UUID merchantId) {
+    public ApiResponse<Map<String, Object>> getMerchantAnalytics(@PathVariable("merchantId") UUID merchantId) {
         return ApiResponse.success(paymentService.getMerchantAnalytics(merchantId));
     }
 
     @GetMapping("/analytics/{merchantId}/trends")
     public ApiResponse<List<Map<String, Object>>> getPaymentTrends(
-            @PathVariable UUID merchantId,
-            @RequestParam(defaultValue = "30") int days
+            @PathVariable("merchantId") UUID merchantId,
+            @RequestParam(name = "days", defaultValue = "30") int days
     ) {
         return ApiResponse.success(paymentService.getPaymentTrends(merchantId, days));
     }
@@ -208,7 +217,7 @@ public class PaymentController {
 
     @GetMapping("/{transactionId}/status")
     public ApiResponse<InitiatePaymentResponse> getPaymentStatus(
-            @PathVariable String transactionId
+            @PathVariable("transactionId") String transactionId
     ) {
         // TODO: Implement status polling
         return ApiResponse.success(InitiatePaymentResponse.pending(transactionId));

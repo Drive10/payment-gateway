@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.AbstractMap;
 import java.time.Duration;
 import java.util.List;
 
@@ -25,6 +26,7 @@ public class TenantRateLimitingFilter implements GlobalFilter, Ordered {
     private static final String RATE_LIMIT_PREFIX = "ratelimit:tenant:";
     private static final long DEFAULT_LIMIT = 100;
     private static final Duration WINDOW = Duration.ofMinutes(1);
+    private static final Duration REDIS_TIMEOUT = Duration.ofMillis(300);
 
     public TenantRateLimitingFilter(ReactiveStringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -52,7 +54,7 @@ public class TenantRateLimitingFilter implements GlobalFilter, Ordered {
 
         String key = RATE_LIMIT_PREFIX + tenantId;
 
-        return redisTemplate.opsForValue().increment(key)
+        Mono<AbstractMap.SimpleEntry<Long, Long>> rateState = redisTemplate.opsForValue().increment(key)
                 .flatMap(count -> {
                     if (count == 1) {
                         return redisTemplate.expire(key, WINDOW).thenReturn(count);
@@ -60,7 +62,16 @@ public class TenantRateLimitingFilter implements GlobalFilter, Ordered {
                     return Mono.just(count);
                 })
                 .flatMap(count -> {
-                    long limit = getTenantLimit(tenantId).blockOptional().orElse(DEFAULT_LIMIT);
+                    return getTenantLimit(tenantId)
+                            .defaultIfEmpty(DEFAULT_LIMIT)
+                            .map(limit -> new AbstractMap.SimpleEntry<>(count, limit));
+                })
+                .timeout(REDIS_TIMEOUT);
+
+        return rateState
+                .flatMap(state -> {
+                    long count = state.getKey();
+                    long limit = state.getValue();
                     if (count > limit) {
                         exchange.getResponse().getHeaders().add("X-RateLimit-Limit", String.valueOf(limit));
                         exchange.getResponse().getHeaders().add("X-RateLimit-Remaining", "0");
@@ -68,7 +79,7 @@ public class TenantRateLimitingFilter implements GlobalFilter, Ordered {
                         return exchange.getResponse().setComplete();
                     }
                     exchange.getResponse().getHeaders().add("X-RateLimit-Limit", String.valueOf(limit));
-                    exchange.getResponse().getHeaders().add("X-RateLimit-Remaining", String.valueOf(limit - count));
+                    exchange.getResponse().getHeaders().add("X-RateLimit-Remaining", String.valueOf(Math.max(limit - count, 0)));
                     return chain.filter(exchange);
                 })
                 .onErrorResume(e -> {

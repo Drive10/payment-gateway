@@ -190,7 +190,7 @@ services:
       DB_NAME: auth_db
       DB_USERNAME: ${DB_USERNAME:-payflow}
       DB_PASSWORD: ${DB_PASSWORD:-payflow}
-      JWT_SECRET: ${JWT_SECRET:-dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1hdXRoLXNlcnZpY2U=}
+      JWT_SECRET: ${JWT_SECRET:-YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY}
       GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-internal-gateway-secret}
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
@@ -276,6 +276,7 @@ services:
       NOTIFICATION_SERVICE_URL: http://notification-service:8084
       ORDER_SERVICE_URL: http://order-service:8082
       AUTH_SERVICE_URL: http://auth-service:8081
+      JWT_SECRET: ${JWT_SECRET:-YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY}
       GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-internal-gateway-secret}
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
@@ -290,11 +291,11 @@ services:
       kafka:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
       order-service:
-        condition: service_healthy
+        condition: service_started
       simulator-service:
-        condition: service_healthy
+        condition: service_started
       zipkin:
         condition: service_healthy
     networks:
@@ -466,6 +467,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
+      JWT_SECRET: ${JWT_SECRET:-YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY}
       GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:-internal-gateway-secret}
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
@@ -476,19 +478,19 @@ services:
       redis:
         condition: service_healthy
       auth-service:
-        condition: service_healthy
+        condition: service_started
       order-service:
-        condition: service_healthy
+        condition: service_started
       payment-service:
-        condition: service_healthy
+        condition: service_started
       notification-service:
-        condition: service_healthy
+        condition: service_started
       simulator-service:
-        condition: service_healthy
+        condition: service_started
       analytics-service:
-        condition: service_healthy
+        condition: service_started
       audit-service:
-        condition: service_healthy
+        condition: service_started
       zipkin:
         condition: service_healthy
     networks:
