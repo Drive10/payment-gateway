@@ -28,7 +28,7 @@ application:
   webhook:
     service-url: http://localhost:8085
   order:
-    service-url: http://localhost:8084
+    service-url: http://localhost:8082
   auth:
     service-url: http://localhost:8081
   gateway-trust:
