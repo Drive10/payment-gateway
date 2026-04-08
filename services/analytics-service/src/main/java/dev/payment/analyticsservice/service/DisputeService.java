@@ -32,7 +32,7 @@ public class DisputeService {
         dispute.setStatus("OPEN");
         dispute.setEvidenceDeadline(Instant.now().plus(7, ChronoUnit.DAYS));
         
-        log.info("Creating dispute: {} for payment: {}", dispute.getDisputeId(), dispute.getPaymentId());
+        log.info("Creating dispute: {} for payment: {}", dispute.getDisputeId(), "REDACTED");
         return disputeRepository.save(dispute);
     }
 
@@ -123,7 +123,7 @@ public class DisputeService {
                 .orElseThrow(() -> new IllegalArgumentException("Dispute not found: " + id));
 
         dispute.setAssignedTo(assignedTo);
-        log.info("Dispute {} assigned to: {}", dispute.getDisputeId(), assignedTo);
+        log.info("Dispute {} assigned to: {}", dispute.getDisputeId(), "REDACTED");
         return disputeRepository.save(dispute);
     }
 
