@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://postgres:5432/analytics_db
+    url: jdbc:postgresql://localhost:5432/analytics_db
   data:
     redis:
       host: localhost
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: localhost:9092

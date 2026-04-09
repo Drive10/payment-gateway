@@ -5,9 +5,9 @@ spring:
   application:
     name: auth-service
   datasource:
-    url: jdbc:postgresql://postgres:5432/auth_db
-    username: payflow
-    password: payflow
+    url: jdbc:postgresql://postgres-auth:5432/payflow_auth
+    username: payflow_auth
+    password: payflow_auth
     hikari:
       maximum-pool-size: 15
       minimum-idle: 3
@@ -17,7 +17,7 @@ spring:
       pool-name: AuthHikariPool
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     open-in-view: false
     properties:
@@ -30,11 +30,13 @@ spring:
         type:
           deprecated_uuid_char_type: true
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
 
 application:
   jwt:
-    secret: YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY
+    secret: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
     expiration: 86400000
     refresh-expiration: 604800000
 

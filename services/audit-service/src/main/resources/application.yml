@@ -6,7 +6,7 @@ spring:
       uri: mongodb://mongodb:27017/audit_db
       auto-index-creation: true
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: kafka:29092
     consumer:
       group-id: audit-service-group
       auto-offset-reset: earliest

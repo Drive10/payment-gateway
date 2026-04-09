@@ -1,6 +1,6 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://mongodb:27017/audit_db
+      uri: mongodb://localhost:27017/audit_db
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: localhost:9092

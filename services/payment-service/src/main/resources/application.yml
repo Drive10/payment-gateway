@@ -10,9 +10,9 @@ spring:
   application:
     name: payment-service
   datasource:
-    url: jdbc:postgresql://postgres:5432/payment_db
-    username: payflow
-    password: payflow
+    url: jdbc:postgresql://postgres-payment:5432/payflow_payment
+    username: payflow_payment
+    password: payflow_payment
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 30
@@ -47,8 +47,12 @@ spring:
         generate_statistics: false
     hibernate:
       ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: kafka:29092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -68,9 +72,6 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=300s
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
 
 application:
   gateway-trust:

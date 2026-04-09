@@ -1,56 +1,6 @@
 name: payflow
 services:
-  postgres:
-    profiles: [infra, services]
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: payflow
-      POSTGRES_PASSWORD: payflow
-      POSTGRES_DB: payflow
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U payflow -d payflow"]
-      interval: 2s
-      timeout: 2s
-      retries: 15
-      start_period: 5s
-    networks:
-      - payflow-network
-
-  mongodb:
-    profiles: [infra, services]
-    image: mongo:7
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 5s
-    networks:
-      - payflow-network
-
-  redis:
-    profiles: [infra, services]
-    image: redis:7-alpine
-    command: redis-server --requirepass payflow-redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "payflow-redis", "ping"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 3s
-    networks:
-      - payflow-network
-
+  # Infrastructure - Shared
   zookeeper:
     profiles: [infra, services]
     image: confluentinc/cp-zookeeper:7.5.0
@@ -92,6 +42,21 @@ services:
     networks:
       - payflow-network
 
+  redis:
+    profiles: [infra, services]
+    image: redis:7-alpine
+    command: redis-server --requirepass payflow-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "payflow-redis", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 3s
+    networks:
+      - payflow-network
+
   zipkin:
     profiles: [infra, services]
     image: openzipkin/zipkin:3.4
@@ -104,6 +69,150 @@ services:
       retries: 5
       start_period: 5s
 
+  # Auth Service Database
+  postgres-auth:
+    profiles: [infra, services]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: payflow_auth
+      POSTGRES_PASSWORD: payflow_auth
+      POSTGRES_DB: payflow_auth
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payflow_auth -d payflow_auth"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 5s
+    networks:
+      - payflow-network
+
+  # Order Service Database
+  postgres-order:
+    profiles: [infra, services]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: payflow_order
+      POSTGRES_PASSWORD: payflow_order
+      POSTGRES_DB: payflow_order
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_order_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payflow_order -d payflow_order"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 5s
+    networks:
+      - payflow-network
+
+  # Payment Service Database
+  postgres-payment:
+    profiles: [infra, services]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: payflow_payment
+      POSTGRES_PASSWORD: payflow_payment
+      POSTGRES_DB: payflow_payment
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_payment_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payflow_payment -d payflow_payment"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 5s
+    networks:
+      - payflow-network
+
+  # Notification Service Database
+  postgres-notification:
+    profiles: [infra, services]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: payflow_notification
+      POSTGRES_PASSWORD: payflow_notification
+      POSTGRES_DB: payflow_notification
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payflow_notification -d payflow_notification"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 5s
+    networks:
+      - payflow-network
+
+  # Analytics Service Database
+  postgres-analytics:
+    profiles: [infra, services]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: payflow_analytics
+      POSTGRES_PASSWORD: payflow_analytics
+      POSTGRES_DB: payflow_analytics
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres_analytics_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payflow_analytics -d payflow_analytics"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 5s
+    networks:
+      - payflow-network
+
+  # Simulator Service Database
+  postgres-simulator:
+    profiles: [infra, services]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: payflow_simulator
+      POSTGRES_PASSWORD: payflow_simulator
+      POSTGRES_DB: payflow_simulator
+    ports:
+      - "5438:5432"
+    volumes:
+      - postgres_simulator_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payflow_simulator -d payflow_simulator"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 5s
+    networks:
+      - payflow-network
+
+  # Audit Service Database (MongoDB)
+  mongodb-audit:
+    profiles: [infra, services]
+    image: mongo:7
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_audit_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+    networks:
+      - payflow-network
+
+  # API Gateway (No DB)
   api-gateway:
     profiles: [services]
     build:
@@ -112,16 +221,13 @@ services:
     container_name: payflow-api-gateway
     ports:
       - "8080:8080"
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
       - payflow-network
 
+  # Auth Service
   auth-service:
     profiles: [services]
     build:
@@ -131,13 +237,16 @@ services:
     ports:
       - "8081:8081"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-auth:5432/payflow_auth
+      - SPRING_DATASOURCE_USERNAME=payflow_auth
+      - SPRING_DATASOURCE_PASSWORD=payflow_auth
     depends_on:
-      postgres:
+      postgres-auth:
         condition: service_healthy
     networks:
       - payflow-network
 
+  # Order Service
   order-service:
     profiles: [services]
     build:
@@ -147,15 +256,18 @@ services:
     ports:
       - "8082:8082"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-order:5432/payflow_order
+      - SPRING_DATASOURCE_USERNAME=payflow_order
+      - SPRING_DATASOURCE_PASSWORD=payflow_order
     depends_on:
-      postgres:
+      postgres-order:
         condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
       - payflow-network
 
+  # Payment Service
   payment-service:
     profiles: [services]
     build:
@@ -165,9 +277,13 @@ services:
     ports:
       - "8083:8083"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-payment:5432/payflow_payment
+      - SPRING_DATASOURCE_USERNAME=payflow_payment
+      - SPRING_DATASOURCE_PASSWORD=payflow_payment
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PASSWORD=payflow-redis
     depends_on:
-      postgres:
+      postgres-payment:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -176,6 +292,7 @@ services:
     networks:
       - payflow-network
 
+  # Notification Service
   notification-service:
     profiles: [services]
     build:
@@ -185,15 +302,18 @@ services:
     ports:
       - "8084:8084"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-notification:5432/payflow_notification
+      - SPRING_DATASOURCE_USERNAME=payflow_notification
+      - SPRING_DATASOURCE_PASSWORD=payflow_notification
     depends_on:
-      postgres:
+      postgres-notification:
         condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
       - payflow-network
 
+  # Simulator Service
   simulator-service:
     profiles: [services]
     build:
@@ -203,15 +323,18 @@ services:
     ports:
       - "8086:8086"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-simulator:5432/payflow_simulator
+      - SPRING_DATASOURCE_USERNAME=payflow_simulator
+      - SPRING_DATASOURCE_PASSWORD=payflow_simulator
     depends_on:
-      postgres:
+      postgres-simulator:
         condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
       - payflow-network
 
+  # Analytics Service
   analytics-service:
     profiles: [services]
     build:
@@ -221,15 +344,18 @@ services:
     ports:
       - "8089:8089"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-analytics:5432/payflow_analytics
+      - SPRING_DATASOURCE_USERNAME=payflow_analytics
+      - SPRING_DATASOURCE_PASSWORD=payflow_analytics
     depends_on:
-      postgres:
+      postgres-analytics:
         condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
       - payflow-network
 
+  # Audit Service
   audit-service:
     profiles: [services]
     build:
@@ -239,15 +365,16 @@ services:
     ports:
       - "8090:8090"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb-audit:27017/payflow_audit
     depends_on:
-      mongodb:
+      mongodb-audit:
         condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
       - payflow-network
 
+  # Frontend
   frontend:
     profiles: [services]
     build:
@@ -264,8 +391,13 @@ services:
       - payflow-network
 
 volumes:
-  postgres_data:
-  mongodb_data:
+  postgres_auth_data:
+  postgres_order_data:
+  postgres_payment_data:
+  postgres_notification_data:
+  postgres_analytics_data:
+  postgres_simulator_data:
+  mongodb_audit_data:
 
 networks:
   payflow-network:

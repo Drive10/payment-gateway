@@ -6,9 +6,9 @@ spring:
   application:
     name: analytics-service
   datasource:
-    url: jdbc:postgresql://postgres:5432/analytics_db
-    username: payflow
-    password: payflow
+    url: jdbc:postgresql://postgres-analytics:5432/payflow_analytics
+    username: payflow_analytics
+    password: payflow_analytics
     driver-class-name: org.postgresql.Driver
   data:
     redis:
@@ -17,7 +17,7 @@ spring:
       password: payflow-redis
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     open-in-view: false
     show-sql: false
     properties:
@@ -29,16 +29,18 @@ spring:
         order_inserts: true
         order_updates: true
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: kafka:29092
     properties:
       spring.json.trusted.packages: "*"
     consumer:
       group-id: analytics-service
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
