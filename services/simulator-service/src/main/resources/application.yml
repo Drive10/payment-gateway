@@ -6,7 +6,7 @@ spring:
   application:
     name: simulator-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/simulator_db
+    url: jdbc:postgresql://postgres:5432/simulator_db
     username: payflow
     password: payflow
     driver-class-name: org.postgresql.Driver

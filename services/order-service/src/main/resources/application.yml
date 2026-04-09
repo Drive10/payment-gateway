@@ -6,7 +6,7 @@ spring:
   application:
     name: order-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/order_db
+    url: jdbc:postgresql://postgres:5432/order_db
     username: payflow
     password: payflow
     driver-class-name: org.postgresql.Driver
@@ -33,7 +33,7 @@ spring:
   flyway:
     enabled: false
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: kafka:9092
     properties:
       spring.json.trusted.packages: "*"
     consumer:

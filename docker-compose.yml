@@ -1,5 +1,5 @@
+name: payflow
 services:
-
   postgres:
     profiles: [infra, services]
     image: postgres:16-alpine
@@ -17,6 +17,8 @@ services:
       timeout: 2s
       retries: 15
       start_period: 5s
+    networks:
+      - payflow-network
 
   mongodb:
     profiles: [infra, services]
@@ -31,6 +33,8 @@ services:
       timeout: 2s
       retries: 10
       start_period: 5s
+    networks:
+      - payflow-network
 
   redis:
     profiles: [infra, services]
@@ -44,6 +48,8 @@ services:
       timeout: 2s
       retries: 10
       start_period: 3s
+    networks:
+      - payflow-network
 
   zookeeper:
     profiles: [infra, services]
@@ -59,6 +65,8 @@ services:
       timeout: 3s
       retries: 10
       start_period: 5s
+    networks:
+      - payflow-network
 
   kafka:
     profiles: [infra, services]
@@ -81,6 +89,8 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+    networks:
+      - payflow-network
 
   zipkin:
     profiles: [infra, services]

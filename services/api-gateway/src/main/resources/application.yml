@@ -8,7 +8,7 @@ spring:
     exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
   data:
     redis:
-      host: localhost
+      host: redis
       port: 6379
       password: payflow-redis
 

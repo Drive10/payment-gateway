@@ -10,7 +10,7 @@ spring:
   application:
     name: payment-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/payment_db
+    url: jdbc:postgresql://postgres:5432/payment_db
     username: payflow
     password: payflow
     driver-class-name: org.postgresql.Driver
@@ -24,7 +24,7 @@ spring:
       register-mbeans: true
   data:
     redis:
-      host: localhost
+      host: redis
       port: 6379
       password: payflow-redis
       timeout: 2000ms
@@ -48,7 +48,7 @@ spring:
     hibernate:
       ddl-auto: validate
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: kafka:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -83,7 +83,7 @@ application:
       refresh-expiration-seconds: 2592000
   payment:
     default-provider: RAZORPAY_SIMULATOR
-    checkout-base-url: http://localhost:5173
+    checkout-base-url: http://frontend:5173
   simulator:
     base-url: http://simulator-service:8086
   webhook:
