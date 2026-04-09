@@ -86,12 +86,27 @@ npm run test:coverage # Run tests with coverage
 
 ## Integration with Backend
 
-The checkout UI connects to the PayFlow API Gateway running at `http://localhost:8080`. Ensure backend services are running:
+The checkout UI connects to the PayFlow API Gateway. Infrastructure (PostgreSQL, Redis, Kafka, etc.) runs in Docker by default.
 
+### Backend Local Development (Recommended)
+1. Start infrastructure:
+   ```bash
+   # From root directory
+   docker compose --profile infra up -d
+   ```
+2. Start backend services in your IDE with Spring profile set to `local`
+3. Start frontend:
+   ```bash
+   npm run dev
+   ```
+
+### Full Docker Mode
 ```bash
 # From root directory
-docker compose up -d
+docker compose --profile infra --profile services up -d
 ```
+
+Visit [http://localhost:5173](http://localhost:5173) for the frontend.
 
 API endpoints:
 - `POST /api/v1/orders` - Create order
