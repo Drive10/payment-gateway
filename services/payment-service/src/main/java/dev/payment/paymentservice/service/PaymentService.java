@@ -109,11 +109,17 @@ public class PaymentService {
         return payment;
     }
 
+    private void enrichPaymentFromOrder(Payment payment, Order order) {
+        payment.setAmount(order.getAmount());
+        payment.setCurrency(order.getCurrency());
+    }
+
     private Payment executePaymentCreation(Payment payment, CreatePaymentRequest request, User actor, String idempotencyKey) {
         try {
             Order order = orderService.getOwnedOrder(request.orderId(), actor, false);
             payment.setOrderId(order.getId());
             payment.setOrder(order);
+            enrichPaymentFromOrder(payment, order);
 
             PaymentProcessorIntentResponse processorIntent = paymentProcessorClient.createIntent(
                     payment, order.getOrderReference(), payment.getTransactionMode());
@@ -342,6 +348,19 @@ public class PaymentService {
 
     private String normalizeProvider(String provider) {
         String normalized = provider == null ? "" : provider.trim().toUpperCase();
-        return normalized.isBlank() ? SIMULATED_PROVIDER : normalized;
+        if (normalized.isBlank()) {
+            return SIMULATED_PROVIDER;
+        }
+        return switch (normalized) {
+            case "STRIPE", "RAZORPAY", "PAYPAL" -> SIMULATED_PROVIDER;
+            default -> normalized;
+        };
+    }
+
+    private String resolveSimulationMode(Payment payment) {
+        if (payment.getTransactionMode() == TransactionMode.TEST) {
+            return "TEST";
+        }
+        return "SUCCESS";
     }
 }

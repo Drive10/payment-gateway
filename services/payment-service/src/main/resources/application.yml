@@ -73,8 +73,7 @@ spring:
 
 application:
   gateway-trust:
-    enabled: true
-    internal-secret: internal-gateway-secret
+    enabled: false
   security:
     jwt:
       secret-key: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk

@@ -34,13 +34,14 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
     @Retry(name = "simulator")
     @CircuitBreaker(name = "simulator", fallbackMethod = "createIntentFallback")
     public PaymentProcessorIntentResponse createIntent(Payment payment, String orderReference, TransactionMode mode) {
+        String simulationMode = resolveSimulationMode(mode);
         SimulatorIntentRequest request = new SimulatorIntentRequest(
                 orderReference,
                 payment.getIdempotencyKey(),
                 payment.getProvider(),
                 payment.getAmount(),
                 payment.getCurrency(),
-                mode.name(),
+                simulationMode,
                 payment.getNotes()
         );
 
@@ -64,6 +65,10 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
                 .block();
     }
 
+    private String resolveSimulationMode(TransactionMode mode) {
+        return mode == TransactionMode.TEST ? "TEST" : "SUCCESS";
+    }
+
     @SuppressWarnings("unused")
     private PaymentProcessorIntentResponse createIntentFallback(Payment payment, String orderReference,
             TransactionMode mode, Throwable throwable) {
@@ -75,9 +80,10 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
     @Retry(name = "simulator")
     @CircuitBreaker(name = "simulator", fallbackMethod = "captureFallback")
     public PaymentProcessorCaptureResponse capture(Payment payment, CapturePaymentRequest request, TransactionMode mode) {
+        String simulationMode = resolveSimulationMode(mode);
         SimulatorCaptureRequest captureRequest = new SimulatorCaptureRequest(
                 payment.getIdempotencyKey(),
-                mode.name()
+                simulationMode
         );
 
         return webClient.post()
