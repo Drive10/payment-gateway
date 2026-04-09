@@ -4,7 +4,6 @@ services:
     environment:
       POSTGRES_USER: payflow
       POSTGRES_PASSWORD: payflow
-      POSTGRES_DB: postgres
     ports:
       - "5432:5432"
     volumes:
@@ -19,7 +18,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass devpassword
+    command: redis-server --requirepass payflow-redis
     ports:
       - "6379:6379"
 
@@ -27,6 +26,8 @@ services:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0

@@ -8,26 +8,24 @@ Welcome to PayFlow! This guide will help you get started with local development.
 - Java 21+ (for backend)
 - Node.js 20+ & npm (for frontend)
 - Maven 3.9+ (for backend builds)
-- IntelliJ IDEA (recommended for backend)
-- VSCode (recommended for frontend)
+- IntelliJ IDEA (backend)
+- VSCode (frontend)
 
-## Quick Start
+## Quick Start - Local Development
 
-### 1. Start Infrastructure
+### Terminal 1: Start Infrastructure (Docker)
 
 ```bash
-# Terminal 1: Start Docker infrastructure
 docker compose up -d
 ```
 
 This starts: PostgreSQL, MongoDB, Redis, Kafka, Zipkin
 
-### 2. Start Backend (IntelliJ)
+### Terminal 2: Start Backend (IntelliJ)
 
-Run each service from IntelliJ using Maven:
-
+Run each service via Maven:
 ```bash
-# Run services individually
+mvn spring-boot:run -pl services/api-gateway
 mvn spring-boot:run -pl services/auth-service
 mvn spring-boot:run -pl services/order-service
 mvn spring-boot:run -pl services/payment-service
@@ -35,15 +33,13 @@ mvn spring-boot:run -pl services/notification-service
 mvn spring-boot:run -pl services/simulator-service
 mvn spring-boot:run -pl services/analytics-service
 mvn spring-boot:run -pl services/audit-service
-mvn spring-boot:run -pl services/api-gateway
 ```
 
 Or create IntelliJ Run Configurations for each service.
 
-### 3. Start Frontend (VSCode)
+### Terminal 3: Start Frontend (VSCode)
 
 ```bash
-# Terminal 2: Start frontend
 cd web/frontend
 npm run dev
 ```
@@ -98,10 +94,9 @@ cd web/frontend
 npm test
 ```
 
-## Environment Variables
+## Environment Configuration
 
-Main configuration is in `.env` file. Key variables:
-
+Main config in `.env` file. Key variables:
 - `DB_HOST=localhost` - PostgreSQL
 - `REDIS_HOST=localhost` - Redis
 - `KAFKA_BOOTSTRAP_SERVERS=localhost:9092` - Kafka
@@ -111,21 +106,28 @@ For frontend, create `web/frontend/.env`:
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
+## E2E Tests
+
+Run E2E tests:
+```bash
+./scripts/e2e/run.sh
+```
+
+Options:
+- `./scripts/e2e/run.sh ui` - Run with UI
+- `./scripts/e2e/run.sh headed` - Run in headed mode
+
 ## Troubleshooting
 
 ### Port already in use
 ```bash
-# Find process using port
 lsof -i :8080
-# Kill if needed
 kill <PID>
 ```
 
 ### Database connection issues
 ```bash
-# Check if PostgreSQL is running
 docker compose ps postgres
-# Restart infrastructure
 docker compose restart
 ```
 
