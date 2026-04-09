@@ -1,17 +1,14 @@
 server:
-  port: ${SERVER_PORT:8086}
+  port: 8086
   shutdown: graceful
 
 spring:
   application:
     name: simulator-service
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
-
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:simulator_db}
-    username: ${DB_USERNAME:payflow}
-    password: ${DB_PASSWORD:payflow}
+    url: jdbc:postgresql://localhost:5432/simulator_db
+    username: payflow
+    password: payflow
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -20,7 +17,6 @@ spring:
       max-lifetime: 1200000
       connection-timeout: 25000
       pool-name: SimulatorHikariPool
-
   jpa:
     hibernate:
       ddl-auto: update
@@ -33,35 +29,13 @@ spring:
           batch_size: 20
         order_inserts: true
         order_updates: true
-
   flyway:
     enabled: false
 
-  cloud:
-    consul:
-      host: ${CONSUL_HOST:consul}
-      port: ${CONSUL_PORT:8500}
-      discovery:
-        enabled: ${CONSUL_ENABLED:false}
-        register: true
-        prefer-ip-address: true
-        instance-id: ${spring.application.name}:${server.port}
-        health-check-path: /actuator/health
-        health-check-interval: 10s
-
-vault:
-  uri: ${VAULT_ADDR:http://localhost:8200}
-  token: ${VAULT_TOKEN:}
-  enabled: ${VAULT_ENABLED:false}
-  ssl:
-    enabled: true
-  kv:
-    enabled: true
-
 webhook:
-  service-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
-  simulator-success-rate: ${SIMULATOR_SUCCESS_RATE:90}
-  simulator-mode: ${SIMULATOR_MODE:random}
+  service-url: http://notification-service:8084
+  simulator-success-rate: 90
+  simulator-mode: random
 
 management:
   endpoints:
@@ -75,6 +49,3 @@ management:
 logging:
   level:
     root: INFO
-    dev.payment: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG

@@ -1,140 +1,131 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: 8080
 
 spring:
   application:
     name: api-gateway
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:devpassword}
-  cloud:
-    consul:
-      host: ${CONSUL_HOST:consul}
-      port: ${CONSUL_PORT:8500}
-      discovery:
-        enabled: ${CONSUL_ENABLED:false}
-    gateway:
-      globalcors:
-        add-to-simple-url-handler-mapping: true
-        cors-configurations:
-          '[/**]':
-            allowedOrigins:
-              - "http://localhost:3000"
-              - "http://localhost:5173"
-              - "http://localhost:5174"
-              - "https://dashboard.payment-gateway.com"
-              - "https://checkout.payment-gateway.com"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - OPTIONS
-            allowedHeaders:
-              - "*"
-            exposedHeaders:
-              - "Authorization"
-              - "X-Timestamp"
-              - "X-Signature"
-              - "X-Request-ID"
-              - "X-Request-Id"
-              - "X-Tenant-ID"
-            allowCredentials: true
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials Access-Control-Allow-Headers Access-Control-Allow-Methods RETAIN_FIRST
-      discovery:
-        locator:
-          enabled: false
-      routes:
-        - id: auth-service
-          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
-          predicates:
-            - Path=/api/v1/auth/**
-          filters:
-            - RewritePath=/api/v1/auth/(?<segment>.*), /auth/${segment}
-        - id: order-service
-          uri: ${ORDER_SERVICE_URL:http://localhost:8082}
-          predicates:
-            - Path=/api/v1/orders/**
-          filters:
-            - StripPrefix=2
-        - id: payment-service
-          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
-          predicates:
-            - Path=/api/v1/payments/**,/api/v1/admin/**
-          filters:
-            - StripPrefix=2
-        - id: notification-service
-          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
-          predicates:
-            - Path=/api/v1/notifications/**
-          filters:
-            - StripPrefix=2
-        - id: analytics-service
-          uri: ${ANALYTICS_SERVICE_URL:http://localhost:8089}
-          predicates:
-            - Path=/api/v1/analytics/**
-          filters:
-            - StripPrefix=2
-        - id: simulator-service
-          uri: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
-          predicates:
-            - Path=/api/v1/simulator/**
-          filters:
-            - StripPrefix=2
-        - id: audit-service
-          uri: ${AUDIT_SERVICE_URL:http://localhost:8090}
-          predicates:
-            - Path=/api/v1/audit/**
-          filters:
-            - StripPrefix=2
-        - id: internal-auth
-          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
-          predicates:
-            - Path=/platform/auth/**
-          filters:
-            - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
-        - id: internal-order
-          uri: ${ORDER_SERVICE_URL:http://localhost:8082}
-          predicates:
-            - Path=/platform/order/**
-          filters:
-            - RewritePath=/platform/order/(?<segment>.*), /internal/platform/${segment}
-        - id: internal-payment
-          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
-          predicates:
-            - Path=/platform/payment/**
-          filters:
-            - RewritePath=/platform/payment/(?<segment>.*), /internal/platform/${segment}
-        - id: internal-notification
-          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
-          predicates:
-            - Path=/platform/notification/**
-          filters:
-            - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
-        - id: internal-analytics
-          uri: ${ANALYTICS_SERVICE_URL:http://localhost:8089}
-          predicates:
-            - Path=/platform/analytics/**
-          filters:
-            - RewritePath=/platform/analytics/(?<segment>.*), /internal/platform/${segment}
-        - id: internal-simulator
-          uri: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
-          predicates:
-            - Path=/platform/simulator/**
-          filters:
-            - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
+      host: localhost
+      port: 6379
+      password: payflow-redis
 
 application:
   gateway:
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
+    internal-secret: internal-gateway-secret
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk}
+    secret-key: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
+
+spring.cloud.gateway:
+  globalcors:
+    add-to-simple-url-handler-mapping: true
+    cors-configurations:
+      '[/**]':
+        allowedOrigins:
+          - "http://localhost:3000"
+          - "http://localhost:5173"
+          - "http://localhost:5174"
+        allowedMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        allowedHeaders:
+          - "*"
+        exposedHeaders:
+          - "Authorization"
+          - "X-Timestamp"
+          - "X-Signature"
+          - "X-Request-ID"
+          - "X-Request-Id"
+          - "X-Tenant-ID"
+        allowCredentials: true
+  default-filters:
+    - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials Access-Control-Allow-Headers Access-Control-Allow-Methods RETAIN_FIRST
+  discovery:
+    locator:
+      enabled: false
+  routes:
+    - id: auth-service
+      uri: http://auth-service:8081
+      predicates:
+        - Path=/api/v1/auth/**
+      filters:
+        - RewritePath=/api/v1/auth/(?<segment>.*), /auth/${segment}
+    - id: order-service
+      uri: http://order-service:8082
+      predicates:
+        - Path=/api/v1/orders/**
+      filters:
+        - StripPrefix=2
+    - id: payment-service
+      uri: http://payment-service:8083
+      predicates:
+        - Path=/api/v1/payments/**,/api/v1/admin/**
+      filters:
+        - StripPrefix=2
+    - id: notification-service
+      uri: http://notification-service:8084
+      predicates:
+        - Path=/api/v1/notifications/**
+      filters:
+        - StripPrefix=2
+    - id: analytics-service
+      uri: http://analytics-service:8089
+      predicates:
+        - Path=/api/v1/analytics/**
+      filters:
+        - StripPrefix=2
+    - id: simulator-service
+      uri: http://simulator-service:8086
+      predicates:
+        - Path=/api/v1/simulator/**
+      filters:
+        - StripPrefix=2
+    - id: audit-service
+      uri: http://audit-service:8090
+      predicates:
+        - Path=/api/v1/audit/**
+      filters:
+        - StripPrefix=2
+    - id: internal-auth
+      uri: http://auth-service:8081
+      predicates:
+        - Path=/platform/auth/**
+      filters:
+        - RewritePath=/platform/auth/(?<segment>.*), /internal/platform/${segment}
+    - id: internal-order
+      uri: http://order-service:8082
+      predicates:
+        - Path=/platform/order/**
+      filters:
+        - RewritePath=/platform/order/(?<segment>.*), /internal/platform/${segment}
+    - id: internal-payment
+      uri: http://payment-service:8083
+      predicates:
+        - Path=/platform/payment/**
+      filters:
+        - RewritePath=/platform/payment/(?<segment>.*), /internal/platform/${segment}
+    - id: internal-notification
+      uri: http://notification-service:8084
+      predicates:
+        - Path=/platform/notification/**
+      filters:
+        - RewritePath=/platform/notification/(?<segment>.*), /internal/platform/${segment}
+    - id: internal-analytics
+      uri: http://analytics-service:8089
+      predicates:
+        - Path=/platform/analytics/**
+      filters:
+        - RewritePath=/platform/analytics/(?<segment>.*), /internal/platform/${segment}
+    - id: internal-simulator
+      uri: http://simulator-service:8086
+      predicates:
+        - Path=/platform/simulator/**
+      filters:
+        - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}

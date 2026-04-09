@@ -1,17 +1,14 @@
 server:
-  port: ${SERVER_PORT:8082}
+  port: 8082
   shutdown: graceful
 
 spring:
   application:
     name: order-service
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
-
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:order_db}
-    username: ${DB_USERNAME:payflow}
-    password: ${DB_PASSWORD:payflow}
+    url: jdbc:postgresql://localhost:5432/order_db
+    username: payflow
+    password: payflow
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -20,10 +17,9 @@ spring:
       max-lifetime: 1200000
       connection-timeout: 25000
       pool-name: OrderHikariPool
-  
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     open-in-view: false
     show-sql: false
     properties:
@@ -34,15 +30,12 @@ spring:
           batch_size: 20
         order_inserts: true
         order_updates: true
-  
   flyway:
     enabled: false
-  
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: localhost:9092
     properties:
       spring.json.trusted.packages: "*"
-      spring.kafka.listener.simple.auto-startup: true
     consumer:
       group-id: order-service
       auto-offset-reset: earliest
@@ -50,40 +43,18 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
-  cloud:
-    consul:
-      host: ${CONSUL_HOST:consul}
-      port: ${CONSUL_PORT:8500}
-      discovery:
-        enabled: ${CONSUL_ENABLED:false}
-        register: true
-        prefer-ip-address: true
-        instance-id: ${spring.application.name}:${server.port}
-        health-check-path: /actuator/health
-        health-check-interval: 10s
-
-# Application-specific configuration (not Spring managed)
 application:
   payment-service:
-    url: ${PAYMENT_SERVICE_URL:${APPLICATION_PAYMENT_SERVICE_URL:http://localhost:8083}}
+    url: http://payment-service:8083
   notification-service:
-    url: ${NOTIFICATION_SERVICE_URL:${APPLICATION_NOTIFICATION_SERVICE_URL:http://localhost:8084}}
+    url: http://notification-service:8084
   kafka:
     topic:
       order-events: order.events
       payment-events: payment.events
       notification-events: notification.events
-
-vault:
-  uri: ${VAULT_ADDR:http://localhost:8200}
-  token: ${VAULT_TOKEN:}
-  enabled: ${VAULT_ENABLED:false}
-  ssl:
-    enabled: true
-  kv:
-    enabled: true
 
 management:
   endpoints:
@@ -97,7 +68,4 @@ management:
 logging:
   level:
     root: INFO
-    dev.payment: DEBUG
-    org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

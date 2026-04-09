@@ -1,6 +1,0 @@
-spring:
-  config:
-    activate:
-      on-profile: hybrid
-  datasource:
-    url: jdbc:postgresql://${DB_HOST:host.docker.internal}:${DB_PORT:5432}/${DB_NAME:auth_db}

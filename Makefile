@@ -1,51 +1,57 @@
 .PHONY: help \
-  infra-up infra-down infra-logs infra-status \
-  logs ps status health diagnose \
+  docker-up docker-down \
+  infra-up infra-down infra-logs \
   dev dev-stop \
+  logs ps health diagnose \
   test lint format \
-  frontend-dev frontend-build \
-  clean docker-prune
+  clean
 
 help:
 	@echo "PayFlow - Development Commands"
 	@echo ""
-	@echo "  INFRASTRUCTURE"
-	@echo "    make infra-up      - Start Docker infra (postgres, redis, kafka, etc)"
+	@echo "  DOCKER MODE (Full stack in Docker)"
+	@echo "    make docker-up      - Start infra + all services in Docker"
+	@echo "    make docker-down    - Stop all Docker services"
+	@echo ""
+	@echo "  LOCAL MODE (Backend local, infra in Docker)"
+	@echo "    make infra-up      - Start Docker infra only"
 	@echo "    make infra-down    - Stop Docker infra"
-	@echo "    make infra-logs    - View infra logs"
-	@echo "    make infra-status  - Show infra status"
+	@echo "    make dev           - Start backend services locally (IDE)"
+	@echo "    make dev-stop      - Stop local backend services"
 	@echo ""
-	@echo "  DEVELOPMENT"
-	@echo "    make dev           - Start all services locally"
-	@echo "    make dev-stop      - Stop all local services"
-	@echo "    make diagnose      - Health check all services"
-	@echo ""
-	@echo "  LOGS & STATUS"
+	@echo "  UTILS"
 	@echo "    make logs          - View Docker logs"
 	@echo "    make ps            - Show Docker containers"
-	@echo "    make status        - Show detailed status"
 	@echo "    make health        - Check service health"
-	@echo ""
-	@echo "  CODE"
-	@echo "    make test          - Run all tests"
+	@echo "    make diagnose      - Full diagnostics"
+	@echo "    make test          - Run tests"
 	@echo "    make lint          - Run linters"
 	@echo "    make format        - Format code"
 	@echo ""
-	@echo "  FRONTEND"
-	@echo "    make frontend-dev  - Start frontend dev server"
-	@echo "    make frontend-build - Build frontend"
-	@echo ""
 	@echo "  CLEANUP"
-	@echo "    make clean         - Stop infra and remove volumes"
-	@echo "    make docker-prune  - Full Docker cleanup"
+	@echo "    make clean         - Stop and remove volumes"
 
 # ===========================================
-# Infrastructure
+# Docker Mode (Full stack)
+# ===========================================
+
+docker-up:
+	@echo "Starting full stack in Docker..."
+	docker compose --profile services up -d --wait
+	@echo "All services ready!"
+	@echo "  API Gateway: http://localhost:8080"
+	@echo "  Frontend:   http://localhost:5173"
+
+docker-down:
+	docker compose --profile services down
+
+# ===========================================
+# Local Mode (Backend local, infra Docker)
 # ===========================================
 
 infra-up:
 	@echo "Starting infrastructure..."
-	docker compose up -d --wait
+	docker compose --profile infra up -d --wait
 	@echo "Infrastructure ready!"
 
 infra-down:
@@ -53,13 +59,6 @@ infra-down:
 
 infra-logs:
 	docker compose logs -f
-
-infra-status:
-	@docker compose ps
-
-# ===========================================
-# Development
-# ===========================================
 
 dev:
 	./run-local.sh
@@ -70,7 +69,7 @@ dev-stop:
 	@echo "Local services stopped"
 
 # ===========================================
-# Logs & Status
+# Utils
 # ===========================================
 
 logs:
@@ -78,9 +77,6 @@ logs:
 
 ps:
 	docker compose ps
-
-status:
-	docker compose ps -a
 
 health:
 	@echo "Checking service health..."
@@ -114,24 +110,9 @@ format:
 	cd web/frontend && npm run format || true
 
 # ===========================================
-# Frontend
-# ===========================================
-
-frontend-dev:
-	@echo "Starting frontend..."
-	cd web/frontend && npm run dev
-
-frontend-build:
-	cd web/frontend && npm run build
-
-# ===========================================
 # Cleanup
 # ===========================================
 
 clean:
 	docker compose down -v
-	@echo "Docker volumes removed"
-
-docker-prune:
-	docker system prune -af --volumes
-	@echo "Docker cleanup complete"
+	@echo "Docker stopped and volumes removed"

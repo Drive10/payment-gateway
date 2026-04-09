@@ -1,16 +1,2 @@
-spring:
-  application:
-    name: simulator-service
-  flyway:
-    enabled: false
-
-server:
-  port: ${SERVER_PORT:8086}
-
-logging:
-  level:
-    root: INFO
-    dev.payment: DEBUG
-
 webhook:
-  service-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+  service-url: http://localhost:8084

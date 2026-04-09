@@ -1,22 +1,6 @@
 spring:
-  application:
-    name: audit-service
-
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/audit_db}
-      auto-index-creation: true
-
+      uri: mongodb://mongodb:27017/audit_db
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: audit-service-group
-      auto-offset-reset: earliest
-
-server:
-  port: ${SERVER_PORT:8090}
-
-logging:
-  level:
-    root: INFO
-    dev.payment: DEBUG
+    bootstrap-servers: kafka:9092
