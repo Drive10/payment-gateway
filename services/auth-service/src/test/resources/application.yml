@@ -1,0 +1,24 @@
+jwt:
+  secret: dGVzdC1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLWhtYWMtc2hhLTI1Ni13aGljaC1yZXF1aXJlcy1hdC1sZWFzdC0zMi1jaGFyYWN0ZXJz
+  expiration: 3600
+  refresh-expiration: 604800
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+
+server:
+  port: 8081
+
+logging:
+  level:
+    root: WARN
