@@ -1,5 +1,6 @@
 -- ===========================================
 -- PayFlow Database Initialization
+-- Creates databases only (tables created by JPA)
 -- ===========================================
 
 -- Create databases for each service

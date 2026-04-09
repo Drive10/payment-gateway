@@ -45,28 +45,17 @@ help:
 
 infra-up:
 	@echo "Starting infrastructure..."
-	docker compose up -d postgres mongodb redis zookeeper kafka zipkin
-	@echo "Waiting for infrastructure..."
-	@timeout=120; interval=5; elapsed=0; \
-	while [ $$elapsed -lt $$timeout ]; do \
-		healthy=true; \
-		for svc in postgres redis; do \
-			status=$$(docker compose ps --format json $$svc 2>/dev/null | grep -o '"health_status":"[^"]*"' | cut -d'"' -f4); \
-			if [ "$$status" != "healthy" ]; then healthy=false; fi; \
-		done; \
-		if [ "$$healthy" = true ]; then echo "Infrastructure ready!"; exit 0; fi; \
-		sleep $$interval; elapsed=$$((elapsed + interval)); \
-	done; \
-	echo "Warning: Some services may still be starting"
+	docker compose up -d --wait
+	@echo "Infrastructure ready!"
 
 infra-down:
 	docker compose down
 
 infra-logs:
-	docker compose logs -f postgres mongodb redis kafka
+	docker compose logs -f
 
 infra-status:
-	@docker compose ps postgres mongodb redis kafka
+	@docker compose ps
 
 # ===========================================
 # Development
