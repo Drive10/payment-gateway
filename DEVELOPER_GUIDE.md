@@ -6,254 +6,131 @@ Welcome to PayFlow! This guide will help you get started with local development.
 
 - Docker & Docker Compose
 - Java 21+ (for backend)
-- Node.js 22+ & npm (for frontend)
+- Node.js 20+ & npm (for frontend)
 - Maven 3.9+ (for backend builds)
+- IntelliJ IDEA (recommended for backend)
+- VSCode (recommended for frontend)
 
 ## Quick Start
 
-### 1. Clone and Setup
+### 1. Start Infrastructure
 
 ```bash
-git clone https://github.com/Drive10/payflow.git
-cd payflow
-```
-
-### 2. Start Development
-
-```bash
-# Option A: Full stack (all services in Docker)
+# Terminal 1: Start Docker infrastructure
 docker compose up -d
-
-# Option B: Development mode (infra + backend in Docker, frontend local)
-docker compose --profile infra up -d
-make frontend-dev
 ```
 
-### 3. Access Services
+This starts: PostgreSQL, MongoDB, Redis, Kafka, Zipkin
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| Frontend | http://localhost:5173 | Checkout UI |
-| API Gateway | http://localhost:8080 | REST API entry |
-| GraphQL | http://localhost:8087/graphiql | GraphQL Playground |
-| Grafana | http://localhost:3000 | Monitoring (admin/admin) |
-| Prometheus | http://localhost:9090 | Metrics |
-| Jaeger | http://localhost:16686 | Distributed Tracing |
+### 2. Start Backend (IntelliJ)
+
+Run each service from IntelliJ using Maven:
+
+```bash
+# Run services individually
+mvn spring-boot:run -pl services/auth-service
+mvn spring-boot:run -pl services/order-service
+mvn spring-boot:run -pl services/payment-service
+mvn spring-boot:run -pl services/notification-service
+mvn spring-boot:run -pl services/simulator-service
+mvn spring-boot:run -pl services/analytics-service
+mvn spring-boot:run -pl services/audit-service
+mvn spring-boot:run -pl services/api-gateway
+```
+
+Or create IntelliJ Run Configurations for each service.
+
+### 3. Start Frontend (VSCode)
+
+```bash
+# Terminal 2: Start frontend
+cd web/frontend
+npm run dev
+```
+
+## Service Ports
+
+| Service | Port |
+|---------|------|
+| Frontend | http://localhost:5173 |
+| API Gateway | http://localhost:8080 |
+| Auth Service | http://localhost:8081 |
+| Order Service | http://localhost:8082 |
+| Payment Service | http://localhost:8083 |
+| Notification | http://localhost:8084 |
+| Simulator | http://localhost:8086 |
+| Analytics | http://localhost:8089 |
+| Audit Service | http://localhost:8090 |
+
+## Infrastructure Ports
+
+| Service | Port |
+|---------|------|
+| PostgreSQL | 5432 |
+| MongoDB | 27017 |
+| Redis | 6379 |
+| Kafka | 9092 |
+| Zipkin | 9411 |
 
 ## Common Commands
 
 ```bash
-# Development
-make dev              # Clean start (down-v + up)
-make rebuild          # Rebuild all services
-make diagnose         # Run diagnostics
+# Start infrastructure
+docker compose up -d
 
-# Logs
-make logs             # All logs
-make logs SERVICE=payment-service  # Specific service
+# Stop infrastructure
+docker compose down
 
-# Testing
-make test             # Run all tests
-make test-backend     # Backend only
-make test-frontend    # Frontend only
+# Start with fresh data
+docker compose down -v
+docker compose up -d
 
-# Code Quality
-make lint             # Run linters
-make format           # Format code
+# Frontend
+cd web/frontend
+npm run dev      # Development
+npm run build    # Production build
 
-# Cleanup
-make down             # Stop all
-make down-v           # Stop + remove volumes
+# Backend tests
+mvn test -pl services/payment-service
+
+# Frontend tests
+cd web/frontend
+npm test
 ```
-
-## Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Frontend (Port 5173)                    │
-│               React + Vite → nginx (production)             │
-└────────────────────────────┬──────────────────────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  API Gateway    │
-                    │    (8080)       │
-                    └────────┬────────┘
-                             │
-     ┌────────────┬─────────┼─────────┬────────────┐
-     ▼            ▼         ▼         ▼            ▼
-┌────────┐ ┌────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐
-│  Auth  │ │ Order  │ │ Payment  │ │  Notif   │ │Analytics│
-│ 8081   │ │ 8082   │ │   8083   │ │  8084    │ │  8089   │
-└────────┘ └────────┘ └──────────┘ └──────────┘ └─────────┘
-     │            │         │          │            │
-     └────────────┴─────────┼─────────┴────────────┘
-                             │
-          ┌──────────────────┼──────────────────┐
-          ▼                  ▼                  ▼
-    ┌───────────┐    ┌─────────────┐    ┌───────────┐
-    │ PostgreSQL│    │   MongoDB   │    │   Redis   │
-    │   (5432)  │    │   (27017)   │    │  (6379)   │
-    └───────────┘    └─────────────┘    └───────────┘
-          │                  │                  │
-          └──────────────────┼──────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │     Kafka       │
-                    │    (9092)       │
-                    └─────────────────┘
-                             │
-          ┌──────────────────┼──────────────────┐
-          ▼                  ▼                  ▼
-   ┌─────────────┐  ┌─────────────┐   ┌─────────────┐
-   │Notification │  │  Analytics  │   │   Search    │
-   │  Service    │  │  Service    │   │  Service    │
-   └─────────────┘  └─────────────┘   └─────────────┘
-```
-
-## Service Endpoints
-
-### API Gateway (8080)
-- All REST API routes via `/api/v1/*`
-- Health: `GET /actuator/health`
-
-### Auth Service (8081)
-- `POST /api/v1/auth/register` - Register user
-- `POST /api/v1/auth/login` - Login
-- `POST /api/v1/auth/refresh` - Refresh token
-- `POST /api/v1/auth/logout` - Logout
-- `GET /api/v1/auth/me` - Current user
-
-### Order Service (8082)
-- `POST /api/v1/orders` - Create order
-- `GET /api/v1/orders` - List orders
-- `GET /api/v1/orders/{id}` - Get order
-- `PUT /api/v1/orders/{id}` - Update order
-
-### Payment Service (8083)
-- `POST /api/v1/payments` - Create payment
-- `POST /api/v1/payments/{id}/capture` - Capture payment
-- `POST /api/v1/payments/{id}/refunds` - Refund
-- `GET /api/v1/payments` - List payments
-- `GET /api/v1/payments/{id}` - Get payment
-
-### Notification Service (8084)
-- `POST /api/v1/notifications/send` - Send notification
-- `GET /api/v1/webhooks` - List webhooks
-- `POST /api/v1/webhooks` - Register webhook
-
-### GraphQL Gateway (8087)
-- Playground: `http://localhost:8087/graphiql`
-- Endpoint: `http://localhost:8087/graphql`
-
-### Search Service (8088)
-- `GET /api/v1/search/payments` - Search payments
-- `GET /api/v1/search/orders` - Search orders
-
-### Analytics Service (8089)
-- `GET /api/v1/analytics/summary` - Analytics summary
-- `GET /api/v1/analytics/reports` - Generate reports
-
-### Audit Service (8089)
-- MongoDB-based audit logging
-- Event sourcing support
 
 ## Environment Variables
 
-Create `.env` file with:
+Main configuration is in `.env` file. Key variables:
 
-```bash
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=payflow
-DB_USERNAME=payflow
-DB_PASSWORD=payflow
+- `DB_HOST=localhost` - PostgreSQL
+- `REDIS_HOST=localhost` - Redis
+- `KAFKA_BOOTSTRAP_SERVERS=localhost:9092` - Kafka
 
-# MongoDB
-MONGO_HOST=localhost
-MONGO_PORT=27017
-MONGO_DB=audit
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# JWT (change in production!)
-JWT_SECRET=your-secret-key-min-32-chars
-JWT_EXPIRATION=3600000
-
-# Payment Providers
-STRIPE_API_KEY=sk_test_xxx
-RAZORPAY_KEY_ID=xxx
-RAZORPAY_KEY_SECRET=xxx
+For frontend, create `web/frontend/.env`:
 ```
-
-## Testing Payment Flow
-
-1. Open http://localhost:5173
-2. Enter amount (e.g., 500)
-3. Select "Test/Sandbox" mode
-4. Enter test card: `4111 1111 1111 1111`, any future date, CVV: 123
-5. Complete payment
-6. Download PDF receipt
+VITE_API_BASE_URL=http://localhost:8080
+```
 
 ## Troubleshooting
 
-### Services won't start
+### Port already in use
 ```bash
-make diagnose        # Run diagnostics
-make down -v         # Clean restart
-docker system prune  # Clean Docker
+# Find process using port
+lsof -i :8080
+# Kill if needed
+kill <PID>
 ```
 
-### Port conflicts
+### Database connection issues
 ```bash
-docker compose ps    # Check running services
-lsof -i :8080        # Find what's using a port
+# Check if PostgreSQL is running
+docker compose ps postgres
+# Restart infrastructure
+docker compose restart
 ```
 
-### Database issues
+### Clear all data
 ```bash
-make db-reset        # Reset databases
+docker compose down -v
+docker compose up -d
 ```
-
-### View logs
-```bash
-make logs            # All services
-make logs SERVICE=auth-service  # Specific
-```
-
-### Health checks
-```bash
-curl http://localhost:8080/actuator/health  # API Gateway
-curl http://localhost:8081/actuator/health  # Auth Service
-```
-
-## Making Changes
-
-### Backend (Java/Spring)
-1. Make changes in `services/*/src/main/java/`
-2. Rebuild: `docker compose build <service>`
-3. Restart: `docker compose up -d <service>`
-
-### Frontend (React)
-1. Make changes in `web/frontend/src/`
-2. Changes hot-reload with `npm run dev` in web/frontend
-
-## Production Considerations
-
-1. Change all default passwords in `.env`
-2. Use strong JWT_SECRET (min 32 chars, base64)
-3. Enable HTTPS/TLS
-4. Configure proper domain names
-5. Review security settings in SECURITY.md
-6. Set up proper monitoring and alerting
-7. Configure backup strategies for databases
-
-## Need Help?
-
-- Check logs: `make logs`
-- Run diagnostics: `make diagnose`
-- View service health: `make health`
-- Check README.md for full architecture
-- See CONTRIBUTING.md for development workflow

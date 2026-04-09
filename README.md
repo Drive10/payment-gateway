@@ -169,50 +169,36 @@
 ### Prerequisites
 - Java 21+
 - Docker & Docker Compose
-- Node.js 22+ (for web apps)
+- Node.js 20+ (for frontend)
 - Maven 3.9+
+- IntelliJ IDEA (backend) + VSCode (frontend)
 
-### Run with Docker (Recommended)
+### Local Development
+
+**1. Start Infrastructure (Docker)**
 ```bash
-# Start all infrastructure + services
 docker compose up -d
-
-# Check service health
-docker compose ps
-
-# View logs
-docker compose logs -f
 ```
 
-### Run Monitoring Stack
+**2. Start Backend (IntelliJ)**
 ```bash
-docker compose -f docker-compose.monitoring.yml up -d
-
-# Access dashboards
-# - Grafana: http://localhost:3000 (admin/admin)
-# - Prometheus: http://localhost:9090
-# - Jaeger: http://localhost:16686
+# Run each service via Maven
+mvn spring-boot:run -pl services/api-gateway
+mvn spring-boot:run -pl services/auth-service
+mvn spring-boot:run -pl services/order-service
+# ... etc
 ```
 
-### Run in Dev Mode (Hot Reload)
+**3. Start Frontend (VSCode)**
 ```bash
-# Start infrastructure only
-docker compose --profile infra up -d
-
-# Run services locally with Maven
-./scripts/dev.sh start
-
-# Start web apps
-cd web/frontend && npm run dev
+cd web/frontend
+npm run dev
 ```
 
 ### Build
 ```bash
 # Build all services
 mvn clean package -DskipTests
-
-# Build Docker images
-docker build -t payment-gateway/api-gateway:latest -f services/api-gateway/Dockerfile .
 ```
 
 ## API Endpoints
@@ -289,7 +275,7 @@ query {
 ## Project Structure
 
 ```
-payment-gateway/
+payflow/
 ├── libs/common/              # Shared library (DTOs, exceptions, utils)
 ├── services/
 │   ├── api-gateway/          # Central API gateway (8080)
@@ -298,49 +284,19 @@ payment-gateway/
 │   ├── payment-service/      # Payment orchestration (8083)
 │   ├── notification-service/ # Notifications, webhooks, feature flags (8084)
 │   ├── simulator-service/    # Payment simulation & testing (8086)
-│   ├── graphql-gateway/      # GraphQL API with federation (8087)
-│   ├── search-service/       # Elasticsearch search (8088)
 │   ├── analytics-service/    # Risk, settlements, disputes, reports (8089)
-│   └── audit-service/        # MongoDB audit logging (8089)
+│   └── audit-service/        # MongoDB audit logging (8090)
 ├── web/
-│   └── frontend/             # Customer checkout (React)
-├── database/                 # Database initialization scripts
-├── infra/                    # Infrastructure configs (Kafka, Postgres, Redis, Vault)
-├── k8s/
-│   └── base/                 # Kubernetes manifests
-├── tests/                    # Integration and E2E tests
-├── docs/                     # Architecture and compliance documentation
-└── scripts/                  # Development scripts
+│   └── frontend/             # Customer checkout (React 18)
+├── infra/                    # Infrastructure configs
+└── docker-compose.yml        # Infrastructure services
 ```
-
-## Kubernetes Deployment
-
-```bash
-# Apply all services
-kubectl apply -f k8s/base/
-
-# Check deployment status
-kubectl get pods -l 'app in (api-gateway,payment-service,auth-service)'
-
-# View logs
-kubectl logs -l app=api-gateway -f
-```
-
-## CI/CD
-
-GitHub Actions workflow includes:
-- **Build**: Compiles all services and builds Docker images
-- **Test**: Unit, integration, and E2E tests
-- **Security**: Trivy vulnerability scanning and secret detection
-- **Deploy**: Pushes images to GitHub Container Registry
 
 ## Documentation
 
+- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - Local development setup
 - [docs/SERVICES.md](docs/SERVICES.md) - Complete service reference
 - [docs/API.md](docs/API.md) - API endpoints and examples
-- [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) - Infrastructure details
-- [.ai/context/architecture.md](.ai/context/architecture.md) - Architecture overview
-- [.ai/context/services.md](.ai/context/services.md) - Service context
 
 ## License
 
