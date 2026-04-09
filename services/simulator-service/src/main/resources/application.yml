@@ -6,9 +6,9 @@ spring:
   application:
     name: simulator-service
   datasource:
-    url: jdbc:postgresql://postgres-simulator:5432/payflow_simulator
-    username: payflow_simulator
-    password: payflow_simulator
+    url: jdbc:postgresql://postgres:5432/payflow_simulator
+    username: payflow
+    password: payflow
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -19,7 +19,7 @@ spring:
       pool-name: SimulatorHikariPool
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
@@ -30,9 +30,7 @@ spring:
         order_inserts: true
         order_updates: true
   flyway:
-    enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: true
+    enabled: false
 
 webhook:
   service-url: http://notification-service:8084

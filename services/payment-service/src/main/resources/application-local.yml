@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/payment_db
+    url: jdbc:postgresql://localhost:5432/payflow_payment
   kafka:
     bootstrap-servers: localhost:9092
 

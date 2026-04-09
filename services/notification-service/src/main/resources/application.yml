@@ -6,9 +6,9 @@ spring:
   application:
     name: notification-service
   datasource:
-    url: jdbc:postgresql://postgres-notification:5432/payflow_notification
-    username: payflow_notification
-    password: payflow_notification
+    url: jdbc:postgresql://postgres:5432/payflow_notification
+    username: payflow
+    password: payflow
     driver-class-name: org.postgresql.Driver
   data:
     redis:
@@ -17,7 +17,7 @@ spring:
       password: payflow-redis
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     open-in-view: false
     show-sql: false
     properties:
@@ -29,9 +29,7 @@ spring:
         order_inserts: true
         order_updates: true
   flyway:
-    enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: true
+    enabled: false
   kafka:
     bootstrap-servers: kafka:29092
     properties:
