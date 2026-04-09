@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -23,6 +22,7 @@ import java.util.stream.Collectors;
 public class NotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
+
     private final NotificationRepository notificationRepository;
     private final TemplateRepository templateRepository;
 
@@ -33,44 +33,27 @@ public class NotificationService {
 
     @Transactional
     public NotificationResponse sendEmail(EmailRequest request) {
-        Notification notification = Notification.builder()
-                .userId(request.getUserId() != null ? UUID.fromString(request.getUserId()) : UUID.randomUUID())
-                .type(NotificationType.PAYMENT_SUCCESS)
-                .channel(NotificationChannel.EMAIL)
-                .status(NotificationStatus.PENDING)
-                .recipient(request.getTo())
-                .subject(request.getSubject())
-                .content(request.getBody())
-                .build();
-
-        notification = notificationRepository.save(notification);
-        log.info("Email notification created with ID: {}", notification.getId());
-
-        notification.setStatus(NotificationStatus.SENT);
-        notification.setSentAt(java.time.LocalDateTime.now());
-        notification = notificationRepository.save(notification);
-
+        Notification notification = createNotification(
+                NotificationType.PAYMENT_SUCCESS,
+                NotificationChannel.EMAIL,
+                request.to(),
+                request.subject(),
+                request.body()
+        );
+        log.info("notification=email_sent id={} recipient={}", notification.getId(), request.to());
         return toResponse(notification);
     }
 
     @Transactional
     public NotificationResponse sendSms(SmsRequest request) {
-        Notification notification = Notification.builder()
-                .userId(request.getUserId() != null ? UUID.fromString(request.getUserId()) : UUID.randomUUID())
-                .type(NotificationType.PAYMENT_SUCCESS)
-                .channel(NotificationChannel.SMS)
-                .status(NotificationStatus.PENDING)
-                .recipient(request.getTo())
-                .content(request.getMessage())
-                .build();
-
-        notification = notificationRepository.save(notification);
-        log.info("SMS notification created with ID: {}", notification.getId());
-
-        notification.setStatus(NotificationStatus.SENT);
-        notification.setSentAt(java.time.LocalDateTime.now());
-        notification = notificationRepository.save(notification);
-
+        Notification notification = createNotification(
+                NotificationType.PAYMENT_SUCCESS,
+                NotificationChannel.SMS,
+                request.to(),
+                null,
+                request.message()
+        );
+        log.info("notification=sms_sent id={} recipient={}", notification.getId(), request.to());
         return toResponse(notification);
     }
 
@@ -81,20 +64,18 @@ public class NotificationService {
                 .type(NotificationType.PAYMENT_SUCCESS)
                 .channel(NotificationChannel.WEBHOOK)
                 .status(NotificationStatus.PENDING)
-                .recipient(request.getUrl())
-                .subject(request.getEventType())
-                .payload(request.getPayload() != null ? request.getPayload().toString() : null)
-                .eventType(request.getEventType())
+                .recipient(request.url())
+                .subject(request.eventType())
+                .payload(request.payload() != null ? request.payload().toString() : null)
+                .eventType(request.eventType())
                 .build();
 
         notification = notificationRepository.save(notification);
-        log.info("Webhook notification created with ID: {}", notification.getId());
+        log.info("notification=webhook_sent id={} url={}", notification.getId(), request.url());
 
         notification.setStatus(NotificationStatus.SENT);
         notification.setSentAt(java.time.LocalDateTime.now());
-        notification = notificationRepository.save(notification);
-
-        return toResponse(notification);
+        return toResponse(notificationRepository.save(notification));
     }
 
     public Optional<NotificationResponse> findById(UUID id) {
@@ -102,51 +83,40 @@ public class NotificationService {
     }
 
     public List<NotificationResponse> findAll(String userId, String status, int page, int size) {
-        List<Notification> notifications;
-        if (userId != null && status != null) {
-            notifications = notificationRepository.findByUserIdAndStatus(
-                    UUID.fromString(userId),
-                    NotificationStatus.valueOf(status.toUpperCase())
-            );
-        } else if (userId != null) {
-            notifications = notificationRepository.findByUserId(UUID.fromString(userId));
-        } else if (status != null) {
-            notifications = notificationRepository.findByStatus(NotificationStatus.valueOf(status.toUpperCase()));
-        } else {
-            notifications = notificationRepository.findAll();
-        }
-        return notifications.stream().map(this::toResponse).collect(Collectors.toList());
+        List<Notification> notifications = findNotificationsByFilter(userId, status);
+        return notifications.stream().map(this::toResponse).toList();
     }
 
     public List<TemplateResponse> getAllTemplates() {
         return templateRepository.findAll().stream()
                 .map(this::toTemplateResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional
     public TemplateResponse createTemplate(CreateTemplateRequest request) {
         Template template = Template.builder()
-                .templateKey(request.getTemplateKey())
-                .name(request.getName())
-                .description(request.getDescription())
-                .channel(request.getChannel())
-                .subject(request.getSubject())
-                .bodyTemplate(request.getBodyTemplate())
-                .eventType(request.getEventType())
+                .templateKey(request.templateKey())
+                .name(request.name())
+                .description(request.description())
+                .channel(request.channel())
+                .subject(request.subject())
+                .bodyTemplate(request.bodyTemplate())
+                .eventType(request.eventType())
                 .active(true)
                 .build();
         template = templateRepository.save(template);
+        log.info("template=created id={} key={}", template.getId(), template.getTemplateKey());
         return toTemplateResponse(template);
     }
 
     public Optional<TemplateResponse> updateTemplate(UUID id, UpdateTemplateRequest request) {
         return templateRepository.findById(id).map(template -> {
-            if (request.getName() != null) template.setName(request.getName());
-            if (request.getSubject() != null) template.setSubject(request.getSubject());
-            if (request.getBodyTemplate() != null) template.setBodyTemplate(request.getBodyTemplate());
-            if (request.getDescription() != null) template.setDescription(request.getDescription());
-            if (request.getActive() != null) template.setActive(request.getActive());
+            if (request.name() != null) template.setName(request.name());
+            if (request.subject() != null) template.setSubject(request.subject());
+            if (request.bodyTemplate() != null) template.setBodyTemplate(request.bodyTemplate());
+            if (request.description() != null) template.setDescription(request.description());
+            if (request.active() != null) template.setActive(request.active());
             return toTemplateResponse(templateRepository.save(template));
         });
     }
@@ -157,13 +127,11 @@ public class NotificationService {
             notification.setStatus(NotificationStatus.PENDING);
             notification.setRetryCount(notification.getRetryCount() + 1);
             notification = notificationRepository.save(notification);
-            log.info("Retrying notification with ID: {}", id);
+            log.info("notification=retry id={} attempt={}", id, notification.getRetryCount());
 
             notification.setStatus(NotificationStatus.SENT);
             notification.setSentAt(java.time.LocalDateTime.now());
-            notification = notificationRepository.save(notification);
-
-            return toResponse(notification);
+            return toResponse(notificationRepository.save(notification));
         });
     }
 
@@ -180,37 +148,72 @@ public class NotificationService {
         return notificationRepository.save(notification);
     }
 
+    private Notification createNotification(NotificationType type, NotificationChannel channel,
+                                          String recipient, String subject, String content) {
+        Notification notification = Notification.builder()
+                .userId(UUID.randomUUID())
+                .type(type)
+                .channel(channel)
+                .status(NotificationStatus.PENDING)
+                .recipient(recipient)
+                .subject(subject)
+                .content(content)
+                .build();
+        notification = notificationRepository.save(notification);
+
+        notification.setStatus(NotificationStatus.SENT);
+        notification.setSentAt(java.time.LocalDateTime.now());
+        return notificationRepository.save(notification);
+    }
+
+    private List<Notification> findNotificationsByFilter(String userId, String status) {
+        if (userId != null && status != null) {
+            return notificationRepository.findByUserIdAndStatus(
+                    UUID.fromString(userId),
+                    NotificationStatus.valueOf(status.toUpperCase())
+            );
+        }
+        if (userId != null) {
+            return notificationRepository.findByUserId(UUID.fromString(userId));
+        }
+        if (status != null) {
+            return notificationRepository.findByStatus(NotificationStatus.valueOf(status.toUpperCase()));
+        }
+        return notificationRepository.findAll();
+    }
+
     private NotificationResponse toResponse(Notification notification) {
-        NotificationResponse response = new NotificationResponse();
-        response.setId(notification.getId());
-        response.setUserId(notification.getUserId());
-        response.setType(notification.getType() != null ? notification.getType().name() : null);
-        response.setChannel(notification.getChannel());
-        response.setStatus(notification.getStatus());
-        response.setRecipient(notification.getRecipient());
-        response.setSubject(notification.getSubject());
-        response.setBody(notification.getContent());
-        response.setEventType(notification.getEventType());
-        response.setRetryCount(notification.getRetryCount());
-        response.setLastError(notification.getLastError());
-        response.setCreatedAt(notification.getCreatedAt());
-        response.setSentAt(notification.getSentAt());
-        return response;
+        return new NotificationResponse(
+                notification.getId(),
+                notification.getUserId(),
+                notification.getType() != null ? notification.getType().name() : null,
+                notification.getChannel(),
+                notification.getStatus(),
+                notification.getRecipient(),
+                notification.getSubject(),
+                notification.getContent(),
+                notification.getEventType(),
+                null,
+                notification.getRetryCount(),
+                notification.getLastError(),
+                notification.getCreatedAt(),
+                notification.getSentAt()
+        );
     }
 
     private TemplateResponse toTemplateResponse(Template template) {
-        TemplateResponse response = new TemplateResponse();
-        response.setId(template.getId());
-        response.setTemplateKey(template.getTemplateKey());
-        response.setName(template.getName());
-        response.setDescription(template.getDescription());
-        response.setChannel(template.getChannel());
-        response.setSubject(template.getSubject());
-        response.setBodyTemplate(template.getBodyTemplate());
-        response.setEventType(template.getEventType());
-        response.setActive(template.isActive());
-        response.setCreatedAt(template.getCreatedAt());
-        response.setUpdatedAt(template.getUpdatedAt());
-        return response;
+        return new TemplateResponse(
+                template.getId(),
+                template.getTemplateKey(),
+                template.getName(),
+                template.getDescription(),
+                template.getChannel(),
+                template.getSubject(),
+                template.getBodyTemplate(),
+                template.getEventType(),
+                template.isActive(),
+                template.getCreatedAt(),
+                template.getUpdatedAt()
+        );
     }
 }

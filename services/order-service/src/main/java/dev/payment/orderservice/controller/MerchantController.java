@@ -1,20 +1,20 @@
 package dev.payment.orderservice.controller;
-import jakarta.validation.Valid;
 
+import dev.payment.common.api.ApiResponse;
+import dev.payment.orderservice.dto.*;
 import dev.payment.orderservice.entity.ApiKey;
 import dev.payment.orderservice.entity.BankAccount;
 import dev.payment.orderservice.entity.KycDocument;
 import dev.payment.orderservice.entity.KycStatus;
 import dev.payment.orderservice.entity.Merchant;
-import dev.payment.orderservice.service.MerchantService;
-import dev.payment.orderservice.service.KycService;
 import dev.payment.orderservice.service.ApiKeyService;
-import dev.payment.common.api.ApiResponse;
+import dev.payment.orderservice.service.KycService;
+import dev.payment.orderservice.service.MerchantService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,18 +22,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/merchants")
 public class MerchantController {
-
-    private static final String FIELD_EMAIL = "email";
-    private static final String FIELD_BUSINESS_NAME = "businessName";
-    private static final String FIELD_DOCUMENT_TYPE = "documentType";
-    private static final String FIELD_DOCUMENT_NUMBER = "documentNumber";
-    private static final String FIELD_FILE_URL = "fileUrl";
-    private static final String FIELD_FILE_KEY = "fileKey";
-    private static final String FIELD_ACCOUNT_HOLDER_NAME = "accountHolderName";
-    private static final String FIELD_BANK_NAME = "bankName";
-    private static final String FIELD_ACCOUNT_NUMBER = "accountNumber";
-    private static final String FIELD_ACCOUNT_TYPE = "accountType";
-    private static final String VALUE_SYSTEM = "SYSTEM";
 
     private final MerchantService merchantService;
     private final KycService kycService;
@@ -46,19 +34,8 @@ public class MerchantController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Merchant>> createMerchant(@RequestBody @Valid Map<String, Object> request) {
-        validateCreateRequest(request);
-
-        Merchant merchant = new Merchant();
-        merchant.setBusinessName(getString(request, FIELD_BUSINESS_NAME));
-        merchant.setLegalName(getString(request, "legalName"));
-        merchant.setEmail(getStringRequired(request, FIELD_EMAIL));
-        merchant.setPhone(getString(request, "phone"));
-        merchant.setWebsite(getString(request, "website"));
-        merchant.setBusinessType(getString(request, "businessType"));
-        merchant.setBusinessCategory(getString(request, "businessCategory"));
-        merchant.setTaxId(getString(request, "taxId"));
-
+    public ResponseEntity<ApiResponse<Merchant>> createMerchant(@Valid @RequestBody CreateMerchantRequest request) {
+        Merchant merchant = mapToMerchant(request);
         Merchant created = merchantService.createMerchant(merchant);
         return ResponseEntity.ok(ApiResponse.success(created));
     }
@@ -81,32 +58,15 @@ public class MerchantController {
     public ResponseEntity<ApiResponse<List<Merchant>>> getAllMerchants(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String kycStatus) {
-
-        List<Merchant> merchants;
-        if (status != null) {
-            merchants = merchantService.getMerchantsByStatus(status);
-        } else if (kycStatus != null) {
-            merchants = merchantService.getMerchantsByKycStatus(kycStatus);
-        } else {
-            merchants = merchantService.getAllMerchants();
-        }
-
+        List<Merchant> merchants = findMerchantsByFilter(status, kycStatus);
         return ResponseEntity.ok(ApiResponse.success(merchants));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Merchant>> updateMerchant(
             @PathVariable UUID id,
-            @RequestBody @Valid Map<String, Object> request) {
-
-        Merchant updates = new Merchant();
-        updates.setBusinessName(getString(request, "businessName"));
-        updates.setLegalName(getString(request, "legalName"));
-        updates.setPhone(getString(request, "phone"));
-        updates.setWebsite(getString(request, "website"));
-        updates.setBusinessType(getString(request, "businessType"));
-        updates.setWebhookUrl(getString(request, "webhookUrl"));
-
+            @Valid @RequestBody UpdateMerchantRequest request) {
+        Merchant updates = mapToUpdateMerchant(request);
         Merchant updated = merchantService.updateMerchant(id, updates);
         return ResponseEntity.ok(ApiResponse.success(updated));
     }
@@ -114,23 +74,16 @@ public class MerchantController {
     @PostMapping("/{id}/kyc/verify")
     public ResponseEntity<ApiResponse<Merchant>> verifyKyc(
             @PathVariable UUID id,
-            @RequestBody @Valid Map<String, Object> request) {
-
-        String verifiedBy = getStringOrDefault(request, "verifiedBy", VALUE_SYSTEM);
-        String notes = getString(request, "notes");
-
-        Merchant updated = merchantService.updateKycStatus(id, "VERIFIED", verifiedBy, notes);
+            @Valid @RequestBody KycVerificationRequest request) {
+        Merchant updated = merchantService.updateKycStatus(id, "VERIFIED", "SYSTEM", request.notes());
         return ResponseEntity.ok(ApiResponse.success(updated));
     }
 
     @PostMapping("/{id}/kyc/reject")
     public ResponseEntity<ApiResponse<Merchant>> rejectKyc(
             @PathVariable UUID id,
-            @RequestBody @Valid Map<String, Object> request) {
-
-        String reason = getStringRequired(request, FIELD_BUSINESS_NAME);
-
-        Merchant updated = merchantService.updateKycStatus(id, "REJECTED", "SYSTEM", reason);
+            @Valid @RequestBody KycRejectionRequest request) {
+        Merchant updated = merchantService.updateKycStatus(id, "REJECTED", "SYSTEM", request.reason());
         return ResponseEntity.ok(ApiResponse.success(updated));
     }
 
@@ -157,7 +110,6 @@ public class MerchantController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // KYC Documents
     @GetMapping("/{id}/kyc-documents")
     public ResponseEntity<ApiResponse<List<KycDocument>>> getKycDocuments(@PathVariable UUID id) {
         List<KycDocument> documents = merchantService.getKycDocuments(id);
@@ -167,14 +119,8 @@ public class MerchantController {
     @PostMapping("/{id}/kyc-documents")
     public ResponseEntity<ApiResponse<KycDocument>> addKycDocument(
             @PathVariable UUID id,
-            @RequestBody @Valid Map<String, Object> request) {
-
-        KycDocument document = new KycDocument();
-        document.setDocumentType(getStringRequired(request, "documentType"));
-        document.setDocumentNumber(getString(request, "documentNumber"));
-        document.setFileUrl(getString(request, "fileUrl"));
-        document.setFileKey(getString(request, "fileKey"));
-
+            @Valid @RequestBody AddKycDocumentRequest request) {
+        KycDocument document = mapToKycDocument(request);
         KycDocument created = merchantService.addKycDocument(id, document);
         return ResponseEntity.ok(ApiResponse.success(created));
     }
@@ -182,8 +128,10 @@ public class MerchantController {
     @PostMapping("/{id}/kyc/submit")
     public ResponseEntity<ApiResponse<Merchant>> submitKyc(
             @PathVariable UUID id,
-            @RequestBody @Valid Map<String, Object> request) {
-        List<KycDocument> documents = parseDocuments(request);
+            @Valid @RequestBody SubmitKycRequest request) {
+        List<KycDocument> documents = request.documents().stream()
+                .map(this::mapToKycDocument)
+                .toList();
         Merchant updated = kycService.submitKyc(id, documents);
         return ResponseEntity.ok(ApiResponse.success(updated));
     }
@@ -191,9 +139,8 @@ public class MerchantController {
     @PostMapping("/{id}/kyc/start-review")
     public ResponseEntity<ApiResponse<Merchant>> startKycReview(
             @PathVariable UUID id,
-            @RequestBody @Valid Map<String, Object> request) {
-        String reviewer = getStringOrDefault(request, "reviewer", "SYSTEM");
-        Merchant updated = kycService.startReview(id, reviewer);
+            @RequestBody KycReviewRequest request) {
+        Merchant updated = kycService.startReview(id, request.reviewer());
         return ResponseEntity.ok(ApiResponse.success(updated));
     }
 
@@ -208,7 +155,6 @@ public class MerchantController {
         )));
     }
 
-    // Bank Accounts
     @GetMapping("/{id}/bank-accounts")
     public ResponseEntity<ApiResponse<List<BankAccount>>> getBankAccounts(@PathVariable UUID id) {
         List<BankAccount> accounts = merchantService.getBankAccounts(id);
@@ -218,20 +164,8 @@ public class MerchantController {
     @PostMapping("/{id}/bank-accounts")
     public ResponseEntity<ApiResponse<BankAccount>> addBankAccount(
             @PathVariable UUID id,
-            @RequestBody @Valid Map<String, Object> request) {
-
-        validateBankAccountRequest(request);
-
-        BankAccount account = new BankAccount();
-        account.setAccountHolderName(getStringRequired(request, "accountHolderName"));
-        account.setBankName(getStringRequired(request, "bankName"));
-        account.setAccountNumber(getStringRequired(request, "accountNumber"));
-        account.setAccountType(getStringRequired(request, "accountType"));
-        account.setIfscCode(getString(request, "ifscCode"));
-        account.setRoutingNumber(getString(request, "routingNumber"));
-        account.setSwiftCode(getString(request, "swiftCode"));
-        account.setIsDefault(getBoolean(request, "isDefault", false));
-
+            @Valid @RequestBody AddBankAccountRequest request) {
+        BankAccount account = mapToBankAccount(request);
         BankAccount created = merchantService.addBankAccount(id, account);
         return ResponseEntity.ok(ApiResponse.success(created));
     }
@@ -239,9 +173,6 @@ public class MerchantController {
     @GetMapping("/{id}/bank-accounts/default")
     public ResponseEntity<ApiResponse<BankAccount>> getDefaultBankAccount(@PathVariable UUID id) {
         BankAccount account = merchantService.getDefaultBankAccount(id);
-        if (account == null) {
-            return ResponseEntity.ok(ApiResponse.success(null));
-        }
         return ResponseEntity.ok(ApiResponse.success(account));
     }
 
@@ -249,12 +180,10 @@ public class MerchantController {
     public ResponseEntity<ApiResponse<Void>> setDefaultBankAccount(
             @PathVariable UUID merchantId,
             @PathVariable UUID accountId) {
-
         merchantService.setDefaultBankAccount(merchantId, accountId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
-    // API Keys
     @GetMapping("/{merchantId}/api-keys")
     public ResponseEntity<ApiResponse<List<ApiKey>>> getApiKeys(@PathVariable UUID merchantId) {
         List<ApiKey> keys = apiKeyService.getMerchantApiKeys(merchantId);
@@ -264,18 +193,17 @@ public class MerchantController {
     @PostMapping("/{merchantId}/api-keys")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createApiKey(
             @PathVariable UUID merchantId,
-            @RequestBody @Valid Map<String, Object> request) {
-        String name = getStringRequired(request, "name");
-        String description = getString(request, "description");
-        List<String> permissions = (List<String>) request.get("permissions");
-        Integer rateLimit = getInt(request, "rateLimitPerMinute");
-        Instant expiresAt = request.get("expiresAt") != null 
-                ? Instant.parse(request.get("expiresAt").toString()) 
-                : null;
-
-        var result = apiKeyService.createApiKey(merchantId, name, description, 
-                permissions, rateLimit, null, expiresAt);
-
+            @Valid @RequestBody CreateApiKeyRequest request) {
+        Instant expiresAt = request.expiresAt() != null ? Instant.parse(request.expiresAt()) : null;
+        var result = apiKeyService.createApiKey(
+                merchantId,
+                request.name(),
+                request.description(),
+                request.permissions(),
+                request.rateLimitPerMinute(),
+                null,
+                expiresAt
+        );
         return ResponseEntity.ok(ApiResponse.success(Map.of(
                 "apiKey", result.rawKey(),
                 "id", result.apiKey().getId(),
@@ -305,77 +233,68 @@ public class MerchantController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
-    // Helper methods
-    private void validateCreateRequest(Map<String, Object> request) {
-        if (!request.containsKey("email") || request.get("email") == null) {
-            throw new IllegalArgumentException("email is required");
+    private List<Merchant> findMerchantsByFilter(String status, String kycStatus) {
+        if (status != null) {
+            return merchantService.getMerchantsByStatus(status);
         }
-        if (!request.containsKey("businessName") || request.get("businessName") == null) {
-            throw new IllegalArgumentException("businessName is required");
+        if (kycStatus != null) {
+            return merchantService.getMerchantsByKycStatus(kycStatus);
         }
+        return merchantService.getAllMerchants();
     }
 
-    private void validateBankAccountRequest(Map<String, Object> request) {
-        if (!request.containsKey("accountHolderName") || request.get("accountHolderName") == null) {
-            throw new IllegalArgumentException("accountHolderName is required");
-        }
-        if (!request.containsKey("bankName") || request.get("bankName") == null) {
-            throw new IllegalArgumentException("bankName is required");
-        }
-        if (!request.containsKey("accountNumber") || request.get("accountNumber") == null) {
-            throw new IllegalArgumentException("accountNumber is required");
-        }
-        if (!request.containsKey("accountType") || request.get("accountType") == null) {
-            throw new IllegalArgumentException("accountType is required");
-        }
+    private Merchant mapToMerchant(CreateMerchantRequest request) {
+        Merchant merchant = new Merchant();
+        merchant.setBusinessName(request.businessName());
+        merchant.setLegalName(request.legalName());
+        merchant.setEmail(request.email());
+        merchant.setPhone(request.phone());
+        merchant.setWebsite(request.website());
+        merchant.setBusinessType(request.businessType());
+        merchant.setBusinessCategory(request.businessCategory());
+        merchant.setTaxId(request.taxId());
+        return merchant;
     }
 
-    private String getString(Map<String, Object> map, String key) {
-        Object value = map.get(key);
-        return value != null ? value.toString() : null;
+    private Merchant mapToUpdateMerchant(UpdateMerchantRequest request) {
+        Merchant merchant = new Merchant();
+        merchant.setBusinessName(request.businessName());
+        merchant.setLegalName(request.legalName());
+        merchant.setPhone(request.phone());
+        merchant.setWebsite(request.website());
+        merchant.setBusinessType(request.businessType());
+        merchant.setWebhookUrl(request.webhookUrl());
+        return merchant;
     }
 
-    private String getStringRequired(Map<String, Object> map, String key) {
-        String value = getString(map, key);
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(key + " is required");
-        }
-        return value;
+    private KycDocument mapToKycDocument(AddKycDocumentRequest request) {
+        KycDocument document = new KycDocument();
+        document.setDocumentType(request.documentType());
+        document.setDocumentNumber(request.documentNumber());
+        document.setFileUrl(request.fileUrl());
+        document.setFileKey(request.fileKey());
+        return document;
     }
 
-    private String getStringOrDefault(Map<String, Object> map, String key, String defaultValue) {
-        String value = getString(map, key);
-        return value != null ? value : defaultValue;
+    private KycDocument mapToKycDocument(SubmitKycRequest.KycDocumentDto dto) {
+        KycDocument document = new KycDocument();
+        document.setDocumentType(dto.documentType());
+        document.setDocumentNumber(dto.documentNumber());
+        document.setFileUrl(dto.fileUrl());
+        document.setFileKey(dto.fileKey());
+        return document;
     }
 
-    private Integer getInt(Map<String, Object> map, String key) {
-        Object value = map.get(key);
-        if (value instanceof Integer) return (Integer) value;
-        if (value instanceof Number) return ((Number) value).intValue();
-        return null;
-    }
-
-    private Boolean getBoolean(Map<String, Object> map, String key, Boolean defaultValue) {
-        Object value = map.get(key);
-        return value != null ? (Boolean) value : defaultValue;
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<KycDocument> parseDocuments(Map<String, Object> request) {
-        List<KycDocument> documents = new ArrayList<>();
-        Object docsObj = request.get("documents");
-        if (docsObj instanceof List<?>) {
-            for (Object docObj : (List<?>) docsObj) {
-                if (docObj instanceof Map) {
-                    KycDocument doc = new KycDocument();
-                    doc.setDocumentType(getString((Map<String, Object>) docObj, "documentType"));
-                    doc.setDocumentNumber(getString((Map<String, Object>) docObj, "documentNumber"));
-                    doc.setFileUrl(getString((Map<String, Object>) docObj, "fileUrl"));
-                    doc.setFileKey(getString((Map<String, Object>) docObj, "fileKey"));
-                    documents.add(doc);
-                }
-            }
-        }
-        return documents;
+    private BankAccount mapToBankAccount(AddBankAccountRequest request) {
+        BankAccount account = new BankAccount();
+        account.setAccountHolderName(request.accountHolderName());
+        account.setBankName(request.bankName());
+        account.setAccountNumber(request.accountNumber());
+        account.setAccountType(request.accountType());
+        account.setIfscCode(request.ifscCode());
+        account.setRoutingNumber(request.routingNumber());
+        account.setSwiftCode(request.swiftCode());
+        account.setIsDefault(request.isDefault());
+        return account;
     }
 }

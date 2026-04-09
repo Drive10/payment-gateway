@@ -17,7 +17,7 @@ import dev.payment.paymentservice.service.AuthService;
 import dev.payment.paymentservice.service.DisputeService;
 import dev.payment.paymentservice.service.FeeConfigService;
 import dev.payment.paymentservice.service.OrderService;
-import dev.payment.paymentservice.service.PaymentService;
+import dev.payment.paymentservice.service.PaymentQueryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -42,7 +42,7 @@ import java.util.UUID;
 @Tag(name = "Administration")
 public class AdminController {
 
-    private final PaymentService paymentService;
+    private final PaymentQueryService queryService;
     private final OrderService orderService;
     private final AuditService auditService;
     private final AuthService authService;
@@ -50,14 +50,14 @@ public class AdminController {
     private final DisputeService disputeService;
 
     public AdminController(
-            PaymentService paymentService,
+            PaymentQueryService queryService,
             OrderService orderService,
             AuditService auditService,
             AuthService authService,
             FeeConfigService feeConfigService,
             DisputeService disputeService
     ) {
-        this.paymentService = paymentService;
+        this.queryService = queryService;
         this.orderService = orderService;
         this.auditService = auditService;
         this.authService = authService;
@@ -72,9 +72,9 @@ public class AdminController {
             @RequestParam(defaultValue = "20") int size,
             Authentication authentication
     ) {
-        User actor = authService.getCurrentUser(authentication.getName());
+        authService.getCurrentUser(authentication.getName());
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
-        var payments = paymentService.getPayments(actor, status, pageable, true);
+        var payments = queryService.findAll(status, pageable);
         return ApiResponse.success(new PageResponse<>(
                 payments.getContent(),
                 payments.getNumber(),

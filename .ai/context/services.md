@@ -122,6 +122,8 @@
 
 ## 7. GraphQL Gateway (8087)
 
+> ⚠️ **NOT IMPLEMENTED** - Planned for future release
+
 ### Responsibility
 - GraphQL API with schema federation
 - Real-time subscriptions (WebSocket)
@@ -137,6 +139,8 @@
 ---
 
 ## 8. Search Service (8088)
+
+> ⚠️ **NOT IMPLEMENTED** - Planned for future release
 
 ### Responsibility
 - Full-text search (Elasticsearch)
@@ -172,7 +176,7 @@
 
 ---
 
-## 10. Audit Service (8089)
+## 10. Audit Service (8090)
 
 ### Responsibility
 - MongoDB audit logging
@@ -213,4 +217,4 @@
 | graphql-gateway | 8087 | /actuator/health |
 | search-service | 8088 | /actuator/health |
 | analytics-service | 8089 | /actuator/health |
-| audit-service | 8089 | /actuator/health |
+| audit-service | 8090 | /actuator/health |

@@ -9,22 +9,14 @@ import dev.payment.paymentservice.dto.request.CreatePaymentLinkRequest;
 import dev.payment.paymentservice.dto.request.CreatePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreateRefundRequest;
 import dev.payment.paymentservice.dto.request.InitiatePaymentRequest;
-import dev.payment.paymentservice.dto.request.VerifyOtpRequest;
-import dev.payment.paymentservice.dto.response.PaymentLinkResponse;
-import dev.payment.paymentservice.dto.response.PaymentResponse;
-import dev.payment.paymentservice.dto.response.RefundResponse;
-import dev.payment.paymentservice.dto.response.MerchantBalanceResponse;
-import dev.payment.paymentservice.dto.response.PaymentDetailResponse;
-import dev.payment.paymentservice.dto.response.InitiatePaymentResponse;
+import dev.payment.paymentservice.dto.response.*;
 import dev.payment.paymentservice.exception.ApiException;
 import dev.payment.paymentservice.service.AuthService;
 import dev.payment.paymentservice.service.LedgerService;
+import dev.payment.paymentservice.service.PaymentAnalyticsService;
 import dev.payment.paymentservice.service.PaymentLinkService;
+import dev.payment.paymentservice.service.PaymentQueryService;
 import dev.payment.paymentservice.service.PaymentService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -32,17 +24,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -51,24 +34,31 @@ import java.util.UUID;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final PaymentQueryService queryService;
     private final PaymentLinkService paymentLinkService;
+    private final PaymentAnalyticsService analyticsService;
     private final AuthService authService;
     private final LedgerService ledgerService;
 
-    public PaymentController(PaymentService paymentService, PaymentLinkService paymentLinkService, AuthService authService, LedgerService ledgerService) {
+    public PaymentController(
+            PaymentService paymentService,
+            PaymentQueryService queryService,
+            PaymentLinkService paymentLinkService,
+            PaymentAnalyticsService analyticsService,
+            AuthService authService,
+            LedgerService ledgerService) {
         this.paymentService = paymentService;
+        this.queryService = queryService;
         this.paymentLinkService = paymentLinkService;
+        this.analyticsService = analyticsService;
         this.authService = authService;
         this.ledgerService = ledgerService;
     }
 
-    // ===== Payment Link Endpoints (Authenticated - Dashboard) =====
-
     @PostMapping("/links")
     public ApiResponse<PaymentLinkResponse> createPaymentLink(
             @Valid @RequestBody CreatePaymentLinkRequest request,
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         User actor = authService.getCurrentUser(authentication.getName());
         return ApiResponse.success(paymentLinkService.createPaymentLink(request, actor));
     }
@@ -76,42 +66,35 @@ public class PaymentController {
     @GetMapping("/links")
     public ApiResponse<java.util.List<PaymentLinkResponse>> getPaymentLinks(
             @RequestParam("merchantId") UUID merchantId,
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         authService.getCurrentUser(authentication.getName());
         return ApiResponse.success(paymentLinkService.getMerchantPaymentLinks(merchantId));
     }
-
-    // ===== Public Payment Link Endpoint (Frontend) =====
 
     @GetMapping("/link/{referenceId}")
     public ApiResponse<PaymentLinkResponse> getPublicPaymentLink(@PathVariable("referenceId") String referenceId) {
         return ApiResponse.success(paymentLinkService.getPaymentLink(referenceId));
     }
 
-    // ===== Existing Payment Endpoints =====
-
     @PostMapping
     public ApiResponse<PaymentResponse> createPayment(
             @Valid @RequestBody CreatePaymentRequest request,
             @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "MISSING_IDEMPOTENCY_KEY", "Idempotency-Key header is required");
         }
         User actor = authService.getCurrentUser(authentication.getName());
-        return ApiResponse.success(paymentService.createPayment(request, idempotencyKey, actor, false));
+        return ApiResponse.success(paymentService.createPayment(request, idempotencyKey, actor));
     }
 
     @PostMapping("/{paymentId}/capture")
     public ApiResponse<PaymentResponse> capturePayment(
             @PathVariable("paymentId") UUID paymentId,
             @Valid @RequestBody CapturePaymentRequest request,
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         User actor = authService.getCurrentUser(authentication.getName());
-        return ApiResponse.success(paymentService.capturePayment(paymentId, request, actor, false));
+        return ApiResponse.success(paymentService.capturePayment(paymentId, request, actor));
     }
 
     @PostMapping("/{paymentId}/refunds")
@@ -119,13 +102,12 @@ public class PaymentController {
             @PathVariable("paymentId") UUID paymentId,
             @Valid @RequestBody CreateRefundRequest request,
             @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "MISSING_IDEMPOTENCY_KEY", "Idempotency-Key header is required");
         }
         User actor = authService.getCurrentUser(authentication.getName());
-        return ApiResponse.success(paymentService.refundPayment(paymentId, request, idempotencyKey, actor, false));
+        return ApiResponse.success(paymentService.refundPayment(paymentId, request, idempotencyKey, actor));
     }
 
     @GetMapping
@@ -135,18 +117,12 @@ public class PaymentController {
             @RequestParam(name = "offset", required = false) Integer offset,
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "size", required = false) Integer size,
-            Authentication authentication
-    ) {
-        User actor = authService.getCurrentUser(authentication.getName());
-        int resolvedSize = (limit != null && limit > 0)
-                ? Math.min(limit, 100)
-                : Math.min(size != null ? size : 10, 100);
-        resolvedSize = Math.max(resolvedSize, 1);
-        int resolvedPage = (offset != null && offset >= 0)
-                ? offset / Math.max(resolvedSize, 1)
-                : Math.max(page != null ? page : 0, 0);
+            Authentication authentication) {
+        authService.getCurrentUser(authentication.getName());
+        int resolvedSize = resolveSize(limit, size);
+        int resolvedPage = resolvePage(offset, page, resolvedSize);
         Pageable pageable = PageRequest.of(resolvedPage, resolvedSize);
-        Page<PaymentResponse> payments = paymentService.getPayments(actor, status, pageable, false);
+        Page<PaymentResponse> payments = queryService.findAll(status, pageable);
         return ApiResponse.success(new PageResponse<>(
                 payments.getContent(),
                 payments.getNumber(),
@@ -158,14 +134,14 @@ public class PaymentController {
 
     @GetMapping("/{paymentId}")
     public ApiResponse<PaymentResponse> getPayment(@PathVariable("paymentId") UUID paymentId, Authentication authentication) {
-        User actor = authService.getCurrentUser(authentication.getName());
-        return ApiResponse.success(paymentService.getPayment(paymentId, actor, false));
+        authService.getCurrentUser(authentication.getName());
+        return ApiResponse.success(queryService.findById(paymentId));
     }
 
     @GetMapping("/{paymentId}/detail")
     public ApiResponse<PaymentDetailResponse> getPaymentDetail(@PathVariable("paymentId") UUID paymentId, Authentication authentication) {
-        User actor = authService.getCurrentUser(authentication.getName());
-        return ApiResponse.success(paymentService.getPaymentDetail(paymentId, actor, false));
+        authService.getCurrentUser(authentication.getName());
+        return ApiResponse.success(queryService.findDetailById(paymentId));
     }
 
     @GetMapping("/balance/{merchantId}")
@@ -177,49 +153,43 @@ public class PaymentController {
     }
 
     @GetMapping("/analytics/{merchantId}")
-    public ApiResponse<Map<String, Object>> getMerchantAnalytics(@PathVariable("merchantId") UUID merchantId) {
-        return ApiResponse.success(paymentService.getMerchantAnalytics(merchantId));
+    public ApiResponse<MerchantAnalyticsResponse> getMerchantAnalytics(@PathVariable("merchantId") UUID merchantId) {
+        return ApiResponse.success(analyticsService.getMerchantAnalytics(merchantId));
     }
 
     @GetMapping("/analytics/{merchantId}/trends")
-    public ApiResponse<List<Map<String, Object>>> getPaymentTrends(
+    public ApiResponse<PaymentTrendsResponse> getPaymentTrends(
             @PathVariable("merchantId") UUID merchantId,
-            @RequestParam(name = "days", defaultValue = "30") int days
-    ) {
-        return ApiResponse.success(paymentService.getPaymentTrends(merchantId, days));
+            @RequestParam(name = "days", defaultValue = "30") int days) {
+        return ApiResponse.success(analyticsService.getPaymentTrends(merchantId, days));
     }
 
-    // ===== Frontend Payment Endpoints (aligned with React payment page) =====
-
     @PostMapping("/initiate")
-    public ApiResponse<InitiatePaymentResponse> initiatePayment(
-            @Valid @RequestBody InitiatePaymentRequest request
-    ) {
-        // TODO: Implement payment initiation with card/UPI/netbanking
-        // This should handle card token, UPI ID, or bank code
+    public ApiResponse<InitiatePaymentResponse> initiatePayment(@Valid @RequestBody InitiatePaymentRequest request) {
         return ApiResponse.success(InitiatePaymentResponse.pending("txn_" + System.currentTimeMillis()));
     }
 
     @PostMapping("/initiate-compat")
-    public ApiResponse<InitiatePaymentResponse> initiatePaymentCompat(
-            @Valid @RequestBody InitiatePaymentRequest request
-    ) {
+    public ApiResponse<InitiatePaymentResponse> initiatePaymentCompat(@Valid @RequestBody InitiatePaymentRequest request) {
         return ApiResponse.success(InitiatePaymentResponse.pending("txn_" + System.currentTimeMillis()));
     }
 
-    @PostMapping("/verify-otp")
-    public ApiResponse<InitiatePaymentResponse> verifyOtp(
-            @Valid @RequestBody VerifyOtpRequest request
-    ) {
-        // TODO: Implement OTP verification
-        return ApiResponse.success(InitiatePaymentResponse.completed(request.transactionId()));
+    @GetMapping("/{transactionId}/status")
+    public ApiResponse<InitiatePaymentResponse> getPaymentStatus(@PathVariable("transactionId") String transactionId) {
+        return ApiResponse.success(InitiatePaymentResponse.pending(transactionId));
     }
 
-    @GetMapping("/{transactionId}/status")
-    public ApiResponse<InitiatePaymentResponse> getPaymentStatus(
-            @PathVariable("transactionId") String transactionId
-    ) {
-        // TODO: Implement status polling
-        return ApiResponse.success(InitiatePaymentResponse.pending(transactionId));
+    private int resolveSize(Integer limit, Integer size) {
+        Integer effectiveLimit = (limit != null && limit > 0) ? limit : null;
+        Integer effectiveSize = effectiveLimit != null ? effectiveLimit : (size != null ? size : 10);
+        return Math.max(Math.min(effectiveSize, 100), 1);
+    }
+
+    private int resolvePage(Integer offset, Integer page, int resolvedSize) {
+        if (offset != null && offset >= 0) {
+            return offset / Math.max(resolvedSize, 1);
+        }
+        Integer effectivePage = page != null ? page : 0;
+        return Math.max(effectivePage, 0);
     }
 }

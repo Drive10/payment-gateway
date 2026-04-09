@@ -64,11 +64,7 @@ public class OrderController {
     ) {
         int resolvedSize = Math.min(limit != null ? limit : size, 100);
         int resolvedPage = offset != null ? Math.max(offset, 0) / Math.max(resolvedSize, 1) : Math.max(page, 0);
-        UUID resolvedUserId = userId != null
-                ? userId
-                : (authenticatedUser != null && !authenticatedUser.isBlank()
-                ? UUID.nameUUIDFromBytes(authenticatedUser.trim().toLowerCase().getBytes(StandardCharsets.UTF_8))
-                : null);
+        UUID resolvedUserId = resolveUserId(userId, authenticatedUser);
 
         Pageable pageable = PageRequest.of(resolvedPage, Math.max(resolvedSize, 1));
         Page<OrderResponse> orders = orderService.getUserOrders(resolvedUserId, status, pageable);
@@ -87,5 +83,15 @@ public class OrderController {
             @Valid @RequestBody InitiatePaymentRequest request
     ) {
         return ApiResponse.success(paymentOrchestrator.initiatePayment(request));
+    }
+
+    private UUID resolveUserId(UUID userId, String authenticatedUser) {
+        if (userId != null) {
+            return userId;
+        }
+        if (authenticatedUser != null && !authenticatedUser.isBlank()) {
+            return UUID.nameUUIDFromBytes(authenticatedUser.trim().toLowerCase().getBytes(StandardCharsets.UTF_8));
+        }
+        return null;
     }
 }

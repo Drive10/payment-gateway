@@ -85,7 +85,7 @@ public class PaymentLink {
         this.cancelUrl = cancelUrl;
         this.createdBy = createdBy;
         this.createdAt = Instant.now();
-        this.expiresAt = Instant.now().plusSeconds(3600 * 24); // 24 hours
+        this.expiresAt = Instant.now().plusSeconds(3600L * 24); // 24 hours
     }
 
     // Getters and Setters

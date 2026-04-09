@@ -3,41 +3,31 @@ package dev.payment.paymentservice.service;
 import dev.payment.paymentservice.domain.Order;
 import dev.payment.paymentservice.domain.Payment;
 import dev.payment.paymentservice.domain.PaymentRefund;
-import dev.payment.paymentservice.domain.PaymentTransaction;
 import dev.payment.paymentservice.domain.User;
 import dev.payment.paymentservice.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.domain.enums.RefundStatus;
 import dev.payment.paymentservice.domain.enums.TransactionMode;
-import dev.payment.paymentservice.domain.enums.TransactionStatus;
-import dev.payment.paymentservice.domain.enums.TransactionType;
 import dev.payment.paymentservice.dto.FeeCalculation;
 import dev.payment.paymentservice.dto.request.CapturePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreatePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreateRefundRequest;
-import dev.payment.paymentservice.dto.response.PaymentDetailResponse;
 import dev.payment.paymentservice.dto.response.PaymentResponse;
 import dev.payment.paymentservice.dto.response.RefundResponse;
-import dev.payment.paymentservice.dto.response.PaymentTransactionResponse;
 import dev.payment.paymentservice.exception.ApiException;
 import dev.payment.paymentservice.integration.processor.PaymentProcessorCaptureResponse;
 import dev.payment.paymentservice.integration.processor.PaymentProcessorClient;
 import dev.payment.paymentservice.integration.processor.PaymentProcessorIntentResponse;
+import dev.payment.paymentservice.mapper.PaymentMapper;
 import dev.payment.paymentservice.repository.PaymentRefundRepository;
 import dev.payment.paymentservice.repository.PaymentRepository;
-import dev.payment.paymentservice.repository.PaymentTransactionRepository;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -49,7 +39,6 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final PaymentRefundRepository paymentRefundRepository;
-    private final PaymentTransactionRepository paymentTransactionRepository;
     private final OrderService orderService;
     private final AuditService auditService;
     private final PaymentProcessorClient paymentProcessorClient;
@@ -58,11 +47,12 @@ public class PaymentService {
     private final PaymentStateMachine paymentStateMachine;
     private final FeeEngine feeEngine;
     private final LedgerService ledgerService;
+    private final PaymentTransactionService transactionService;
+    private final PaymentMapper paymentMapper;
 
     public PaymentService(
             PaymentRepository paymentRepository,
             PaymentRefundRepository paymentRefundRepository,
-            PaymentTransactionRepository paymentTransactionRepository,
             OrderService orderService,
             AuditService auditService,
             PaymentProcessorClient paymentProcessorClient,
@@ -70,11 +60,11 @@ public class PaymentService {
             IdempotencyService idempotencyService,
             PaymentStateMachine paymentStateMachine,
             FeeEngine feeEngine,
-            LedgerService ledgerService
-    ) {
+            LedgerService ledgerService,
+            PaymentTransactionService transactionService,
+            PaymentMapper paymentMapper) {
         this.paymentRepository = paymentRepository;
         this.paymentRefundRepository = paymentRefundRepository;
-        this.paymentTransactionRepository = paymentTransactionRepository;
         this.orderService = orderService;
         this.auditService = auditService;
         this.paymentProcessorClient = paymentProcessorClient;
@@ -83,10 +73,12 @@ public class PaymentService {
         this.paymentStateMachine = paymentStateMachine;
         this.feeEngine = feeEngine;
         this.ledgerService = ledgerService;
+        this.transactionService = transactionService;
+        this.paymentMapper = paymentMapper;
     }
 
     @Transactional
-    public PaymentResponse createPayment(CreatePaymentRequest request, String idempotencyKey, User actor, boolean adminView) {
+    public PaymentResponse createPayment(CreatePaymentRequest request, String idempotencyKey, User actor) {
         IdempotencyService.IdempotencyResult<PaymentResponse> idempotency =
                 idempotencyService.begin("PAYMENT_CREATE", idempotencyKey, actorIdKey(actor), Map.of(
                         "actor", actor.getEmail(),
@@ -96,134 +88,130 @@ public class PaymentService {
             return idempotency.cachedResponse();
         }
 
-        Order order = orderService.getOwnedOrder(request.orderId(), actor, adminView);
+        Payment payment = buildPayment(request, idempotencyKey);
+        Payment savedPayment = executePaymentCreation(payment, request, actor, idempotencyKey);
+
+        PaymentResponse response = paymentMapper.toResponse(savedPayment, transactionService.findByPaymentId(savedPayment.getId()));
+        idempotencyService.complete(idempotency.record(), response, savedPayment.getId().toString());
+        return response;
+    }
+
+    private Payment buildPayment(CreatePaymentRequest request, String idempotencyKey) {
         Payment payment = new Payment();
-        payment.setOrderId(order.getId());
-        payment.setOrder(order);
-        payment.setAmount(order.getAmount());
-        payment.setCurrency(order.getCurrency());
+        payment.setIdempotencyKey(idempotencyKey);
         payment.setProvider(normalizeProvider(request.provider()));
         payment.setMethod(request.method());
         payment.setStatus(PaymentStatus.CREATED);
         payment.setTransactionMode(resolveMode(request.transactionMode()));
-        payment.setIdempotencyKey(idempotencyKey);
         payment.setNotes(request.notes());
         payment.setMerchantId(request.merchantId());
         payment.setPricingTier("STANDARD");
+        return payment;
+    }
 
-        PaymentProcessorIntentResponse processorIntent = paymentProcessorClient.createIntent(payment, order.getOrderReference(), payment.getTransactionMode());
-        if (processorIntent == null) {
-            throw new ApiException(HttpStatus.BAD_GATEWAY, "PROCESSOR_EMPTY_RESPONSE", "Payment processor returned no intent");
-        }
-        payment.setProviderOrderId(processorIntent.providerOrderId());
-        payment.setCheckoutUrl(processorIntent.checkoutUrl());
-        payment.setSimulated(processorIntent.simulated());
+    private Payment executePaymentCreation(Payment payment, CreatePaymentRequest request, User actor, String idempotencyKey) {
         try {
-            paymentRepository.save(payment);
-        } catch (DataIntegrityViolationException exception) {
-            Payment existing = paymentRepository.findByIdempotencyKey(idempotencyKey)
-                    .orElseThrow(() -> exception);
-            return toResponse(existing);
-        }
+            Order order = orderService.getOwnedOrder(request.orderId(), actor, false);
+            payment.setOrderId(order.getId());
+            payment.setOrder(order);
 
-        createTransaction(
-                payment,
-                TransactionType.PAYMENT_INITIATED,
-                TransactionStatus.PENDING,
-                payment.getTransactionMode() == TransactionMode.TEST ? "Test simulator order created" : "Production payment order created",
-                payment.getProviderOrderId()
-        );
-        orderService.markPaymentPending(order.getId(), order.getOrderReference());
-        auditService.record("PAYMENT_CREATED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Payment initiated for order " + order.getOrderReference());
-        paymentEventPublisher.publish("payment.created", payment, Map.of("actor", actor.getEmail()));
-        log.info("event=payment_created paymentId={} orderId={} actor={} provider={} mode={} simulated={}",
-                payment.getId(), order.getId(), actor.getEmail(), payment.getProvider(), payment.getTransactionMode(), payment.isSimulated());
-        PaymentResponse response = toResponse(payment);
-        log.info("event=payment_response_created paymentId={} responseNotNull={}", payment.getId(), response != null);
-        idempotencyService.complete(idempotency.record(), response, payment.getId().toString());
-        return response;
+            PaymentProcessorIntentResponse processorIntent = paymentProcessorClient.createIntent(
+                    payment, order.getOrderReference(), payment.getTransactionMode());
+            if (processorIntent == null) {
+                throw new ApiException(HttpStatus.BAD_GATEWAY, "PROCESSOR_EMPTY_RESPONSE", "Payment processor returned no intent");
+            }
+            payment.setProviderOrderId(processorIntent.providerOrderId());
+            payment.setCheckoutUrl(processorIntent.checkoutUrl());
+            payment.setSimulated(processorIntent.simulated());
+
+            return savePayment(payment, idempotencyKey);
+        } catch (DataIntegrityViolationException exception) {
+            return paymentRepository.findByIdempotencyKey(idempotencyKey)
+                    .orElseThrow(() -> exception);
+        }
+    }
+
+    private Payment savePayment(Payment payment, String idempotencyKey) {
+        Payment saved = paymentRepository.save(payment);
+        transactionService.createPaymentInitiated(saved);
+        orderService.markPaymentPending(payment.getOrderId(), payment.getOrder().getOrderReference());
+        return saved;
     }
 
     @Transactional
-    public PaymentResponse capturePayment(UUID paymentId, CapturePaymentRequest request, User actor, boolean adminView) {
-        Payment payment = getOwnedPayment(paymentId, actor, adminView);
+    public PaymentResponse capturePayment(UUID paymentId, CapturePaymentRequest request, User actor) {
+        Payment payment = getOwnedPayment(paymentId, actor);
         if (payment.getStatus() == PaymentStatus.CAPTURED) {
-            return toResponse(payment);
+            return paymentMapper.toResponse(payment, transactionService.findByPaymentId(paymentId));
         }
 
         paymentStateMachine.transition(payment, PaymentStatus.PROCESSING);
 
         try {
-            PaymentProcessorCaptureResponse processorCapture = paymentProcessorClient.capture(payment, request, payment.getTransactionMode());
+            PaymentProcessorCaptureResponse processorCapture = paymentProcessorClient.capture(
+                    payment, request, payment.getTransactionMode());
             payment.setProviderPaymentId(processorCapture.providerPaymentId());
             payment.setProviderSignature(processorCapture.providerSignature());
             payment.setSimulated(processorCapture.simulated());
 
-            FeeCalculation fees = feeEngine.calculateFees(
-                    payment.getMerchantId(),
-                    payment.getAmount(),
-                    payment.getPricingTier(),
-                    payment.getMethod().name()
-            );
-            payment.setPlatformFee(fees.platformFee());
-            payment.setGatewayFee(fees.gatewayFee());
-
+            calculateAndSetFees(payment);
             paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
             paymentRepository.save(payment);
 
-            try {
-                ledgerService.recordPayment(
-                        payment.getId(),
-                        payment.getId().toString(),
-                        payment.getMerchantId(),
-                        payment.getAmount(),
-                        payment.getPlatformFee(),
-                        payment.getGatewayFee(),
-                        payment.getCurrency()
-                );
-            } catch (Exception ledgerException) {
-                log.warn("event=ledger_recording_failed paymentId={} error={}", payment.getId(), ledgerException.getMessage());
-            }
-
-            createTransaction(
-                    payment,
-                    TransactionType.PAYMENT_CAPTURED,
-                    TransactionStatus.SUCCESS,
-                    payment.getTransactionMode() == TransactionMode.TEST ? "Test payment captured" : "Production payment captured",
-                    processorCapture.providerReference()
-            );
-            try {
-                orderService.markPaid(payment.getOrderId(), payment.getOrder() != null ? payment.getOrder().getOrderReference() : "ORD-UNKNOWN");
-            } catch (Exception orderException) {
-                log.warn("event=order_status_update_failed paymentId={} error={}", payment.getId(), orderException.getMessage());
-            }
+            recordToLedger(payment);
+            transactionService.createCaptureSuccess(payment, processorCapture.providerReference());
+            updateOrderStatus(payment);
             auditService.record("PAYMENT_CAPTURED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Payment captured successfully");
             paymentEventPublisher.publish("payment.captured", payment, Map.of("actor", actor.getEmail()));
-            log.info("event=payment_captured paymentId={} actor={} mode={} simulated={}", payment.getId(), actor.getEmail(), payment.getTransactionMode(), payment.isSimulated());
-            return toResponse(payment);
+
+            log.info("event=payment_captured paymentId={} actor={} mode={} simulated={}",
+                    payment.getId(), actor.getEmail(), payment.getTransactionMode(), payment.isSimulated());
+
+            return paymentMapper.toResponse(payment, transactionService.findByPaymentId(paymentId));
         } catch (RuntimeException exception) {
-            if (payment.getStatus() != PaymentStatus.CAPTURED) {
-                paymentStateMachine.transition(payment, PaymentStatus.FAILED);
-            }
-            paymentRepository.save(payment);
-            try {
-                orderService.markFailed(payment.getOrderId(), payment.getOrder() != null ? payment.getOrder().getOrderReference() : "ORD-UNKNOWN");
-            } catch (Exception orderException) {
-                log.warn("event=order_status_update_failed paymentId={} error={}", payment.getId(), orderException.getMessage());
-            }
-            createTransaction(
-                    payment,
-                    TransactionType.PAYMENT_CAPTURED,
-                    TransactionStatus.FAILED,
-                    "Payment capture failed",
-                    payment.getProviderOrderId()
-            );
+            handleCaptureFailure(payment, actor);
             throw exception;
         }
     }
 
+    private void calculateAndSetFees(Payment payment) {
+        FeeCalculation fees = feeEngine.calculateFees(
+                payment.getMerchantId(),
+                payment.getAmount(),
+                payment.getPricingTier(),
+                payment.getMethod().name()
+        );
+        payment.setPlatformFee(fees.platformFee());
+        payment.setGatewayFee(fees.gatewayFee());
+    }
+
+    private void recordToLedger(Payment payment) {
+        try {
+            ledgerService.recordPayment(
+                    payment.getId(),
+                    payment.getId().toString(),
+                    payment.getMerchantId(),
+                    payment.getAmount(),
+                    payment.getPlatformFee(),
+                    payment.getGatewayFee(),
+                    payment.getCurrency()
+            );
+        } catch (Exception ledgerException) {
+            log.warn("event=ledger_recording_failed paymentId={} error={}", payment.getId(), ledgerException.getMessage());
+        }
+    }
+
+    private void handleCaptureFailure(Payment payment, User actor) {
+        if (payment.getStatus() != PaymentStatus.CAPTURED) {
+            paymentStateMachine.transition(payment, PaymentStatus.FAILED);
+        }
+        paymentRepository.save(payment);
+        transactionService.createCaptureFailed(payment);
+        updateOrderStatusOnFailure(payment);
+    }
+
     @Transactional
-    public RefundResponse refundPayment(UUID paymentId, CreateRefundRequest request, String idempotencyKey, User actor, boolean adminView) {
+    public RefundResponse refundPayment(UUID paymentId, CreateRefundRequest request, String idempotencyKey, User actor) {
         IdempotencyService.IdempotencyResult<RefundResponse> idempotency =
                 idempotencyService.begin("PAYMENT_REFUND", idempotencyKey, actorIdKey(actor), Map.of(
                         "actor", actor.getEmail(),
@@ -234,16 +222,37 @@ public class PaymentService {
             return idempotency.cachedResponse();
         }
 
-        Payment payment = getOwnedPayment(paymentId, actor, adminView);
+        Payment payment = getOwnedPayment(paymentId, actor);
+        validateRefundability(payment, request.amount());
+        BigDecimal alreadyRefunded = paymentRefundRepository.sumRefundedAmountByPaymentId(payment.getId());
+
+        PaymentRefund refund = createRefund(payment, request, idempotencyKey);
+        transactionService.createRefundRequested(payment, request.reason(), refund.getRefundReference(), request.amount());
+
+        refund.setStatus(RefundStatus.PROCESSED);
+        paymentRefundRepository.save(refund);
+
+        updatePaymentAfterRefund(payment, alreadyRefunded, request.amount());
+        transactionService.createRefundCompleted(payment, request.reason(), refund.getRefundReference(), request.amount());
+        recordRefundToLedger(payment, refund, request.amount());
+        publishRefundEvents(payment, actor, refund, request);
+
+        RefundResponse response = paymentMapper.toRefundResponse(refund);
+        idempotencyService.complete(idempotency.record(), response, refund.getId().toString());
+        return response;
+    }
+
+    private void validateRefundability(Payment payment, BigDecimal refundAmount) {
         if (payment.getStatus() != PaymentStatus.CAPTURED && payment.getStatus() != PaymentStatus.PARTIALLY_REFUNDED) {
             throw new ApiException(HttpStatus.CONFLICT, "PAYMENT_NOT_REFUNDABLE", "Only captured payments can be refunded");
         }
-
-        java.math.BigDecimal alreadyRefunded = paymentRefundRepository.sumRefundedAmountByPaymentId(payment.getId());
-        if (alreadyRefunded.add(request.amount()).compareTo(payment.getAmount()) > 0) {
+        BigDecimal alreadyRefunded = paymentRefundRepository.sumRefundedAmountByPaymentId(payment.getId());
+        if (alreadyRefunded.add(refundAmount).compareTo(payment.getAmount()) > 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "REFUND_EXCEEDS_PAYMENT", "Refund amount exceeds captured payment amount");
         }
+    }
 
+    private PaymentRefund createRefund(Payment payment, CreateRefundRequest request, String idempotencyKey) {
         PaymentRefund refund = new PaymentRefund();
         refund.setPayment(payment);
         refund.setIdempotencyKey(idempotencyKey);
@@ -252,115 +261,79 @@ public class PaymentService {
         refund.setAmount(request.amount());
         refund.setReason(request.reason());
         refund.setStatus(RefundStatus.REQUESTED);
-        paymentRefundRepository.save(refund);
+        return paymentRefundRepository.save(refund);
+    }
 
-        createTransaction(
-                payment,
-                TransactionType.REFUND_REQUESTED,
-                TransactionStatus.PENDING,
-                request.reason() == null || request.reason().isBlank() ? "Refund requested" : request.reason(),
-                refund.getRefundReference(),
-                request.amount()
-        );
-
-        refund.setStatus(RefundStatus.PROCESSED);
-        paymentRefundRepository.save(refund);
-
-        payment.setRefundedAmount(alreadyRefunded.add(request.amount()));
-        paymentStateMachine.transition(payment, payment.getRefundedAmount().compareTo(payment.getAmount()) >= 0
+    private void updatePaymentAfterRefund(Payment payment, BigDecimal alreadyRefunded, BigDecimal refundAmount) {
+        payment.setRefundedAmount(alreadyRefunded.add(refundAmount));
+        PaymentStatus newStatus = payment.getRefundedAmount().compareTo(payment.getAmount()) >= 0
                 ? PaymentStatus.REFUNDED
-                : PaymentStatus.PARTIALLY_REFUNDED);
+                : PaymentStatus.PARTIALLY_REFUNDED;
+        paymentStateMachine.transition(payment, newStatus);
         paymentRepository.save(payment);
 
-        createTransaction(
-                payment,
-                TransactionType.REFUND_COMPLETED,
-                TransactionStatus.SUCCESS,
-                request.reason() == null || request.reason().isBlank() ? "Refund completed" : request.reason(),
-                refund.getRefundReference(),
-                request.amount()
-        );
-
-        if (payment.getStatus() == PaymentStatus.REFUNDED) {
-            orderService.markRefunded(payment.getOrderId(), payment.getOrder() != null ? payment.getOrder().getOrderReference() : "ORD-UNKNOWN");
+        if (newStatus == PaymentStatus.REFUNDED) {
+            orderService.markRefunded(payment.getOrderId(), getOrderReference(payment));
         }
+    }
 
+    private void recordRefundToLedger(Payment payment, PaymentRefund refund, BigDecimal refundAmount) {
         FeeCalculation refundFees = feeEngine.calculateRefundFees(
                 payment.getMerchantId(),
                 payment.getAmount(),
-                request.amount(),
+                refundAmount,
                 payment.getPricingTier()
         );
-        BigDecimal refundedPlatformFee = refundFees.platformFee();
-
         ledgerService.recordRefund(
                 refund.getId(),
                 refund.getRefundReference(),
                 payment.getId(),
                 payment.getId().toString(),
                 payment.getMerchantId(),
-                request.amount(),
-                refundedPlatformFee,
+                refundAmount,
+                refundFees.platformFee(),
                 payment.getCurrency()
         );
+    }
 
+    private void publishRefundEvents(Payment payment, User actor, PaymentRefund refund, CreateRefundRequest request) {
         auditService.record("PAYMENT_REFUNDED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "Refund processed");
         paymentEventPublisher.publish("payment.refunded", payment, Map.of(
                 "actor", actor.getEmail(),
                 "refundId", refund.getId().toString(),
                 "refundReference", refund.getRefundReference(),
                 "refundAmount", request.amount().toPlainString(),
-                "reason", request.reason() == null ? "" : request.reason()
+                "reason", request.reason() != null ? request.reason() : ""
         ));
-
-        RefundResponse response = toRefundResponse(refund);
-        idempotencyService.complete(idempotency.record(), response, refund.getId().toString());
-        return response;
     }
 
-    public Page<PaymentResponse> getPayments(User actor, PaymentStatus status, Pageable pageable, boolean adminView) {
-        return status == null
-                ? paymentRepository.findAll(pageable).map(this::toResponse)
-                : paymentRepository.findByStatus(status, pageable).map(this::toResponse);
+    private void updateOrderStatus(Payment payment) {
+        try {
+            orderService.markPaid(payment.getOrderId(), getOrderReference(payment));
+        } catch (Exception orderException) {
+            log.warn("event=order_status_update_failed paymentId={} error={}", payment.getId(), orderException.getMessage());
+        }
     }
 
-    public PaymentResponse getPayment(UUID paymentId, User actor, boolean adminView) {
-        return toResponse(getOwnedPayment(paymentId, actor, adminView));
+    private void updateOrderStatusOnFailure(Payment payment) {
+        try {
+            orderService.markFailed(payment.getOrderId(), getOrderReference(payment));
+        } catch (Exception orderException) {
+            log.warn("event=order_status_update_failed paymentId={} error={}", payment.getId(), orderException.getMessage());
+        }
     }
 
-    public PaymentDetailResponse getPaymentDetail(UUID paymentId, User actor, boolean adminView) {
-        Payment payment = getOwnedPayment(paymentId, actor, adminView);
-        List<PaymentRefund> refunds = paymentRefundRepository.findByPaymentIdOrderByCreatedAtAsc(paymentId);
-        List<PaymentTransaction> transactions = paymentTransactionRepository.findByPaymentIdOrderByCreatedAtDesc(paymentId);
-        return PaymentDetailResponse.from(payment, refunds, transactions);
+    private String getOrderReference(Payment payment) {
+        return payment.getOrder() != null ? payment.getOrder().getOrderReference() : "ORD-UNKNOWN";
     }
 
-    private Payment getOwnedPayment(UUID paymentId, User actor, boolean adminView) {
+    private Payment getOwnedPayment(UUID paymentId, User actor) {
         return paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Payment not found"));
     }
 
     private long actorIdKey(User actor) {
         return Math.abs(actor.getId().getLeastSignificantBits());
-    }
-
-    void createSystemTransaction(Payment payment, TransactionType type, TransactionStatus status, String remarks, String providerReference, java.math.BigDecimal amount) {
-        createTransaction(payment, type, status, remarks, providerReference, amount);
-    }
-
-    private void createTransaction(Payment payment, TransactionType type, TransactionStatus status, String remarks, String providerReference) {
-        createTransaction(payment, type, status, remarks, providerReference, payment.getAmount());
-    }
-
-    private void createTransaction(Payment payment, TransactionType type, TransactionStatus status, String remarks, String providerReference, java.math.BigDecimal amount) {
-        PaymentTransaction transaction = new PaymentTransaction();
-        transaction.setPayment(payment);
-        transaction.setType(type);
-        transaction.setStatus(status);
-        transaction.setAmount(amount);
-        transaction.setProviderReference(providerReference);
-        transaction.setRemarks(remarks);
-        paymentTransactionRepository.save(transaction);
     }
 
     private TransactionMode resolveMode(TransactionMode requestedMode) {
@@ -370,103 +343,5 @@ public class PaymentService {
     private String normalizeProvider(String provider) {
         String normalized = provider == null ? "" : provider.trim().toUpperCase();
         return normalized.isBlank() ? SIMULATED_PROVIDER : normalized;
-    }
-
-    private PaymentResponse toResponse(Payment payment) {
-        List<PaymentTransactionResponse> transactions = paymentTransactionRepository.findByPaymentIdOrderByCreatedAtDesc(payment.getId()).stream()
-                .map(transaction -> new PaymentTransactionResponse(
-                        transaction.getId(),
-                        transaction.getType().name(),
-                        transaction.getStatus().name(),
-                        transaction.getAmount(),
-                        transaction.getProviderReference(),
-                        transaction.getRemarks(),
-                        transaction.getCreatedAt()
-                ))
-                .toList();
-        UUID orderId = payment.getOrderId();
-        String orderRef = "ORD-" + (orderId != null ? orderId.toString().substring(0, 8).toUpperCase() : "UNKNOWN");
-        return new PaymentResponse(
-                payment.getId(),
-                orderId,
-                orderRef,
-                payment.getAmount(),
-                payment.getRefundedAmount(),
-                payment.getCurrency(),
-                payment.getProvider(),
-                payment.getProviderOrderId(),
-                payment.getProviderPaymentId(),
-                payment.getMethod().name(),
-                payment.getTransactionMode().name(),
-                payment.getStatus().name(),
-                payment.getCheckoutUrl(),
-                payment.isSimulated(),
-                payment.getProviderSignature(),
-                payment.getNotes(),
-                payment.getCreatedAt(),
-                transactions
-        );
-    }
-
-    RefundResponse toRefundResponse(PaymentRefund refund) {
-        Payment payment = refund.getPayment();
-        UUID orderId = payment.getOrderId();
-        String orderRef = "ORD-" + (orderId != null ? orderId.toString().substring(0, 8).toUpperCase() : "UNKNOWN");
-        return new RefundResponse(
-                refund.getId(),
-                refund.getRefundReference(),
-                payment.getId(),
-                orderRef,
-                refund.getAmount(),
-                payment.getRefundedAmount(),
-                payment.getStatus().name(),
-                refund.getReason(),
-                refund.getCreatedAt()
-        );
-    }
-
-    public Map<String, Object> getMerchantAnalytics(UUID merchantId) {
-        BigDecimal totalRevenue = paymentRepository.sumCapturedAmountByMerchantId(merchantId);
-        BigDecimal totalFees = paymentRepository.sumPlatformFeeByMerchantId(merchantId);
-        BigDecimal totalRefunds = paymentRefundRepository.sumRefundedAmountByMerchantId(merchantId);
-        
-        long totalPayments = paymentRepository.countByMerchantId(merchantId);
-        long successCount = paymentRepository.countByMerchantIdAndStatus(merchantId, PaymentStatus.CAPTURED);
-        long failedCount = paymentRepository.countByMerchantIdAndStatus(merchantId, PaymentStatus.FAILED);
-        
-        BigDecimal netRevenue = totalRevenue.subtract(totalFees).subtract(totalRefunds);
-        double successRate = totalPayments > 0 ? (double) successCount / totalPayments * 100 : 0;
-        
-        return Map.of(
-                "totalRevenue", totalRevenue != null ? totalRevenue : BigDecimal.ZERO,
-                "totalFees", totalFees != null ? totalFees : BigDecimal.ZERO,
-                "totalRefunds", totalRefunds != null ? totalRefunds : BigDecimal.ZERO,
-                "netRevenue", netRevenue,
-                "totalPayments", totalPayments,
-                "successCount", successCount,
-                "failedCount", failedCount,
-                "successRate", Math.round(successRate * 100.0) / 100.0
-        );
-    }
-
-    public List<Map<String, Object>> getPaymentTrends(UUID merchantId, int days) {
-        List<Map<String, Object>> trends = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
-        
-        for (int i = days - 1; i >= 0; i--) {
-            LocalDateTime dayStart = now.minusDays(i).withHour(0).withMinute(0).withSecond(0);
-            LocalDateTime dayEnd = dayStart.plusDays(1);
-            
-            BigDecimal dayRevenue = paymentRepository.sumCapturedAmountByMerchantIdAndDateRange(merchantId, dayStart, dayEnd);
-            long dayCount = paymentRepository.countByMerchantIdAndDateRange(merchantId, dayStart, dayEnd);
-            
-            trends.add(Map.of(
-                    "date", dayStart.toLocalDate().toString(),
-                    "revenue", dayRevenue != null ? dayRevenue : BigDecimal.ZERO,
-                    "count", dayCount
-            ));
-        }
-        
-        return trends;
     }
 }

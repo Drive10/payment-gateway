@@ -41,10 +41,6 @@ public class UserRateLimitFilter implements GlobalFilter, Ordered {
         }
 
         String userId = extractUserId(exchange);
-        
-        if (userId == null) {
-            return chain.filter(exchange);
-        }
 
         String rateLimitKey = "rate_limit:user:" + userId;
 
@@ -89,9 +85,14 @@ public class UserRateLimitFilter implements GlobalFilter, Ordered {
             return "user_" + xUserId;
         }
 
-        String clientIp = exchange.getRequest().getRemoteAddress() != null 
-                ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress() 
-                : "unknown";
+        String clientIp = "unknown";
+        var remoteAddress = exchange.getRequest().getRemoteAddress();
+        if (remoteAddress != null && remoteAddress.getAddress() != null) {
+            String hostAddress = remoteAddress.getAddress().getHostAddress();
+            if (hostAddress != null) {
+                clientIp = hostAddress;
+            }
+        }
         return "ip_" + clientIp.hashCode();
     }
 

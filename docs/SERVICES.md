@@ -195,6 +195,36 @@
 
 ---
 
+## GraphQL Gateway (8087)
+
+> ⚠️ **NOT IMPLEMENTED** - Planned for future release
+
+### Planned Functionality
+- GraphQL API with schema federation
+- Real-time subscriptions (WebSocket)
+- DataLoader for N+1 prevention
+
+### Planned Endpoints
+- `/graphql` - GraphQL endpoint
+- `/graphiql` - Playground
+
+---
+
+## Search Service (8088)
+
+> ⚠️ **NOT IMPLEMENTED** - Planned for future release
+
+### Planned Functionality
+- Full-text search (Elasticsearch)
+- Payment and order search
+- Aggregations and analytics
+
+### Planned Endpoints
+- `GET /api/v1/search/payments`
+- `GET /api/v1/search/orders`
+
+---
+
 ## Communication Patterns
 
 ### Synchronous (Feign Client)
@@ -205,7 +235,7 @@
 ### Asynchronous (Kafka)
 - Payment → Notification
 - Payment → Analytics
-- Payment → Search
+- Payment → Search *(planned)*
 - Payment → Audit
 
 ---

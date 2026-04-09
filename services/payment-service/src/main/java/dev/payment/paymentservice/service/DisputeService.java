@@ -89,7 +89,8 @@ public class DisputeService {
 
         log.info("Evidence submitted for dispute {}", dispute.getDisputeReference());
 
-        return disputeRepository.save(dispute).getStatus() != null ? null : null;
+        disputeRepository.save(dispute);
+        return evidence;
     }
 
     public List<DisputeEvidence> getDisputeEvidence(UUID disputeId) {

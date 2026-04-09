@@ -34,7 +34,7 @@ public class RazorpayWebhookService {
     private final AuditService auditService;
     private final OrderService orderService;
     private final PaymentEventPublisher paymentEventPublisher;
-    private final PaymentService paymentService;
+    private final PaymentTransactionService transactionService;
     private final PaymentStateMachine paymentStateMachine;
     private final ObjectMapper objectMapper;
     private final String webhookSecret;
@@ -46,7 +46,7 @@ public class RazorpayWebhookService {
             AuditService auditService,
             OrderService orderService,
             PaymentEventPublisher paymentEventPublisher,
-            PaymentService paymentService,
+            PaymentTransactionService transactionService,
             PaymentStateMachine paymentStateMachine,
             ObjectMapper objectMapper,
             @Value("${application.webhook.razorpay.secret:}") String webhookSecret
@@ -57,7 +57,7 @@ public class RazorpayWebhookService {
         this.auditService = auditService;
         this.orderService = orderService;
         this.paymentEventPublisher = paymentEventPublisher;
-        this.paymentService = paymentService;
+        this.transactionService = transactionService;
         this.paymentStateMachine = paymentStateMachine;
         this.objectMapper = objectMapper;
         this.webhookSecret = webhookSecret;
@@ -106,9 +106,7 @@ public class RazorpayWebhookService {
         payment.setProviderPaymentId(entity.id());
         paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
         paymentRepository.save(payment);
-        paymentService.createSystemTransaction(payment, dev.payment.paymentservice.domain.enums.TransactionType.PAYMENT,
-                dev.payment.paymentservice.domain.enums.TransactionStatus.SUCCESS,
-                "Webhook marked payment captured", entity.id(), payment.getAmount());
+        transactionService.createCaptureSuccess(payment, entity.id());
         orderService.markPaid(payment.getOrderId(), "ORD-UNKNOWN");
         auditService.record("RAZORPAY_WEBHOOK_CAPTURED", "system", "PAYMENT", payment.getId().toString(), "Webhook marked payment captured");
         paymentEventPublisher.publish("payment.webhook.captured", payment, Map.of("providerPaymentId", entity.id()));
@@ -143,9 +141,7 @@ public class RazorpayWebhookService {
                 ? PaymentStatus.REFUNDED
                 : PaymentStatus.PARTIALLY_REFUNDED);
         paymentRepository.save(payment);
-        paymentService.createSystemTransaction(payment, dev.payment.paymentservice.domain.enums.TransactionType.REFUND,
-                dev.payment.paymentservice.domain.enums.TransactionStatus.SUCCESS,
-                "Webhook processed refund", entity.id(), refundAmount);
+        transactionService.createRefundCompleted(payment, "Webhook processed refund", entity.id(), refundAmount);
         if (payment.getStatus() == PaymentStatus.REFUNDED) {
             orderService.markRefunded(payment.getOrderId(), "ORD-UNKNOWN");
         }

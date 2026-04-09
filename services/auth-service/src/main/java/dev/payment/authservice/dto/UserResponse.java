@@ -21,7 +21,7 @@ public record UserResponse(
         List<String> userRoles = user.getRoles().stream()
                 .map(role -> role.getName().replace("ROLE_", ""))
                 .collect(Collectors.toList());
-        String primaryRole = userRoles.contains("ADMIN") ? "ADMIN" : (userRoles.isEmpty() ? "USER" : userRoles.get(0));
+        String primaryRole = determinePrimaryRole(userRoles);
         String fullName = user.getFirstName() + " " + user.getLastName();
         
         return new UserResponse(
@@ -33,5 +33,15 @@ public record UserResponse(
                 fullName,
                 primaryRole
         );
+    }
+
+    private static String determinePrimaryRole(List<String> userRoles) {
+        if (userRoles.contains("ADMIN")) {
+            return "ADMIN";
+        }
+        if (userRoles.isEmpty()) {
+            return "USER";
+        }
+        return userRoles.get(0);
     }
 }

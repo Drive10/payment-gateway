@@ -14,7 +14,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
-@Transactional
 public class AnalyticsService {
 
     private static final Logger log = LoggerFactory.getLogger(AnalyticsService.class);
@@ -41,6 +40,7 @@ public class AnalyticsService {
         this.objectMapper = objectMapper;
     }
 
+    @Transactional
     public AnalyticsEvent recordEvent(String eventType, String category, Map<String, Object> data,
                                       String merchantId, String orderId, String paymentId,
                                       String userId, Double amount, String currency, String status) {

@@ -35,6 +35,11 @@
         <flyway.version>10.17.0</flyway.version>
         <opentelemetry.version>1.32.0</opentelemetry.version>
         <opentelemetry-exporter-jaeger.version>1.32.0</opentelemetry-exporter-jaeger.version>
+        <sonar.host.url>http://localhost:9000</sonar.host.url>
+        <sonar.projectKey>payflow</sonar.projectKey>
+        <sonar.login>admin</sonar.login>
+        <sonar.password>Payflow@2026!</sonar.password>
+        <sonar.token></sonar.token>
     </properties>
 
     <dependencyManagement>
@@ -203,6 +208,11 @@
                             </configuration>
                         </execution>
                     </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>3.11.0.3757</version>
                 </plugin>
             </plugins>
         </pluginManagement>

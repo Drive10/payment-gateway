@@ -1,10 +1,7 @@
 package dev.payment.paymentservice.controller;
 
 import dev.payment.common.api.ApiResponse;
-import dev.payment.paymentservice.dto.request.LoginRequest;
 import dev.payment.paymentservice.dto.request.SyncUserRequest;
-import dev.payment.paymentservice.dto.request.RegisterRequest;
-import dev.payment.paymentservice.dto.response.AuthResponse;
 import dev.payment.paymentservice.dto.response.UserResponse;
 import dev.payment.paymentservice.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;

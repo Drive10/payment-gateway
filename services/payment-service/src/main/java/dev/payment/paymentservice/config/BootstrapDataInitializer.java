@@ -47,20 +47,23 @@ public class BootstrapDataInitializer {
                 return;
             }
 
-            userRepository.findByEmailIgnoreCase(adminEmail).orElseGet(() -> {
-                User admin = new User();
-                admin.setEmail(adminEmail.toLowerCase());
-                admin.setFirstName("Platform");
-                admin.setLastName("Admin");
-                admin.setFullName("Platform Admin");
-                admin.setPassword(passwordEncoder.encode(adminPassword));
-                admin.setPasswordHash(admin.getPassword());
-                admin.setEnabled(true);
-                admin.getRoles().add(adminRole);
-                admin.getRoles().add(userRole);
-                log.info("event=bootstrap_admin_created email={}", admin.getEmail());
-                return userRepository.save(admin);
-            });
+            userRepository.findByEmailIgnoreCase(adminEmail).ifPresentOrElse(
+                    existing -> log.info("event=bootstrap_admin_exists email={}", existing.getEmail()),
+                    () -> {
+                        User admin = new User();
+                        admin.setEmail(adminEmail.toLowerCase());
+                        admin.setFirstName("Platform");
+                        admin.setLastName("Admin");
+                        admin.setFullName("Platform Admin");
+                        admin.setPassword(passwordEncoder.encode(adminPassword));
+                        admin.setPasswordHash(admin.getPassword());
+                        admin.setEnabled(true);
+                        admin.getRoles().add(adminRole);
+                        admin.getRoles().add(userRole);
+                        userRepository.save(admin);
+                        log.info("event=bootstrap_admin_created email={}", admin.getEmail());
+                    }
+            );
         };
     }
 }

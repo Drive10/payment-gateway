@@ -61,23 +61,41 @@ public class PaymentOutboxRelay {
                     ? java.util.Collections.emptyMap()
                     : objectMapper.readValue(event.getMessageHeaders(), objectMapper.getTypeFactory().constructMapType(Map.class, String.class, String.class));
             headers.forEach((key, value) -> record.headers().add(key, value.getBytes(StandardCharsets.UTF_8)));
-            kafkaTemplate.send(record).get();
+            kafkaTemplate.send(record).get(30, java.util.concurrent.TimeUnit.SECONDS);
             event.setStatus(OutboxEventStatus.PUBLISHED);
             event.setPublishedAt(Instant.now());
             event.setLastError(null);
-        } catch (Exception exception) {
+        } catch (java.util.concurrent.TimeoutException e) {
+            Thread.currentThread().interrupt();
             int attempts = event.getAttemptCount() + 1;
             event.setAttemptCount(attempts);
-            event.setLastError(truncate(exception.getMessage()));
+            event.setLastError("Timeout sending to Kafka");
             event.setNextAttemptAt(Instant.now().plusSeconds(5L * attempts));
-            if (attempts >= MAX_ATTEMPTS) {
-                event.setStatus(OutboxEventStatus.DEAD_LETTER);
-                log.error("event=payment_outbox_dead_letter outboxId={} eventType={} alert=true reason={}",
-                        event.getId(), event.getEventType(), truncate(exception.getMessage()));
-            } else {
-                log.warn("event=payment_outbox_retry outboxId={} eventType={} attempt={} reason={}",
-                        event.getId(), event.getEventType(), attempts, truncate(exception.getMessage()));
-            }
+            log.warn("event=payment_outbox_timeout outboxId={} eventType={} attempt={}", 
+                    event.getId(), event.getEventType(), attempts);
+        } catch (java.util.concurrent.ExecutionException e) {
+            Thread.currentThread().interrupt();
+            handleFailure(event, e.getCause() != null ? e.getCause().getMessage() : "Execution error");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            handleFailure(event, "Interrupted");
+        } catch (Exception exception) {
+            handleFailure(event, exception.getMessage());
+        }
+    }
+
+    private void handleFailure(PaymentOutboxEvent event, String reason) {
+        int attempts = event.getAttemptCount() + 1;
+        event.setAttemptCount(attempts);
+        event.setLastError(truncate(reason));
+        event.setNextAttemptAt(Instant.now().plusSeconds(5L * attempts));
+        if (attempts >= MAX_ATTEMPTS) {
+            event.setStatus(OutboxEventStatus.DEAD_LETTER);
+            log.error("event=payment_outbox_dead_letter outboxId={} eventType={} alert=true reason={}",
+                    event.getId(), event.getEventType(), truncate(reason));
+        } else {
+            log.warn("event=payment_outbox_retry outboxId={} eventType={} attempt={} reason={}",
+                    event.getId(), event.getEventType(), attempts, truncate(reason));
         }
     }
 

@@ -5,6 +5,8 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
+import java.net.InetSocketAddress;
+
 @Component("clientIpKeyResolver")
 public class ClientIpKeyResolver implements KeyResolver {
 
@@ -18,10 +20,16 @@ public class ClientIpKeyResolver implements KeyResolver {
         if (forwarded != null && !forwarded.isBlank()) {
             return forwarded.split(",")[0].trim();
         }
-        if (request.getRemoteAddress() != null && request.getRemoteAddress().getAddress() != null) {
-            return request.getRemoteAddress().getAddress().getHostAddress();
+        
+        InetSocketAddress remoteAddress = request.getRemoteAddress();
+        if (remoteAddress != null && remoteAddress.getAddress() != null) {
+            String hostAddress = remoteAddress.getAddress().getHostAddress();
+            if (hostAddress != null) {
+                return hostAddress;
+            }
         }
+        
         String userAgent = request.getHeaders().getFirst("User-Agent");
-        return userAgent == null || userAgent.isBlank() ? "anonymous" : userAgent;
+        return (userAgent == null || userAgent.isBlank()) ? "anonymous" : userAgent;
     }
 }

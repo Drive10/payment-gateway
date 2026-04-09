@@ -1,10 +1,9 @@
 package dev.payment.notificationservice.controller;
-import jakarta.validation.Valid;
 
 import dev.payment.common.api.ApiResponse;
-import dev.payment.notificationservice.dto.WebhookPayload;
 import dev.payment.notificationservice.entity.WebhookEvent;
 import dev.payment.notificationservice.service.WebhookService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
