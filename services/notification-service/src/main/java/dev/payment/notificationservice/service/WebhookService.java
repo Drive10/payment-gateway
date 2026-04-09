@@ -15,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
@@ -67,12 +68,11 @@ public class WebhookService {
             webhookEventRepository.save(event);
 
             log.info("Successfully processed webhook event {} for provider {}", event.getId(), provider);
-        } catch (Exception e) {
-            log.error("Webhook delivery failed: {}", e.getMessage(), e);
+        } catch (RestClientException e) {
+            log.error("Webhook delivery failed for event {}: {}", event.getId(), e.getMessage());
             event.setStatus(WebhookStatus.FAILED);
             webhookEventRepository.save(event);
-            log.error("Failed to process webhook event {}: {}", event.getId(), e.getMessage());
-            throw e;
+            throw new WebhookDeliveryException("Failed to process webhook event " + event.getId(), e);
         }
 
         return event;
@@ -106,10 +106,9 @@ public class WebhookService {
             restTemplate.postForEntity(url, httpRequest, Void.class);
 
             log.info("Forwarded webhook event {} to payment service", event.getId());
-        } catch (Exception e) {
-            log.error("Webhook delivery failed: {}", e.getMessage(), e);
+        } catch (RestClientException e) {
             log.error("Failed to forward webhook event {} to payment service: {}", event.getId(), e.getMessage());
-            throw new RuntimeException("Failed to forward webhook to payment service", e);
+            throw new WebhookDeliveryException("Failed to forward webhook to payment service", e);
         }
     }
 }

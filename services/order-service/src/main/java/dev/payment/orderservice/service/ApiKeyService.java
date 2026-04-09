@@ -2,6 +2,7 @@ package dev.payment.orderservice.service;
 
 import dev.payment.orderservice.entity.ApiKey;
 import dev.payment.orderservice.entity.Merchant;
+import dev.payment.orderservice.exception.CryptoOperationException;
 import dev.payment.orderservice.repository.ApiKeyRepository;
 import dev.payment.orderservice.repository.MerchantRepository;
 import org.slf4j.Logger;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
@@ -180,9 +182,9 @@ public class ApiKeyService {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(rawKey.getBytes(StandardCharsets.UTF_8));
             return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
-        } catch (Exception e) {
-            log.error("API key operation failed: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to hash API key", e);
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Failed to hash API key: {}", e.getMessage(), e);
+            throw new CryptoOperationException("Failed to hash API key", e);
         }
     }
 
