@@ -3,14 +3,20 @@ package dev.payment.paymentservice.service;
 import dev.payment.paymentservice.domain.FeeConfig;
 import dev.payment.paymentservice.dto.FeeCalculation;
 import dev.payment.paymentservice.repository.FeeConfigRepository;
+import dev.payment.paymentservice.strategy.DefaultFeeStrategy;
+import dev.payment.paymentservice.strategy.PaymentMethodFeeStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class FeeEngine {
@@ -20,15 +26,20 @@ public class FeeEngine {
 
     private static final BigDecimal DEFAULT_PLATFORM_FEE_PERCENT = new BigDecimal("2.00");
     private static final BigDecimal DEFAULT_PLATFORM_FIXED = BigDecimal.ZERO;
-    private static final BigDecimal DEFAULT_GATEWAY_FEE_PERCENT = new BigDecimal("1.50");
     private static final BigDecimal DEFAULT_GATEWAY_FIXED = new BigDecimal("2.00");
     private static final BigDecimal DEFAULT_MIN_FEE = new BigDecimal("1.00");
     private static final BigDecimal DEFAULT_MAX_FEE_PERCENT = new BigDecimal("5.00");
 
     private final FeeConfigRepository feeConfigRepository;
+    private final Map<String, PaymentMethodFeeStrategy> feeStrategies;
 
-    public FeeEngine(FeeConfigRepository feeConfigRepository) {
+    public FeeEngine(FeeConfigRepository feeConfigRepository, List<PaymentMethodFeeStrategy> strategies) {
         this.feeConfigRepository = feeConfigRepository;
+        this.feeStrategies = strategies.stream()
+                .collect(Collectors.toMap(
+                        s -> s.getPaymentMethod().toUpperCase(),
+                        Function.identity()
+                ));
     }
 
     public FeeCalculation calculateFees(BigDecimal amount, String pricingTier, String paymentMethod) {
@@ -38,7 +49,6 @@ public class FeeEngine {
     public FeeCalculation calculateFees(UUID merchantId, BigDecimal amount, String pricingTier, String paymentMethod) {
         BigDecimal platformPercent = DEFAULT_PLATFORM_FEE_PERCENT;
         BigDecimal platformFixed = DEFAULT_PLATFORM_FIXED;
-        BigDecimal gatewayPercent = getGatewayFeePercent(paymentMethod);
         BigDecimal gatewayFixed = DEFAULT_GATEWAY_FIXED;
         BigDecimal minFee = DEFAULT_MIN_FEE;
         BigDecimal maxFeePercent = DEFAULT_MAX_FEE_PERCENT;
@@ -49,7 +59,6 @@ public class FeeEngine {
             FeeConfig fc = config.get();
             platformPercent = fc.getPlatformFeePercent();
             platformFixed = fc.getPlatformFixedFee();
-            gatewayPercent = fc.getGatewayFeePercent();
             gatewayFixed = fc.getGatewayFixedFee();
             minFee = fc.getMinFee();
             maxFeePercent = fc.getMaxFeePercent();
@@ -58,6 +67,8 @@ public class FeeEngine {
                 volumeDiscount = fc.getVolumeDiscountPercent();
             }
         }
+
+        BigDecimal gatewayPercent = getStrategy(paymentMethod).getGatewayFeePercent(config.orElse(null));
 
         BigDecimal effectivePlatformPercent = platformPercent;
         if (volumeDiscount.compareTo(BigDecimal.ZERO) > 0) {
@@ -126,16 +137,10 @@ public class FeeEngine {
         return totalFee.setScale(2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal getGatewayFeePercent(String paymentMethod) {
+    private PaymentMethodFeeStrategy getStrategy(String paymentMethod) {
         if (paymentMethod == null) {
-            return DEFAULT_GATEWAY_FEE_PERCENT;
+            return feeStrategies.getOrDefault("DEFAULT", new DefaultFeeStrategy());
         }
-        return switch (paymentMethod.toUpperCase()) {
-            case "UPI" -> new BigDecimal("0.50");
-            case "CARD" -> new BigDecimal("1.50");
-            case "NETBANKING" -> new BigDecimal("1.00");
-            case "WALLET" -> new BigDecimal("1.50");
-            default -> DEFAULT_GATEWAY_FEE_PERCENT;
-        };
+        return feeStrategies.getOrDefault(paymentMethod.toUpperCase(), new DefaultFeeStrategy());
     }
 }

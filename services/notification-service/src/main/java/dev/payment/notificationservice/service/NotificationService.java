@@ -6,6 +6,7 @@ import dev.payment.notificationservice.entity.NotificationChannel;
 import dev.payment.notificationservice.entity.NotificationStatus;
 import dev.payment.notificationservice.entity.NotificationType;
 import dev.payment.notificationservice.entity.Template;
+import dev.payment.notificationservice.mapper.NotificationMapper;
 import dev.payment.notificationservice.repository.NotificationRepository;
 import dev.payment.notificationservice.repository.TemplateRepository;
 import org.slf4j.Logger;
@@ -13,10 +14,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class NotificationService {
@@ -25,36 +26,29 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final TemplateRepository templateRepository;
+    private final EmailService emailService;
+    private final SmsService smsService;
+    private final NotificationMapper mapper;
 
-    public NotificationService(NotificationRepository notificationRepository, TemplateRepository templateRepository) {
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            TemplateRepository templateRepository,
+            EmailService emailService,
+            SmsService smsService,
+            NotificationMapper mapper) {
         this.notificationRepository = notificationRepository;
         this.templateRepository = templateRepository;
+        this.emailService = emailService;
+        this.smsService = smsService;
+        this.mapper = mapper;
     }
 
-    @Transactional
     public NotificationResponse sendEmail(EmailRequest request) {
-        Notification notification = createNotification(
-                NotificationType.PAYMENT_SUCCESS,
-                NotificationChannel.EMAIL,
-                request.to(),
-                request.subject(),
-                request.body()
-        );
-        log.info("notification=email_sent id={} recipient={}", notification.getId(), request.to());
-        return toResponse(notification);
+        return emailService.send(request);
     }
 
-    @Transactional
     public NotificationResponse sendSms(SmsRequest request) {
-        Notification notification = createNotification(
-                NotificationType.PAYMENT_SUCCESS,
-                NotificationChannel.SMS,
-                request.to(),
-                null,
-                request.message()
-        );
-        log.info("notification=sms_sent id={} recipient={}", notification.getId(), request.to());
-        return toResponse(notification);
+        return smsService.send(request);
     }
 
     @Transactional
@@ -74,22 +68,22 @@ public class NotificationService {
         log.info("notification=webhook_sent id={} url={}", notification.getId(), request.url());
 
         notification.setStatus(NotificationStatus.SENT);
-        notification.setSentAt(java.time.LocalDateTime.now());
-        return toResponse(notificationRepository.save(notification));
+        notification.setSentAt(LocalDateTime.now());
+        return mapper.toResponse(notificationRepository.save(notification));
     }
 
     public Optional<NotificationResponse> findById(UUID id) {
-        return notificationRepository.findById(id).map(this::toResponse);
+        return notificationRepository.findById(id).map(mapper::toResponse);
     }
 
     public List<NotificationResponse> findAll(String userId, String status, int page, int size) {
         List<Notification> notifications = findNotificationsByFilter(userId, status);
-        return notifications.stream().map(this::toResponse).toList();
+        return notifications.stream().map(mapper::toResponse).toList();
     }
 
     public List<TemplateResponse> getAllTemplates() {
         return templateRepository.findAll().stream()
-                .map(this::toTemplateResponse)
+                .map(mapper::toTemplateResponse)
                 .toList();
     }
 
@@ -107,7 +101,7 @@ public class NotificationService {
                 .build();
         template = templateRepository.save(template);
         log.info("template=created id={} key={}", template.getId(), template.getTemplateKey());
-        return toTemplateResponse(template);
+        return mapper.toTemplateResponse(template);
     }
 
     public Optional<TemplateResponse> updateTemplate(UUID id, UpdateTemplateRequest request) {
@@ -117,7 +111,7 @@ public class NotificationService {
             if (request.bodyTemplate() != null) template.setBodyTemplate(request.bodyTemplate());
             if (request.description() != null) template.setDescription(request.description());
             if (request.active() != null) template.setActive(request.active());
-            return toTemplateResponse(templateRepository.save(template));
+            return mapper.toTemplateResponse(templateRepository.save(template));
         });
     }
 
@@ -130,8 +124,8 @@ public class NotificationService {
             log.info("notification=retry id={} attempt={}", id, notification.getRetryCount());
 
             notification.setStatus(NotificationStatus.SENT);
-            notification.setSentAt(java.time.LocalDateTime.now());
-            return toResponse(notificationRepository.save(notification));
+            notification.setSentAt(LocalDateTime.now());
+            return mapper.toResponse(notificationRepository.save(notification));
         });
     }
 
@@ -145,24 +139,6 @@ public class NotificationService {
                 .subject(event.getSubject())
                 .content(event.getContent())
                 .build();
-        return notificationRepository.save(notification);
-    }
-
-    private Notification createNotification(NotificationType type, NotificationChannel channel,
-                                          String recipient, String subject, String content) {
-        Notification notification = Notification.builder()
-                .userId(UUID.randomUUID())
-                .type(type)
-                .channel(channel)
-                .status(NotificationStatus.PENDING)
-                .recipient(recipient)
-                .subject(subject)
-                .content(content)
-                .build();
-        notification = notificationRepository.save(notification);
-
-        notification.setStatus(NotificationStatus.SENT);
-        notification.setSentAt(java.time.LocalDateTime.now());
         return notificationRepository.save(notification);
     }
 
@@ -180,40 +156,5 @@ public class NotificationService {
             return notificationRepository.findByStatus(NotificationStatus.valueOf(status.toUpperCase()));
         }
         return notificationRepository.findAll();
-    }
-
-    private NotificationResponse toResponse(Notification notification) {
-        return new NotificationResponse(
-                notification.getId(),
-                notification.getUserId(),
-                notification.getType() != null ? notification.getType().name() : null,
-                notification.getChannel(),
-                notification.getStatus(),
-                notification.getRecipient(),
-                notification.getSubject(),
-                notification.getContent(),
-                notification.getEventType(),
-                null,
-                notification.getRetryCount(),
-                notification.getLastError(),
-                notification.getCreatedAt(),
-                notification.getSentAt()
-        );
-    }
-
-    private TemplateResponse toTemplateResponse(Template template) {
-        return new TemplateResponse(
-                template.getId(),
-                template.getTemplateKey(),
-                template.getName(),
-                template.getDescription(),
-                template.getChannel(),
-                template.getSubject(),
-                template.getBodyTemplate(),
-                template.getEventType(),
-                template.isActive(),
-                template.getCreatedAt(),
-                template.getUpdatedAt()
-        );
     }
 }
