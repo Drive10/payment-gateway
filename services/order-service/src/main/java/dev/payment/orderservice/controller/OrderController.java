@@ -14,16 +14,16 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @RestController
@@ -40,34 +40,30 @@ public class OrderController {
     }
 
     @PostMapping
-    public ApiResponse<OrderResponse> createOrder(
-            @Valid @RequestBody CreateOrderRequest request,
-            @RequestHeader(value = "X-Authenticated-User", required = false) String authenticatedUser
-    ) {
+    public ApiResponse<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
+        String authenticatedUser = getAuthenticatedUsername();
         return ApiResponse.success(orderService.createOrder(request, authenticatedUser));
     }
 
     @GetMapping("/{id}")
     public ApiResponse<OrderResponse> getOrder(@PathVariable("id") UUID id) {
-        return ApiResponse.success(orderService.getOrder(id));
+        return ApiResponse.success(orderService.getOrder(id, getAuthenticatedUsername()));
     }
 
     @GetMapping
     public ApiResponse<PageResponse<OrderResponse>> getOrders(
-            @RequestParam(name = "userId", required = false) UUID userId,
             @RequestParam(name = "status", required = false) OrderStatus status,
             @RequestParam(name = "limit", required = false) Integer limit,
             @RequestParam(name = "offset", required = false) Integer offset,
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "10") int size,
-            @RequestHeader(value = "X-Authenticated-User", required = false) String authenticatedUser
+            @RequestParam(name = "size", defaultValue = "10") int size
     ) {
         int resolvedSize = Math.min(limit != null ? limit : size, 100);
         int resolvedPage = offset != null ? Math.max(offset, 0) / Math.max(resolvedSize, 1) : Math.max(page, 0);
-        UUID resolvedUserId = resolveUserId(userId, authenticatedUser);
 
         Pageable pageable = PageRequest.of(resolvedPage, Math.max(resolvedSize, 1));
-        Page<OrderResponse> orders = orderService.getUserOrders(resolvedUserId, status, pageable);
+        String authenticatedUser = getAuthenticatedUsername();
+        Page<OrderResponse> orders = orderService.getUserOrders(authenticatedUser, status, pageable);
         return ApiResponse.success(new PageResponse<>(
                 orders.getContent(),
                 orders.getNumber(),
@@ -85,12 +81,10 @@ public class OrderController {
         return ApiResponse.success(paymentOrchestrator.initiatePayment(request));
     }
 
-    private UUID resolveUserId(UUID userId, String authenticatedUser) {
-        if (userId != null) {
-            return userId;
-        }
-        if (authenticatedUser != null && !authenticatedUser.isBlank()) {
-            return UUID.nameUUIDFromBytes(authenticatedUser.trim().toLowerCase().getBytes(StandardCharsets.UTF_8));
+    private String getAuthenticatedUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() != null) {
+            return auth.getPrincipal().toString();
         }
         return null;
     }

@@ -13,7 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -33,9 +32,12 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request, String authenticatedUser) {
+        if (authenticatedUser == null || authenticatedUser.isBlank()) {
+            throw new OrderException("Authentication required to create an order");
+        }
+
         Order order = new Order();
-        UUID userId = resolveUserId(request.userId(), authenticatedUser);
-        order.setUserId(userId);
+        order.setUserId(generateUserId(authenticatedUser));
         order.setOrderReference(generateOrderReference());
         order.setExternalReference(resolveExternalReference(request.externalReference()));
         order.setMerchantId(DEFAULT_MERCHANT_ID.toString());
@@ -60,6 +62,13 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
+    public OrderResponse getOrder(UUID orderId, String authenticatedUser) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderException("Order not found: " + orderId));
+        return toResponse(order);
+    }
+
+    @Transactional(readOnly = true)
     public OrderResponse getOrder(UUID orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderException("Order not found: " + orderId));
@@ -67,7 +76,8 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public Page<OrderResponse> getUserOrders(UUID userId, OrderStatus status, Pageable pageable) {
+    public Page<OrderResponse> getUserOrders(String authenticatedUser, OrderStatus status, Pageable pageable) {
+        UUID userId = generateUserId(authenticatedUser);
         Page<Order> orders;
         if (status != null) {
             orders = orderRepository.findByUserIdAndStatus(userId, status, pageable);
@@ -118,14 +128,11 @@ public class OrderService {
         return "EXT-" + Instant.now().toEpochMilli();
     }
 
-    private UUID resolveUserId(UUID requestedUserId, String authenticatedUser) {
-        if (requestedUserId != null) {
-            return requestedUserId;
+    private UUID generateUserId(String username) {
+        if (username == null || username.isBlank()) {
+            throw new OrderException("User authentication required");
         }
-        if (authenticatedUser != null && !authenticatedUser.isBlank()) {
-            return UUID.nameUUIDFromBytes(authenticatedUser.trim().toLowerCase().getBytes(StandardCharsets.UTF_8));
-        }
-        throw new OrderException("Unable to resolve user id for order request");
+        return UUID.nameUUIDFromBytes(username.trim().toLowerCase().getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     private String resolveCustomerEmail(String requestedCustomerEmail, String authenticatedUser) {

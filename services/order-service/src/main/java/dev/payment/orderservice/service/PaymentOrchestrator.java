@@ -96,4 +96,26 @@ public class PaymentOrchestrator {
             orderService.updateOrderStatus(orderId, newStatus);
         }
     }
+
+    public void capturePayment(UUID orderId, String providerReference) {
+        try {
+            Map<String, Object> captureRequest = new HashMap<>();
+            captureRequest.put("providerReference", providerReference);
+
+            webClient.post()
+                    .uri("/payments/" + getPaymentIdByOrderId(orderId) + "/capture")
+                    .bodyValue(captureRequest)
+                    .retrieve()
+                    .bodyToMono(Void.class)
+                    .timeout(Duration.ofMillis(requestTimeoutMs))
+                    .block();
+        } catch (Exception e) {
+            log.error("Payment capture failed for order {}: {}", orderId, e.getMessage(), e);
+            throw new OrderException("Failed to capture payment: " + e.getMessage());
+        }
+    }
+
+    private String getPaymentIdByOrderId(UUID orderId) {
+        return orderService.getOrder(orderId).id().toString();
+    }
 }

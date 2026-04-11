@@ -165,18 +165,51 @@ public class PaymentController {
     }
 
     @PostMapping("/initiate")
-    public ApiResponse<InitiatePaymentResponse> initiatePayment(@Valid @RequestBody InitiatePaymentRequest request) {
-        return ApiResponse.success(InitiatePaymentResponse.pending("txn_" + System.currentTimeMillis()));
+    public ApiResponse<InitiatePaymentResponse> initiatePayment(
+            @Valid @RequestBody InitiatePaymentRequest request,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
+            Authentication authentication) {
+        User actor = authService.getCurrentUser(authentication.getName());
+        
+        CreatePaymentRequest createRequest = new CreatePaymentRequest(
+                request.orderId(),
+                actor.getId() != null ? actor.getId() : UUID.fromString(request.merchantId()),
+                dev.payment.paymentservice.domain.enums.PaymentMethod.CARD,
+                "RAZORPAY_SIMULATOR",
+                dev.payment.paymentservice.domain.enums.TransactionMode.TEST,
+                "Initiated via order payment flow"
+        );
+        
+        PaymentResponse paymentResponse = paymentService.createPayment(createRequest, 
+                idempotencyKey != null ? idempotencyKey : "idem_" + System.currentTimeMillis(), 
+                actor);
+        
+        InitiatePaymentResponse initiateResponse = new InitiatePaymentResponse(
+                paymentResponse.id().toString(),
+                paymentResponse.status(),
+                paymentResponse.checkoutUrl()
+        );
+        
+        return ApiResponse.success(initiateResponse);
     }
 
     @PostMapping("/initiate-compat")
-    public ApiResponse<InitiatePaymentResponse> initiatePaymentCompat(@Valid @RequestBody InitiatePaymentRequest request) {
-        return ApiResponse.success(InitiatePaymentResponse.pending("txn_" + System.currentTimeMillis()));
+    public ApiResponse<InitiatePaymentResponse> initiatePaymentCompat(
+            @Valid @RequestBody InitiatePaymentRequest request,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
+            Authentication authentication) {
+        return initiatePayment(request, idempotencyKey, authentication);
     }
 
     @GetMapping("/{transactionId}/status")
     public ApiResponse<InitiatePaymentResponse> getPaymentStatus(@PathVariable("transactionId") String transactionId) {
-        return ApiResponse.success(InitiatePaymentResponse.pending(transactionId));
+        PaymentResponse payment = queryService.findById(UUID.fromString(transactionId));
+        InitiatePaymentResponse response = new InitiatePaymentResponse(
+                payment.id().toString(),
+                payment.status(),
+                payment.checkoutUrl()
+        );
+        return ApiResponse.success(response);
     }
 
     private int resolveSize(Integer limit, Integer size) {

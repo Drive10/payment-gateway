@@ -46,6 +46,11 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 application:
+  security:
+    jwt:
+      secret-key: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
+      expiration-seconds: 3600
+      refresh-expiration-seconds: 2592000
   payment-service:
     url: http://payment-service:8083
   notification-service:
