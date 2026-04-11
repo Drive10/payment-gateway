@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import CardForm from "../components/CardForm";
 import UpiQR from "../components/UpiQR";
+import NetBankingForm from "../components/NetBankingForm";
+import WalletForm from "../components/WalletForm";
 import {
   DEFAULT_PAYMENT_NOTE,
   TRANSACTION_MODES,
@@ -37,6 +39,24 @@ const paymentMethods = [
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    id: "netbanking",
+    name: "Net Banking",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+      </svg>
+    ),
+  },
+  {
+    id: "wallet",
+    name: "Wallet",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
       </svg>
     ),
   },
@@ -129,68 +149,17 @@ export default function Checkout() {
     setAmountInput(value);
   };
 
-  const MIN_AMOUNT = 10;
-  const MAX_AMOUNT = 100000;
+    const MIN_AMOUNT = 10;
+    const MAX_AMOUNT = 100000;
 
-  const pay = async () => {
-    const amount = parseFloat(amountInput);
-    
-    if (!amountInput || amount <= 0) {
-      setSubmitError("Please enter a valid payment amount");
-      return;
-    }
-
-    if (amount < MIN_AMOUNT) {
-      setSubmitError(`Minimum payment amount is ₹${MIN_AMOUNT}`);
-      return;
-    }
-
-    if (amount > MAX_AMOUNT) {
-      setSubmitError(`Maximum payment amount is ₹${MAX_AMOUNT.toLocaleString()}`);
-      return;
-    }
-
-    if (method === "card") {
-      const nextErrors = validateCardForm(values);
-      if (Object.keys(nextErrors).length > 0) {
-        setErrors(nextErrors);
-        return;
-      }
-    }
-
-    setSubmitting(true);
-    setSubmitError("");
-
-    try {
-      const checkout = await startCheckout({
-        amount,
-        method,
-        cardholder: values.cardholder,
-        transactionMode,
-        description: paymentLinkData?.description || DEFAULT_PAYMENT_NOTE,
-      });
-      navigate("/processing", { state: { checkout } });
-    } catch (error) {
-      setSubmitError(error.message || "Payment failed. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const displayAmount = paymentLinkData?.amount ?? (amountInput ? parseFloat(amountInput) : 0);
-  const displayCurrency = paymentLinkData?.currency || "INR";
-  const displayMerchant = paymentLinkData?.merchantName || "PayFlow Merchant";
-  const displayDescription = paymentLinkData?.description || DEFAULT_PAYMENT_NOTE;
-  
-  const amount = parseFloat(amountInput) || 0;
-  const isValidAmount = amount >= MIN_AMOUNT && amount <= MAX_AMOUNT;
-  
-  const disabled =
-    submitting ||
-    !amountInput ||
-    !isValidAmount ||
-    (method === "card" &&
-      (!values.cardNumber || !values.expiry || !values.cvv || !values.cardholder.trim()));
+    const disabled =
+      submitting ||
+      !amountInput ||
+      !isValidAmount ||
+      (method === "card" &&
+        (!values.cardNumber || !values.expiry || !values.cvv || !values.cardholder.trim())) ||
+      (method === "netbanking" && !values.bankCode) ||
+      (method === "wallet" && !values.wallet);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50">
@@ -342,19 +311,19 @@ export default function Checkout() {
               </div>
 
               <div className="p-6">
-                <div className="mb-6 grid grid-cols-2 gap-3">
+                <div className="mb-6 grid grid-cols-4 gap-3">
                   {paymentMethods.map((pm) => (
                     <button
                       key={pm.id}
                       onClick={() => setMethod(pm.id)}
-                      className={`flex items-center justify-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                      className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 transition-all ${
                         method === pm.id
                           ? "border-cyan-500 bg-cyan-50 text-cyan-700"
                           : "border-slate-200 text-slate-600 hover:border-slate-300"
                       }`}
                     >
                       {pm.icon}
-                      <span className="text-sm font-medium">{pm.name}</span>
+                      <span className="text-xs font-medium">{pm.name}</span>
                     </button>
                   ))}
                 </div>
@@ -391,8 +360,12 @@ export default function Checkout() {
                 <div className="mb-6">
                   {method === "card" ? (
                     <CardForm values={values} errors={errors} onChange={handleChange} />
-                  ) : (
+                  ) : method === "upi" ? (
                     <UpiQR />
+                  ) : method === "netbanking" ? (
+                    <NetBankingForm values={values} errors={errors} onChange={handleChange} />
+                  ) : (
+                    <WalletForm values={values} errors={errors} onChange={handleChange} />
                   )}
                 </div>
 

@@ -259,17 +259,21 @@ export async function startCheckout({
         "Idempotency-Key": `pay-${sessionCustomer.email}-${externalReference}`,
         "X-Request-Id": correlationId,
       },
-      body: JSON.stringify({
-        orderId: order.id,
-        merchantId: merchantIdToSend,
-        method: method === "upi" ? "UPI" : "CARD",
-        provider,
-        transactionMode,
-        notes:
-          method === "upi"
-            ? "Customer selected UPI"
-            : `Cardholder: ${(cardholder.trim() || `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim()).trim()}`,
-      }),
+        body: JSON.stringify({
+          orderId: order.id,
+          merchantId: merchantIdToSend,
+          method: method === "upi" ? "UPI" : method === "netbanking" ? "NET_BANKING" : method === "wallet" ? "WALLET" : "CARD",
+          provider,
+          transactionMode,
+          notes:
+            method === "upi"
+              ? "Customer selected UPI"
+              : method === "netbanking"
+                ? `Net Banking: ${values.bankCode || "Unknown Bank"}`
+                : method === "wallet"
+                  ? `Wallet: ${values.wallet || "Unknown Wallet"}`
+                  : `Cardholder: ${(cardholder.trim() || `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim()).trim()}`,
+        }),
     });
 
     const checkout = {
