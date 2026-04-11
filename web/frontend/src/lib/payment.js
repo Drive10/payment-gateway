@@ -269,9 +269,9 @@ export async function startCheckout({
             method === "upi"
               ? "Customer selected UPI"
               : method === "netbanking"
-                ? `Net Banking: ${(values && values.bankCode) || "Unknown Bank"}`
+                ? "Customer selected Net Banking"
                 : method === "wallet"
-                  ? `Wallet: ${(values && values.wallet) || "Unknown Wallet"}`
+                  ? "Customer selected Wallet"
                   : `Cardholder: ${(cardholder.trim() || `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim()).trim()}`,
         }),
     });
