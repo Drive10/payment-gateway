@@ -6,11 +6,8 @@ import UpiQR from "../components/UpiQR";
 import NetBankingForm from "../components/NetBankingForm";
 import WalletForm from "../components/WalletForm";
 import {
-  DEFAULT_PAYMENT_NOTE,
   TRANSACTION_MODES,
   formatCurrency,
-  startCheckout,
-  validateCardForm,
 } from "../lib/payment";
 
 const API_BASE_URL = window.__ENV__?.API_BASE_URL || "/api/v1";
@@ -360,13 +357,13 @@ export default function Checkout() {
                 <div className="mb-6">
                   {method === "card" ? (
                     <CardForm values={values} errors={errors} onChange={handleChange} />
-                  ) : method === "upi" ? (
-                    <UpiQR />
-                  ) : method === "netbanking" ? (
-                    <NetBankingForm values={values} errors={errors} onChange={handleChange} />
-                  ) : (
-                    <WalletForm values={values} errors={errors} onChange={handleChange} />
-                  )}
+                   ) : method === "upi" ? (
+                     <UpiQR />
+                   ) : method === "netbanking" ? (
+                     <NetBankingForm values={values} onChange={handleChange} />
+                   ) : (
+                     <WalletForm values={values} onChange={handleChange} />
+                   )}
                 </div>
 
                 {submitError && (

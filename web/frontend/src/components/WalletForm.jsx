@@ -7,13 +7,15 @@ const wallets = [
   { id: "freecharge", name: "FreeCharge", icon: "🟡" },
 ];
 
-export default memo(function WalletForm({ values, errors, onChange }) {
+export default memo(function WalletForm({ values, onChange }) {
+  const isWalletSelected = values && values.wallet;
+  
   return (
     <div className="space-y-4">
       <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
           <svg className="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3-3v8a3 3 0 003 3z" />
           </svg>
         </div>
         <h4 className="text-lg font-semibold text-slate-900">Pay with Wallet</h4>
