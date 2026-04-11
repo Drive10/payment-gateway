@@ -8,8 +8,6 @@ const wallets = [
 ];
 
 export default memo(function WalletForm({ values, onChange }) {
-  const isWalletSelected = values && values.wallet;
-  
   return (
     <div className="space-y-4">
       <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
@@ -29,7 +27,7 @@ export default memo(function WalletForm({ values, onChange }) {
             type="button"
             onClick={() => onChange("wallet", wallet.id)}
             className={`flex items-center gap-3 rounded-xl border-2 p-4 transition-all ${
-              values.wallet === wallet.id
+              values?.wallet === wallet.id
                 ? "border-purple-500 bg-purple-50"
                 : "border-slate-200 hover:border-slate-300"
             }`}
@@ -40,7 +38,7 @@ export default memo(function WalletForm({ values, onChange }) {
         ))}
       </div>
 
-      {!values.wallet && (
+      {!values?.wallet && (
         <p className="text-center text-sm text-slate-500">Select a wallet to continue</p>
       )}
     </div>

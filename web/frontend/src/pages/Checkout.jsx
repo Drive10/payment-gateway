@@ -8,6 +8,8 @@ import WalletForm from "../components/WalletForm";
 import {
   TRANSACTION_MODES,
   formatCurrency,
+  startCheckout,
+  validateCardForm,
 } from "../lib/payment";
 
 const API_BASE_URL = window.__ENV__?.API_BASE_URL || "/api/v1";
@@ -146,17 +148,70 @@ export default function Checkout() {
     setAmountInput(value);
   };
 
-    const MIN_AMOUNT = 10;
-    const MAX_AMOUNT = 100000;
+  const handlePay = async () => {
+    const amount = parseFloat(amountInput);
+    
+    if (!amountInput || amount <= 0) {
+      setSubmitError("Please enter a valid payment amount");
+      return;
+    }
 
-    const disabled =
-      submitting ||
-      !amountInput ||
-      !isValidAmount ||
-      (method === "card" &&
-        (!values.cardNumber || !values.expiry || !values.cvv || !values.cardholder.trim())) ||
-      (method === "netbanking" && !values.bankCode) ||
-      (method === "wallet" && !values.wallet);
+    if (amount < MIN_AMOUNT) {
+      setSubmitError(`Minimum payment amount is ₹${MIN_AMOUNT}`);
+      return;
+    }
+
+    if (amount > MAX_AMOUNT) {
+      setSubmitError(`Maximum payment amount is ₹${MAX_AMOUNT.toLocaleString()}`);
+      return;
+    }
+
+    if (method === "card") {
+      const nextErrors = validateCardForm(values);
+      if (Object.keys(nextErrors).length > 0) {
+        setErrors(nextErrors);
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const checkout = await startCheckout({
+        amount,
+        method,
+        cardholder: values.cardholder,
+        transactionMode,
+        description: paymentLinkData?.description || "Payment for order",
+      });
+      navigate("/processing", { state: { checkout } });
+    } catch (error) {
+      setSubmitError(error.message || "Payment failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const MIN_AMOUNT = 10;
+  const MAX_AMOUNT = 100000;
+  
+  const amount = parseFloat(amountInput) || 0;
+  const isValidAmount = amount >= MIN_AMOUNT && amount <= MAX_AMOUNT;
+
+  const displayAmount = paymentLinkData?.amount ?? (amountInput ? parseFloat(amountInput) : 0);
+  const displayCurrency = paymentLinkData?.currency || "INR";
+  const displayMerchant = paymentLinkData?.merchantName || "PayFlow Merchant";
+  const displayDescription = paymentLinkData?.description || "Payment for order";
+  
+  const disabled =
+    submitting ||
+    !amountInput ||
+    !isValidAmount ||
+    (method === "card" &&
+      (!values.cardNumber || !values.expiry || !values.cvv || !values.cardholder.trim())) ||
+    (method === "netbanking" && !values.bankCode) ||
+    (method === "wallet" && !values.wallet);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50">
@@ -378,7 +433,7 @@ export default function Checkout() {
                 )}
 
                 <button
-                  onClick={pay}
+                  onClick={handlePay}
                   disabled={disabled}
                   className="w-full rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 py-4 text-base font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all hover:shadow-xl hover:shadow-cyan-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
                 >

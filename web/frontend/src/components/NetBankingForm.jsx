@@ -12,8 +12,6 @@ const banks = [
 ];
 
 export default memo(function NetBankingForm({ values, onChange }) {
-  const isBankSelected = values && values.bankCode;
-  
   return (
     <div className="space-y-4">
       <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
@@ -33,7 +31,7 @@ export default memo(function NetBankingForm({ values, onChange }) {
             type="button"
             onClick={() => onChange("bankCode", bank.id)}
             className={`flex items-center gap-3 rounded-xl border-2 p-4 transition-all ${
-              values.bankCode === bank.id
+              values?.bankCode === bank.id
                 ? "border-indigo-500 bg-indigo-50"
                 : "border-slate-200 hover:border-slate-300"
             }`}
@@ -44,7 +42,7 @@ export default memo(function NetBankingForm({ values, onChange }) {
         ))}
       </div>
 
-      {!values.bankCode && (
+      {!values?.bankCode && (
         <p className="text-center text-sm text-slate-500">Select a bank to continue</p>
       )}
     </div>
