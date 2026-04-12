@@ -16,3 +16,11 @@ export const logout = () => {
 export const getAuthToken = (): string | null => {
   return getToken(JWT_TOKEN_KEY);
 };
+
+export const requireAuth = () => {
+  if (!isAuthenticated()) {
+    window.location.href = '/login';
+    return false;
+  }
+  return true;
+};
