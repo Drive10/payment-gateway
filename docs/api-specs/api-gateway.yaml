@@ -1,0 +1,203 @@
+openapi: 3.0.3
+info:
+  title: PayFlow API Gateway
+  description: Central API Gateway for PayFlow microservices
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.payflow.dev
+    description: Production server
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register new user
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+      responses:
+        '201':
+          description: User registered
+
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: User login
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+
+  /api/v1/orders:
+    post:
+      tags:
+        - Orders
+      summary: Create order
+      operationId: createOrder
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Order created
+
+    get:
+      tags:
+        - Orders
+      summary: Get orders
+      operationId: getOrders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of orders
+
+  /api/v1/payments:
+    post:
+      tags:
+        - Payments
+      summary: Create payment
+      operationId: createPayment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Payment created
+
+    get:
+      tags:
+        - Payments
+      summary: Get payments
+      operationId: getPayments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of payments
+
+  /api/v1/payments/{paymentId}:
+    get:
+      tags:
+        - Payments
+      summary: Get payment by ID
+      operationId: getPayment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment details
+
+  /api/v1/payments/{paymentId}/refunds:
+    post:
+      tags:
+        - Payments
+      summary: Refund payment
+      operationId: refundPayment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Refund processed
+
+  /api/v1/notifications/send:
+    post:
+      tags:
+        - Notifications
+      summary: Send notification
+      operationId: sendNotification
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Notification sent
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

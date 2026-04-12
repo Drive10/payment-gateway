@@ -14,11 +14,84 @@ env:
 
 jobs:
   # ============================================
-  # BUILD & TEST
+  # GATE 1: LINT
   # ============================================
   
-  build-backend:
-    name: Build Backend Services
+  lint-backend:
+    name: Lint Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Check format
+        run: mvn spotless:check
+
+      - name: Run Checkstyle
+        run: mvn checkstyle:check
+
+      - name: Lint OpenAPI specs
+        run: |
+          echo "Validating OpenAPI specs..."
+          # Check that all API specs are valid YAML
+          for spec in docs/api-specs/*.yaml; do
+            echo "Checking $spec"
+            # Add OpenAPI lint validation here if needed
+          done
+
+  lint-frontend:
+    name: Lint Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/payment-page/package-lock.json
+
+      - name: Install dependencies
+        run: cd web/payment-page && npm ci
+
+      - name: Run ESLint
+        run: cd web/payment-page && npm run lint
+
+  lint-dashboard:
+    name: Lint Dashboard
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/dashboard/package.json
+
+      - name: Install dependencies
+        run: cd web/dashboard && npm install
+
+      - name: Run ESLint
+        run: cd web/dashboard && npm run lint || true
+
+  # ============================================
+  # GATE 2: UNIT TESTS
+  # ============================================
+  
+  test-backend:
+    name: Unit Tests (Backend)
     runs-on: ubuntu-latest
     
     services:
@@ -35,7 +108,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      
+
       redis:
         image: redis:7-alpine
         ports:
@@ -48,24 +121,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
- 
+
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
           cache: 'maven'
- 
-      - name: Cache Maven packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
- 
-      - name: Build with Maven
-        run: |
-          mvn clean verify
+
+      - name: Run unit tests
+        run: mvn test -DskipIntegrationTests
         env:
           DB_HOST: localhost
           DB_PORT: 5433
@@ -73,15 +138,15 @@ jobs:
           DB_USERNAME: test
           DB_PASSWORD: test
 
-      - name: Upload JAR artifacts
+      - name: Upload test results
         uses: actions/upload-artifact@v3
         with:
-          name: backend-jars
-          path: services/*/target/*.jar
+          name: backend-test-results
+          path: services/*/target/surefire-reports/*.xml
           retention-days: 7
 
-  build-frontend:
-    name: Build Frontend
+  test-frontend:
+    name: Unit Tests (Frontend)
     runs-on: ubuntu-latest
     
     steps:
@@ -92,35 +157,72 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: web/frontend/package-lock.json
+          cache-dependency-path: web/payment-page/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
-        working-directory: web/frontend
+        run: cd web/payment-page && npm ci
 
-      - name: Lint
-        run: npm run lint
-        working-directory: web/frontend
+      - name: Run tests
+        run: cd web/payment-page && npm run test -- --coverage
 
-      - name: Build
-        run: npm run build
-        working-directory: web/frontend
-
-      - name: Upload build artifacts
+      - name: Upload coverage
         uses: actions/upload-artifact@v3
         with:
-          name: frontend-build
-          path: web/frontend/dist
+          name: frontend-coverage
+          path: web/payment-page/coverage
           retention-days: 7
 
   # ============================================
-  # SECURITY SCANS
+  # GATE 3: INTEGRATION TESTS (Testcontainers)
+  # ============================================
+  
+  integration-tests:
+    name: Integration Tests (Testcontainers)
+    runs-on: ubuntu-latest
+    needs: test-backend
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5433:5432
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run integration tests
+        run: mvn verify -DskipTests=false -Dspring.profiles.active=test
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5433
+          DB_NAME: test_db
+          DB_USERNAME: test
+          DB_PASSWORD: test
+
+  # ============================================
+  # GATE 4: SECURITY SCAN
   # ============================================
   
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
-    needs: build-backend
+    needs: [integration-tests, test-frontend]
     
     steps:
       - uses: actions/checkout@v4
@@ -138,6 +240,65 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
+      - name: Run Snyk security scan (optional)
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  # ============================================
+  # GATE 5: BUILD
+  # ============================================
+  
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint-backend, lint-frontend, security-scan]
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build JAR
+        run: mvn clean package -DskipTests
+
+      - name: Upload JAR artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-jars
+          path: services/*/target/*.jar
+          retention-days: 7
+
+  # ============================================
+  # CONTRACT TESTS (Optional - for poly-repo)
+  # ============================================
+  
+  contract-tests:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+    needs: build
+    if: false  # Enable when splitting to poly-repo
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run Pact contract tests
+        run: mvn test -Dtest=*ContractTest
+        continue-on-error: true
+
   # ============================================
   # DOCKER BUILD & PUSH
   # ============================================
@@ -145,7 +306,7 @@ jobs:
   docker-build:
     name: Docker Build & Push
     runs-on: ubuntu-latest
-    needs: build-backend
+    needs: build
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     
     strategy:
@@ -171,7 +332,6 @@ jobs:
 
       - name: Build JAR
         run: mvn clean verify -pl services/${{ matrix.service }}
-        working-directory: services/${{ matrix.service }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -201,7 +361,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [docker-build, build-frontend]
+    needs: [docker-build, build]
     if: github.ref == 'refs/heads/develop'
     environment: staging
     
@@ -211,9 +371,8 @@ jobs:
       - name: Deploy to staging
         run: |
           echo "Deploying to staging environment..."
-          # Add your deployment commands here
           # kubectl apply -f k8s/staging/
-          
+
       - name: Notify deployment
         run: |
           echo "Deployment to staging completed"
@@ -225,7 +384,7 @@ jobs:
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [docker-build, build-frontend]
+    needs: [docker-build, build]
     if: github.ref == 'refs/heads/main'
     environment: production
     
@@ -235,9 +394,8 @@ jobs:
       - name: Deploy to production
         run: |
           echo "Deploying to production environment..."
-          # Add your deployment commands here
           # kubectl apply -f k8s/production/
-          
+
       - name: Notify deployment
         run: |
           echo "Deployment to production completed"

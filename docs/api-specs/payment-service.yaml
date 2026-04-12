@@ -1,0 +1,482 @@
+openapi: 3.0.3
+info:
+  title: PayFlow Payment Service API
+  description: API for payment processing and management
+  version: 1.0.0
+  contact:
+    name: PayFlow Team
+    email: dev@payflow.dev
+
+servers:
+  - url: http://localhost:8083
+    description: Development server
+  - url: https://api.payflow.dev
+    description: Production server
+
+tags:
+  - name: Payments
+    description: Payment operations
+  - name: Payment Links
+    description: Payment link management
+  - name: Analytics
+    description: Payment analytics and reporting
+
+paths:
+  /payments:
+    post:
+      tags:
+        - Payments
+      summary: Create a new payment
+      operationId: createPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+            examples:
+              card_payment:
+                summary: Card payment example
+                value:
+                  orderId: "order_123"
+                  merchantId: "550e8400-e29b-41d4-a716-446655440000"
+                  paymentMethod: "CARD"
+                  provider: "STRIPE"
+                  transactionMode: "TEST"
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Unique key for idempotent requests
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Payment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Bad request - missing idempotency key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    get:
+      tags:
+        - Payments
+      summary: Get all payments
+      operationId: getPayments
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [CREATED, PROCESSING, AUTHORIZED, CAPTURED, FAILED, REFUNDED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Paginated list of payments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageResponse'
+
+  /payments/{paymentId}:
+    get:
+      tags:
+        - Payments
+      summary: Get payment by ID
+      operationId: getPayment
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Payment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Payment not found
+
+  /payments/{paymentId}/capture:
+    post:
+      tags:
+        - Payments
+      summary: Capture an authorized payment
+      operationId: capturePayment
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapturePaymentRequest'
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Payment captured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /payments/{paymentId}/refunds:
+    post:
+      tags:
+        - Payments
+      summary: Refund a payment
+      operationId: refundPayment
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRefundRequest'
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Refund processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /payments/links:
+    post:
+      tags:
+        - Payment Links
+      summary: Create payment link
+      operationId: createPaymentLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentLinkRequest'
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Payment link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    get:
+      tags:
+        - Payment Links
+      summary: Get merchant payment links
+      operationId: getPaymentLinks
+      parameters:
+        - name: merchantId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of payment links
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /payments/balance/{merchantId}:
+    get:
+      tags:
+        - Analytics
+      summary: Get merchant balance
+      operationId: getMerchantBalance
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Merchant balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /payments/analytics/{merchantId}:
+    get:
+      tags:
+        - Analytics
+      summary: Get merchant analytics
+      operationId: getMerchantAnalytics
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Merchant analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /payments/analytics/{merchantId}/trends:
+    get:
+      tags:
+        - Analytics
+      summary: Get payment trends
+      operationId: getPaymentTrends
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        '200':
+          description: Payment trends
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    PageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            type: object
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        last:
+          type: boolean
+
+    CreatePaymentRequest:
+      type: object
+      required:
+        - orderId
+        - merchantId
+        - paymentMethod
+        - provider
+        - transactionMode
+      properties:
+        orderId:
+          type: string
+        merchantId:
+          type: string
+          format: uuid
+        paymentMethod:
+          type: string
+          enum: [CARD, UPI, WALLET, BANK_TRANSFER]
+        provider:
+          type: string
+          enum: [STRIPE, RAZORPAY, PAYPAL]
+        transactionMode:
+          type: string
+          enum: [TEST, LIVE]
+        amount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+          default: INR
+
+    CapturePaymentRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: decimal
+
+    CreateRefundRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: decimal
+        reason:
+          type: string
+
+    CreatePaymentLinkRequest:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+        description:
+          type: string
+        expireBy:
+          type: string
+          format: date-time
+
+    PaymentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+        amount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [CREATED, PROCESSING, AUTHORIZED, CAPTURED, FAILED, REFUNDED]
+        checkoutUrl:
+          type: string
+
+    MerchantBalanceResponse:
+      type: object
+      properties:
+        available:
+          type: number
+          format: decimal
+        pending:
+          type: number
+          format: decimal
+        total:
+          type: number
+          format: decimal
+        currency:
+          type: string
+
+    MerchantAnalyticsResponse:
+      type: object
+      properties:
+        totalRevenue:
+          type: number
+        totalFees:
+          type: number
+        totalRefunds:
+          type: number
+        netRevenue:
+          type: number
+        totalPayments:
+          type: integer
+          format: int64
+        successCount:
+          type: integer
+          format: int64
+        failedCount:
+          type: integer
+          format: int64
+        successRate:
+          type: number
+
+    PaymentTrendsResponse:
+      type: object
+      properties:
+        trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyTrend'
+
+    DailyTrend:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        revenue:
+          type: number
+        count:
+          type: integer
