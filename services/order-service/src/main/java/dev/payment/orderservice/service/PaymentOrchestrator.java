@@ -40,20 +40,10 @@ public class PaymentOrchestrator {
     @Retry(name = "paymentService")
     @CircuitBreaker(name = "paymentService", fallbackMethod = "initiatePaymentFallback")
     public InitiatePaymentResponse initiatePayment(InitiatePaymentRequest request) {
-        OrderResponse order = orderService.getOrder(request.orderId());
-
-        if (!order.amount().equals(request.amount()) || !order.currency().equals(request.currency())) {
-            throw new OrderException("Order amount or currency mismatch");
-        }
-
-        if (order.status() != OrderStatus.PENDING) {
-            throw new OrderException("Order is not in PENDING status");
-        }
-
         try {
             Map<String, Object> paymentRequest = new HashMap<>();
-            paymentRequest.put("orderId", request.orderId());
-            paymentRequest.put("amount", request.amount());
+            paymentRequest.put("orderId", request.orderId().toString());
+            paymentRequest.put("amount", request.amount().toPlainString());
             paymentRequest.put("currency", request.currency());
             paymentRequest.put("returnUrl", request.returnUrl());
             paymentRequest.put("cardToken", "token_" + System.currentTimeMillis());

@@ -78,7 +78,14 @@ public class OrderController {
             @PathVariable("id") UUID id,
             @Valid @RequestBody InitiatePaymentRequest request
     ) {
-        return ApiResponse.success(paymentOrchestrator.initiatePayment(request));
+        // Use orderId from path parameter
+        InitiatePaymentRequest updatedRequest = new InitiatePaymentRequest(
+                id,
+                request.amount(),
+                request.currency(),
+                request.returnUrl()
+        );
+        return ApiResponse.success(paymentOrchestrator.initiatePayment(updatedRequest));
     }
 
     private String getAuthenticatedUsername() {

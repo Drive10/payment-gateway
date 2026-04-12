@@ -31,7 +31,9 @@ public class GatewayTrustFilter extends OncePerRequestFilter {
             "/api/v1/auth",
             "/api/v1/webhooks",
             "/internal/",
-            "/payments/initiate"
+            "/payments/initiate",
+            "/internal/platform/",
+            "/orders/"
     );
 
     private final ObjectMapper objectMapper;

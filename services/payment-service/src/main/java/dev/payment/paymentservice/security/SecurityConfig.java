@@ -51,6 +51,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/internal/platform/auth/**").permitAll()
                         .requestMatchers("/internal/**").permitAll()
+                        .requestMatchers("/orders/**").permitAll()
                         .requestMatchers("/payments/initiate").permitAll()
                         .requestMatchers("/payments/**").authenticated()
                 )
