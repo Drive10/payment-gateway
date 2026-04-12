@@ -9,6 +9,15 @@ public class ServiceConfig {
 
     private final PaymentService paymentService = new PaymentService();
     private final NotificationService notificationService = new NotificationService();
+    private String internalApiKey;
+
+    public String getInternalApiKey() {
+        return internalApiKey;
+    }
+
+    public void setInternalApiKey(String internalApiKey) {
+        this.internalApiKey = internalApiKey;
+    }
 
     public PaymentService getPaymentService() {
         return paymentService;

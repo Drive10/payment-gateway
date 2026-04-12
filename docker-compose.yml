@@ -276,7 +276,7 @@ services:
   frontend:
     profiles: [services]
     build:
-      context: ./web/frontend
+      context: ./web/payment-page
       dockerfile: Dockerfile
     container_name: payflow-frontend
     environment:

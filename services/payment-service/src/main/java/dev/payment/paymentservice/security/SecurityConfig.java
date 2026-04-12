@@ -50,8 +50,9 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
                         .requestMatchers("/internal/platform/auth/**").permitAll()
-                        .requestMatchers("/api/v1/webhooks/**").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/internal/**").permitAll()
+                        .requestMatchers("/payments/initiate").permitAll()
+                        .requestMatchers("/payments/**").authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

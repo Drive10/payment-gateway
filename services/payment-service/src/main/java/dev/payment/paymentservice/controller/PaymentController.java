@@ -169,7 +169,8 @@ public class PaymentController {
             @Valid @RequestBody InitiatePaymentRequest request,
             @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication authentication) {
-        User actor = authService.getCurrentUser(authentication.getName());
+        String userEmail = authentication != null ? authentication.getName() : "system@payflow.dev";
+        User actor = authService.getCurrentUser(userEmail);
         
         CreatePaymentRequest createRequest = new CreatePaymentRequest(
                 request.orderId(),

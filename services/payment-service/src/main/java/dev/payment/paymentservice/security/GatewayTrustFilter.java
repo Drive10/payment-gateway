@@ -29,7 +29,9 @@ public class GatewayTrustFilter extends OncePerRequestFilter {
             "/swagger-ui.html",
             "/v3/api-docs",
             "/api/v1/auth",
-            "/api/v1/webhooks"
+            "/api/v1/webhooks",
+            "/internal/",
+            "/payments/initiate"
     );
 
     private final ObjectMapper objectMapper;

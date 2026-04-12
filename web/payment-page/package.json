@@ -1,5 +1,5 @@
 {
-  "name": "fintech-payment-gateway",
+  "name": "payflow-payment-page",
   "version": "1.0.0",
   "private": true,
   "description": "A polished fintech checkout experience built with React, Vite, Tailwind CSS, and Framer Motion.",
