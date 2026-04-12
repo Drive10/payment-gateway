@@ -67,12 +67,15 @@ public class PaymentController {
     public ApiResponse<java.util.List<PaymentLinkResponse>> getPaymentLinks(
             @RequestParam("merchantId") UUID merchantId,
             Authentication authentication) {
-        authService.getCurrentUser(authentication.getName());
+        User actor = authService.getCurrentUser(authentication.getName());
         return ApiResponse.success(paymentLinkService.getMerchantPaymentLinks(merchantId));
     }
 
     @GetMapping("/link/{referenceId}")
-    public ApiResponse<PaymentLinkResponse> getPublicPaymentLink(@PathVariable("referenceId") String referenceId) {
+    public ApiResponse<PaymentLinkResponse> getPaymentLink(
+            @PathVariable("referenceId") String referenceId,
+            Authentication authentication) {
+        User actor = authService.getCurrentUser(authentication.getName());
         return ApiResponse.success(paymentLinkService.getPaymentLink(referenceId));
     }
 

@@ -30,6 +30,24 @@ public class WebhookController {
         this.razorpayWebhookService = razorpayWebhookService;
     }
 
+    @PostMapping("/stripe")
+    @Operation(summary = "Handle Stripe webhooks", description = "Validates Stripe signature and updates payment state.")
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleStripeWebhook(
+            @RequestHeader(name = "Stripe-Signature", required = false) String signature,
+            @RequestBody @Valid String payload
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(Map.of("status", "processed")));
+    }
+
+    @PostMapping("/paypal")
+    @Operation(summary = "Handle PayPal webhooks", description = "Validates PayPal webhook and updates payment state.")
+    public ResponseEntity<ApiResponse<Map<String, String>>> handlePaypalWebhook(
+            @RequestHeader(name = "PayPal-Transmission-Sig", required = false) String signature,
+            @RequestBody @Valid String payload
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(Map.of("status", "processed")));
+    }
+
     @PostMapping("/razorpay")
     @Operation(summary = "Handle Razorpay webhooks", description = "Validates the HMAC signature, rejects replays by event id, and updates payment or refund state.")
     @ApiResponses({

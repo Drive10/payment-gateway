@@ -54,19 +54,13 @@ export default function Success() {
               ))}
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-8 flex justify-center">
               <Link
                 to="/receipt"
                 state={{ transaction }}
                 className="inline-flex flex-1 items-center justify-center rounded-[1.25rem] bg-slate-950 px-6 py-3 font-semibold text-white transition hover:bg-slate-800"
               >
                 View receipt
-              </Link>
-              <Link
-                to="/"
-                className="inline-flex flex-1 items-center justify-center rounded-[1.25rem] border border-slate-200 px-6 py-3 font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
-              >
-                New payment
               </Link>
             </div>
           </div>

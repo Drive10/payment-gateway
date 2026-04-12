@@ -351,10 +351,10 @@ public class PaymentService {
         if (normalized.isBlank()) {
             return SIMULATED_PROVIDER;
         }
-        return switch (normalized) {
-            case "STRIPE", "RAZORPAY", "PAYPAL" -> SIMULATED_PROVIDER;
-            default -> normalized;
-        };
+        if (normalized.equals("RAZORPAY_SIMULATOR") || normalized.equals("STRIPE_SIMULATOR") || normalized.equals("PAYPAL_SIMULATOR")) {
+            return SIMULATED_PROVIDER;
+        }
+        return normalized;
     }
 
     private String resolveSimulationMode(Payment payment) {

@@ -13,10 +13,11 @@ import java.util.Map;
 public class PaymentStateMachine {
 
     private static final Map<PaymentStatus, EnumSet<PaymentStatus>> ALLOWED_TRANSITIONS = Map.of(
-            PaymentStatus.CREATED, EnumSet.of(PaymentStatus.PROCESSING, PaymentStatus.CAPTURED, PaymentStatus.FAILED),
-            PaymentStatus.PROCESSING, EnumSet.of(PaymentStatus.CAPTURED, PaymentStatus.FAILED),
+            PaymentStatus.CREATED, EnumSet.of(PaymentStatus.PROCESSING, PaymentStatus.CAPTURED, PaymentStatus.FAILED, PaymentStatus.EXPIRED),
+            PaymentStatus.PROCESSING, EnumSet.of(PaymentStatus.CAPTURED, PaymentStatus.FAILED, PaymentStatus.EXPIRED),
             PaymentStatus.CAPTURED, EnumSet.of(PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED),
-            PaymentStatus.PARTIALLY_REFUNDED, EnumSet.of(PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED)
+            PaymentStatus.PARTIALLY_REFUNDED, EnumSet.of(PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED),
+            PaymentStatus.EXPIRED, EnumSet.noneOf(PaymentStatus.class)
     );
 
     public void transition(Payment payment, PaymentStatus targetStatus) {
