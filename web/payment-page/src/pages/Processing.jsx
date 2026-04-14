@@ -28,8 +28,50 @@ export default function Processing() {
       return;
     }
 
-    handleOtpRequired();
+    checkPaymentAndProceed();
   }, [checkout, navigate]);
+
+  const checkPaymentAndProceed = async () => {
+    if (!checkout?.payment?.id) {
+      console.error("No checkout or payment ID:", checkout);
+      navigate("/", { replace: true });
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/payments/${checkout.payment.id}`,
+        {
+          headers: { Authorization: `Bearer ${checkout.token}` },
+        }
+      );
+      const data = await response.json();
+
+      if (data.success && (data.data?.status === "COMPLETED" || data.data?.status === "CAPTURED")) {
+        // Already captured - go to success
+        const transaction = {
+          id: checkout.payment.id,
+          orderId: checkout.order.id,
+          orderReference: checkout.order.externalReference,
+          status: data.data.status,
+          amount: checkout.amount,
+          amountLabel: formatCurrency(checkout.amount),
+          method: checkout.method,
+          methodLabel: checkout.method === "upi" ? "UPI" : "Card",
+          customerLabel: checkout.cardholder || `${checkout.customer?.firstName} ${checkout.customer?.lastName}`.trim(),
+          environmentLabel: "Sandbox lane",
+          correlationId: checkout.correlationId,
+        };
+        navigate("/success", { replace: true, state: { transaction } });
+      } else {
+        // Need OTP
+        handleOtpRequired();
+      }
+    } catch (err) {
+      console.error("Error checking payment:", err);
+      handleOtpRequired();
+    }
+  };
 
   const handleOtpRequired = () => {
     setShowOtpModal(true);
@@ -74,14 +116,30 @@ export default function Processing() {
           correlationId: checkout.correlationId,
         };
         navigate("/success", { replace: true, state: { transaction } });
-      } else {
-        if (data.data?.status === "PROCESSING" || data.data?.status === "CREATED") {
-          await pollPaymentStatus(data.data);
-        } else {
-          setOtpError(data.error?.message || "Invalid OTP. Try 123456");
-          setStatus("pending_otp");
-        }
+        return;
       }
+
+      // If payment is already captured (race condition), go to success
+      if (data.error?.code === "INVALID_STATE" || data.data?.status === "CAPTURED") {
+        const transaction = {
+          id: checkout.payment.id,
+          orderId: checkout.order.id,
+          orderReference: checkout.order.externalReference,
+          status: "CAPTURED",
+          amount: checkout.amount,
+          amountLabel: formatCurrency(checkout.amount),
+          method: checkout.method,
+          methodLabel: checkout.method === "upi" ? "UPI" : "Card",
+          customerLabel: checkout.cardholder || `${checkout.customer?.firstName} ${checkout.customer?.lastName}`.trim(),
+          environmentLabel: "Sandbox lane",
+          correlationId: checkout.correlationId,
+        };
+        navigate("/success", { replace: true, state: { transaction } });
+        return;
+      }
+
+      setOtpError(data.error?.message || "Invalid OTP. Try 123456");
+      setStatus("pending_otp");
     } catch (err) {
       setOtpError("Verification failed. Try 123456");
       setStatus("pending_otp");

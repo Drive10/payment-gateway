@@ -6,11 +6,12 @@ const TX_STORAGE_KEY = "payflow-checkout-transaction";
 test.describe("Fullstack checkout E2E", () => {
   test.setTimeout(120_000);
 
-  test("creates and verifies payment across frontend + backend", async ({ page, request }) => {
+test("creates and verifies payment across frontend + backend", async ({ page, request }) => {
     await page.goto("/");
+    await page.waitForLoadState("networkidle");
 
     const amountToggle = page.getByRole("button", { name: /enter custom amount/i });
-    await expect(amountToggle).toBeVisible();
+    await expect(amountToggle).toBeVisible({ timeout: 10000 });
     await amountToggle.click();
 
     const amountInput = page.getByPlaceholder("Enter amount");
@@ -20,17 +21,20 @@ test.describe("Fullstack checkout E2E", () => {
     await upiButton.click();
 
     const payButton = page.getByRole("button", { name: /^Pay /i });
-    await expect(payButton).toBeEnabled();
+    await expect(payButton).toBeEnabled({ timeout: 10000 });
     await payButton.click();
+
+    await page.waitForURL("**/processing", { timeout: 10000 });
 
     const otpInput = page.getByPlaceholder("Enter 6-digit OTP");
     if (await otpInput.isVisible({ timeout: 5000 })) {
       await otpInput.fill("123456");
       await page.getByRole("button", { name: "Verify OTP" }).click();
-      await page.waitForLoadState("networkidle", { timeout: 10000 });
+      await page.waitForURL("**/success", { timeout: 30000 });
+    } else {
+      await page.waitForURL("**/success", { timeout: 60000 });
     }
-
-    await page.waitForURL(/\/(success|failure)/, { timeout: 60_000 });
+    }
     expect(page.url(), "checkout should complete successfully").toMatch(/\/success/);
 
     await expect(page.getByRole("heading", { name: /payment successful/i })).toBeVisible();

@@ -113,10 +113,8 @@
 | **payment-service** | 8083 | Payment orchestration, multi-provider integration | Spring Boot |
 | **notification-service** | 8084 | Email, SMS, push, webhooks, feature flags | Kafka, Redis |
 | **simulator-service** | 8086 | Payment simulation, load testing, demo mode | Spring Boot |
-| **graphql-gateway** | 8087 | GraphQL API with schema federation | Spring GraphQL |
-| **search-service** | 8088 | Full-text search, aggregations | Elasticsearch |
 | **analytics-service** | 8089 | Risk scoring, settlements, disputes, reports | Kafka, JPA |
-| **audit-service** | 8089 | Audit logging, compliance | MongoDB |
+| **audit-service** | 8090 | Audit logging, compliance | MongoDB |
 
 ## Features
 
@@ -128,10 +126,7 @@
 - **Retry Logic**: Exponential backoff with circuit breaker (Resilience4j)
 
 ### GraphQL API
-- **Schema Federation**: GraphQL gateway aggregates data from multiple services
-- **Real-time Subscriptions**: WebSocket-based live updates
-- **DataLoader**: N+1 query optimization
-- **GraphiQL UI**: Interactive API playground at `/graphiql`
+> ⚠️ **Planned** - Not yet implemented
 
 ### Search & Analytics
 - **Full-text Search**: Elasticsearch-powered payment and order search
