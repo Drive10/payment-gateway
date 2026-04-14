@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { getStoredTransaction } from "../lib/payment";
 
 export default function Receipt() {
@@ -109,20 +109,14 @@ export default function Receipt() {
               ))}
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-8">
               <button
                 type="button"
                 onClick={downloadPDF}
-                className="flex-1 rounded-[1.25rem] bg-slate-950 px-5 py-3 font-semibold text-white transition hover:bg-slate-800"
+                className="w-full rounded-[1.25rem] bg-slate-950 px-5 py-3 font-semibold text-white transition hover:bg-slate-800"
               >
                 Download PDF
               </button>
-              <Link
-                to="/"
-                className="flex-1 rounded-[1.25rem] border border-slate-200 px-5 py-3 text-center font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
-              >
-                New payment
-              </Link>
             </div>
           </div>
         </div>
