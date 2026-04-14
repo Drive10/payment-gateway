@@ -7,4 +7,5 @@ import dev.payment.paymentservice.dto.request.CapturePaymentRequest;
 public interface PaymentProcessorClient {
     PaymentProcessorIntentResponse createIntent(Payment payment, String orderReference, TransactionMode mode);
     PaymentProcessorCaptureResponse capture(Payment payment, CapturePaymentRequest request, TransactionMode mode);
+    boolean verifyOtp(Payment payment, String otp);
 }

@@ -31,6 +31,11 @@ spring:
           deprecated_uuid_char_type: true
   flyway:
     enabled: false
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: payflow-redis
 
 application:
   jwt:

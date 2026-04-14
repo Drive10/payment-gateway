@@ -44,4 +44,13 @@ public class InMemoryPaymentProcessorClient implements PaymentProcessorClient {
                 + UUID.randomUUID().toString().replace("-", "").substring(0, 18);
         return new PaymentProcessorCaptureResponse(providerPaymentId, providerSignature, providerReference, mode == TransactionMode.TEST);
     }
+
+    @Override
+    public boolean verifyOtp(Payment payment, String otp) {
+        if (payment.getTransactionMode() == TransactionMode.TEST) {
+            return "123456".equals(otp);
+        }
+        
+        return otp != null && otp.length() >= 4 && !otp.isBlank();
+    }
 }

@@ -160,6 +160,13 @@ public class PaymentController {
         return ApiResponse.success(queryService.findDetailById(paymentId));
     }
 
+    @PostMapping("/tokenize")
+    public ApiResponse<CardTokenizationResponse> tokenizeCard(
+            @RequestBody CardTokenizationRequest request) {
+        String token = paymentService.tokenizeCard(request);
+        return ApiResponse.success(new CardTokenizationResponse(token));
+    }
+
     @PostMapping("/{paymentId}/retry")
     public ApiResponse<PaymentResponse> retryPayment(
             @PathVariable("paymentId") UUID paymentId,

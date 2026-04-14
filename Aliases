@@ -1,0 +1,77 @@
+# ===========================================
+# PayFlow Shell Aliases
+# Add to your ~/.zshrc or ~/.bashrc:
+#   source /path/to/payflow/Aliases
+# ===========================================
+
+# Quick Make targets
+alias pf-infra='make infra-up'
+alias pf-down='make infra-down'
+alias pf-docker='make docker-up'
+alias pf-docker-down='make docker-down'
+alias pf-diagnose='make diagnose'
+alias pf-health='make health'
+
+# Service scripts
+alias pf-start='./run-local.sh start'
+alias pf-stop='./run-local.sh stop'
+alias pf-restart='./run-local.sh restart'
+alias pf-status='./run-local.sh status'
+alias pf-logs='./run-local.sh logs'
+
+# Individual services
+alias pf-auth='./run-service.sh start auth'
+alias pf-payment='./run-service.sh start payment'
+alias pf-order='./run-service.sh start order'
+alias pf-notif='./run-service.sh start notification'
+alias pf-sim='./run-service.sh start simulator'
+
+# Testing
+alias pf-test='make test'
+alias pf-lint='make lint'
+alias pf-format='make format'
+
+# Frontend
+alias pf-front='cd web/payment-page && npm run dev'
+alias pf-front-test='cd web/payment-page && npm test'
+alias pf-front-build='cd web/payment-page && npm run build'
+
+# Quick status check
+pf() {
+    echo ""
+    echo "PayFlow Status:"
+    echo "============"
+    for port in 8080 8081 8082 8083 8084 8086 8089 8090 5173; do
+        if curl -sf "http://localhost:$port/actuator/health" >/dev/null 2>&1; then
+            echo "✓ port $port"
+        elif [ $port -eq 5173 ]; then
+            echo "○ frontend (5173)"
+        else
+            echo "○ port $port"
+        fi
+    done
+}
+
+# Service logs
+plog() {
+    if [ -z "$1" ]; then
+        tail -f /tmp/api-gateway.log
+    else
+        case "$1" in
+            auth) tail -f /tmp/auth-service.log ;;
+            payment) tail -f /tmp/payment-service.log ;;
+            order) tail -f /tmp/order-service.log ;;
+            notif|notification) tail -f /tmp/notification-service.log ;;
+            sim|simulator) tail -f /tmp/simulator-service.log ;;
+            analytics) tail -f /tmp/analytics-service.log ;;
+            audit) tail -f /tmp/audit-service.log ;;
+            gateway|api) tail -f /tmp/api-gateway.log ;;
+            front|frontend) tail -f /tmp/frontend.log ;;
+            *) echo "Unknown service: $1" ;;
+        esac
+    fi
+}
+
+echo "PayFlow aliases loaded!"
+echo "Run 'pf' for quick status check"
+echo "Run 'plog <service>' for logs"

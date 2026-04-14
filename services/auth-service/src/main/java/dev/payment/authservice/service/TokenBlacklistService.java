@@ -3,7 +3,7 @@ package dev.payment.authservice.service;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.Duration;
+import java.time.Duration;
 
 @Service
 public class TokenBlacklistService {

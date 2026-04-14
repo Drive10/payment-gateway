@@ -189,22 +189,25 @@ public class PaymentService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Payment is not in pending state");
         }
 
-        if ("123456".equals(otp)) {
-            payment.setProviderPaymentId("pay_" + System.currentTimeMillis());
-            paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
+        boolean valid = paymentProcessorClient.verifyOtp(payment, otp);
+        if (!valid) {
+            paymentStateMachine.transition(payment, PaymentStatus.FAILED);
             paymentRepository.save(payment);
-            
-            recordToLedger(payment);
-            transactionService.createCaptureSuccess(payment, payment.getProviderPaymentId());
-            updateOrderStatus(payment);
-            auditService.record("PAYMENT_OTP_VERIFIED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "OTP verified and payment captured");
-            paymentEventPublisher.publish("payment.captured", payment, Map.of("actor", actor.getEmail()));
-            
-            log.info("event=payment_otp_verified paymentId={} actor={}", paymentId, actor.getEmail());
-            return paymentMapper.toResponse(payment, transactionService.findByPaymentId(paymentId));
-        } else {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OTP", "Invalid OTP");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OTP", "Invalid OTP - please verify with your bank");
         }
+
+        payment.setProviderPaymentId("pay_" + System.currentTimeMillis());
+        paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
+        paymentRepository.save(payment);
+        
+        recordToLedger(payment);
+        transactionService.createCaptureSuccess(payment, payment.getProviderPaymentId());
+        updateOrderStatus(payment);
+        auditService.record("PAYMENT_OTP_VERIFIED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "OTP verified and payment captured");
+        paymentEventPublisher.publish("payment.captured", payment, Map.of("actor", actor.getEmail()));
+        
+        log.info("event=payment_otp_verified paymentId={} actor={}", paymentId, actor.getEmail());
+        return paymentMapper.toResponse(payment, transactionService.findByPaymentId(paymentId));
     }
 
     private void calculateAndSetFees(Payment payment) {
@@ -384,11 +387,25 @@ public class PaymentService {
         return normalized;
     }
 
-    private String resolveSimulationMode(Payment payment) {
+private String resolveSimulationMode(Payment payment) {
         if (payment.getTransactionMode() == TransactionMode.TEST) {
             return "TEST";
         }
         return "SUCCESS";
+    }
+
+    public String tokenizeCard(dev.payment.paymentservice.dto.request.CardTokenizationRequest request) {
+        String cardNumber = request.cardNumber().replaceAll("\\s", "");
+        
+        if (cardNumber.length() < 13 || cardNumber.length() > 19) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_CARD", "Invalid card number");
+        }
+        
+        String token = "tok_" + cardNumber.substring(cardNumber.length() - 4) + "_" + System.currentTimeMillis();
+        
+        log.info("Card tokenized: {}****{}", token.substring(0, 8), token.substring(token.length() - 4));
+        
+        return token;
     }
 
     @Transactional
