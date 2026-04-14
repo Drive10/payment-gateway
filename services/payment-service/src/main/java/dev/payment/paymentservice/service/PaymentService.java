@@ -390,4 +390,52 @@ public class PaymentService {
         }
         return "SUCCESS";
     }
+
+    @Transactional
+    public PaymentResponse retryPayment(UUID paymentId, String idempotencyKey, User actor) {
+        Payment payment = getOwnedPayment(paymentId, actor);
+        
+        if (payment.getStatus() != PaymentStatus.FAILED && payment.getStatus() != PaymentStatus.EXPIRED) {
+            throw new ApiException(HttpStatus.CONFLICT, "INVALID_STATE", 
+                "Only failed or expired payments can be retried. Current state: " + payment.getStatus());
+        }
+        
+        String newIdempotencyKey = idempotencyKey + "_retry_" + System.currentTimeMillis();
+        
+        IdempotencyService.IdempotencyResult<PaymentResponse> idempotency =
+                idempotencyService.begin("PAYMENT_RETRY", newIdempotencyKey, actorIdKey(actor), Map.of(
+                        "actor", actor.getEmail(),
+                        "originalPaymentId", paymentId
+                ), PaymentResponse.class);
+        if (idempotency.replayed()) {
+            return idempotency.cachedResponse();
+        }
+        
+        payment.setStatus(PaymentStatus.PENDING);
+        payment.setProviderOrderId(null);
+        payment.setProviderPaymentId(null);
+        payment.setProviderSignature(null);
+        payment.setCheckoutUrl(null);
+        payment.setIdempotencyKey(newIdempotencyKey);
+        
+        try {
+            PaymentProcessorIntentResponse processorIntent = paymentProcessorClient.createIntent(
+                    payment, payment.getOrder().getOrderReference(), payment.getTransactionMode());
+            payment.setProviderOrderId(processorIntent.providerOrderId());
+            payment.setCheckoutUrl(processorIntent.checkoutUrl());
+            paymentStateMachine.transition(payment, PaymentStatus.CREATED);
+        } catch (Exception e) {
+            paymentStateMachine.transition(payment, PaymentStatus.FAILED);
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "RETRY_FAILED", "Failed to initiate retry: " + e.getMessage());
+        }
+        
+        paymentRepository.save(payment);
+        transactionService.createPaymentInitiated(payment);
+        
+        PaymentResponse response = paymentMapper.toResponse(payment, transactionService.findByPaymentId(payment.getId()));
+        idempotencyService.complete(idempotency.record(), response, payment.getId().toString());
+        
+        log.info("event=payment_retry paymentId={} actor={}", paymentId, actor.getEmail());
+        return response;
+    }
 }

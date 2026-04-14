@@ -160,6 +160,18 @@ public class PaymentController {
         return ApiResponse.success(queryService.findDetailById(paymentId));
     }
 
+    @PostMapping("/{paymentId}/retry")
+    public ApiResponse<PaymentResponse> retryPayment(
+            @PathVariable("paymentId") UUID paymentId,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
+            Authentication authentication) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "MISSING_IDEMPOTENCY_KEY", "Idempotency-Key header is required");
+        }
+        User actor = authService.getCurrentUser(authentication.getName());
+        return ApiResponse.success(paymentService.retryPayment(paymentId, idempotencyKey, actor));
+    }
+
     @GetMapping("/balance/{merchantId}")
     public ApiResponse<MerchantBalanceResponse> getMerchantBalance(@PathVariable("merchantId") UUID merchantId) {
         java.math.BigDecimal available = ledgerService.getMerchantBalance(merchantId);

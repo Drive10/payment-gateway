@@ -39,6 +39,12 @@ public class WebhookEvent {
     @Column(nullable = false, length = 32)
     private WebhookStatus status;
 
+    @Column(name = "attempt")
+    private int attempt;
+
+    @Column(name = "next_retry_at")
+    private Instant nextRetryAt;
+
     @Column(name = "processed_at")
     private Instant processedAt;
 
@@ -84,6 +90,22 @@ public class WebhookEvent {
 
     public void setStatus(WebhookStatus status) {
         this.status = status;
+    }
+
+    public int getAttempt() {
+        return attempt;
+    }
+
+    public void setAttempt(int attempt) {
+        this.attempt = attempt;
+    }
+
+    public Instant getNextRetryAt() {
+        return nextRetryAt;
+    }
+
+    public void setNextRetryAt(Instant nextRetryAt) {
+        this.nextRetryAt = nextRetryAt;
     }
 
     public Instant getProcessedAt() {

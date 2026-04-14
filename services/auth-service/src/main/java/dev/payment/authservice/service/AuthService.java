@@ -19,11 +19,14 @@ public class AuthService {
     private final UserService userService;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final TokenBlacklistService tokenBlacklistService;
 
-    public AuthService(UserService userService, JwtService jwtService, PasswordEncoder passwordEncoder) {
+    public AuthService(UserService userService, JwtService jwtService, 
+                       PasswordEncoder passwordEncoder, TokenBlacklistService tokenBlacklistService) {
         this.userService = userService;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -96,5 +99,18 @@ public class AuthService {
     public User getUserByEmail(String email) {
         return userService.findByEmail(email)
                 .orElseThrow(() -> new AuthException("User not found", "USER_NOT_FOUND"));
+    }
+
+    public void logout(String refreshToken) {
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            try {
+                if (jwtService.validateToken(refreshToken)) {
+                    long expiration = jwtService.getRefreshTokenExpiration();
+                    tokenBlacklistService.blacklistToken(refreshToken, expiration);
+                }
+            } catch (Exception e) {
+                // Token invalid anyway, ignore
+            }
+        }
     }
 }

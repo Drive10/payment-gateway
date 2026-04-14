@@ -26,6 +26,8 @@ import java.util.UUID;
 public class WebhookService {
 
     private static final Logger log = LoggerFactory.getLogger(WebhookService.class);
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final long INITIAL_BACKOFF_MS = 1000;
 
     private final WebhookEventRepository webhookEventRepository;
     private final WebhookValidator webhookValidator;
@@ -57,25 +59,46 @@ public class WebhookService {
         event.setStatus(WebhookStatus.RECEIVED);
         event = webhookEventRepository.save(event);
 
-        try {
-            event.setStatus(WebhookStatus.PROCESSING);
-            webhookEventRepository.save(event);
+        boolean success = deliverWebhookWithRetry(event);
 
-            forwardToPaymentService(event);
-
+        if (success) {
             event.setStatus(WebhookStatus.PROCESSED);
             event.setProcessedAt(Instant.now());
             webhookEventRepository.save(event);
-
             log.info("Successfully processed webhook event {} for provider {}", event.getId(), provider);
-        } catch (RestClientException e) {
-            log.error("Webhook delivery failed for event {}: {}", event.getId(), e.getMessage());
-            event.setStatus(WebhookStatus.FAILED);
+        } else {
+            event.setStatus(WebhookStatus.PENDING_RETRY);
             webhookEventRepository.save(event);
-            throw new WebhookDeliveryException("Failed to process webhook event " + event.getId(), e);
+            log.warn("Webhook event {} failed after {} attempts, marked for retry", event.getId(), MAX_RETRY_ATTEMPTS);
         }
 
         return event;
+    }
+
+    private boolean deliverWebhookWithRetry(WebhookEvent event) {
+        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+            try {
+                event.setStatus(WebhookStatus.PROCESSING);
+                event.setAttempt(attempt);
+                webhookEventRepository.save(event);
+
+                forwardToPaymentService(event);
+
+                return true;
+            } catch (RestClientException e) {
+                log.warn("Webhook delivery attempt {} failed for event {}: {}", attempt, event.getId(), e.getMessage());
+                if (attempt < MAX_RETRY_ATTEMPTS) {
+                    try {
+                        long backoffMs = INITIAL_BACKOFF_MS * (long) Math.pow(2, attempt - 1);
+                        Thread.sleep(backoffMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private String extractEventType(String payload) {

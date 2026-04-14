@@ -3,6 +3,8 @@ package dev.payment.paymentservice.service;
 import dev.payment.paymentservice.domain.Payment;
 import dev.payment.paymentservice.domain.enums.TransactionMode;
 import dev.payment.paymentservice.dto.request.CreatePaymentRequest;
+import dev.payment.paymentservice.exception.ApiException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -36,17 +38,17 @@ public class PaymentValidator {
     public void validateOrThrow(CreatePaymentRequest request) {
         List<String> errors = validate(request);
         if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(String.join(", ", errors));
+            throw ApiException.badRequest("VALIDATION_ERROR", String.join(", ", errors));
         }
     }
 
     public void validatePaymentForCapture(Payment payment) {
         if (payment == null) {
-            throw new IllegalArgumentException("Payment is required");
+            throw ApiException.notFound("PAYMENT_NOT_FOUND", "Payment is required");
         }
         
         if (payment.getStatus() == null) {
-            throw new IllegalArgumentException("Payment status is required");
+            throw ApiException.badRequest("INVALID_STATE", "Payment status is required");
         }
     }
 
