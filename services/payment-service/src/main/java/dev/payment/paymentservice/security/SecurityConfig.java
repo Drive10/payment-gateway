@@ -53,6 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/internal/**").permitAll()
                         .requestMatchers("/orders/**").permitAll()
                         .requestMatchers("/payments/initiate").permitAll()
+                        .requestMatchers("/payments/tokenize").permitAll()
                         .requestMatchers("/payments/**").authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

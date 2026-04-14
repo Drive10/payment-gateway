@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -94,5 +95,23 @@ public class JwtService {
 
     public long getRefreshTokenExpiration() {
         return jwtConfig.getRefreshExpiration();
+    }
+
+    public String extractUsername(String token) {
+        return extractEmail(token);
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> extractRoles(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            Object rolesObj = claims.get("roles");
+            if (rolesObj instanceof List) {
+                return (List<String>) rolesObj;
+            }
+        } catch (Exception e) {
+            // Return empty list on error
+        }
+        return List.of();
     }
 }

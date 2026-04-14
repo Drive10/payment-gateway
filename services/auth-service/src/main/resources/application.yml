@@ -80,3 +80,4 @@ logging:
   level:
     root: INFO
     org.springframework.security: INFO
+    dev.payment.authservice: DEBUG

@@ -1,5 +1,6 @@
-package dev.payment.paymentservice.security;
+package dev.payment.authservice.config;
 
+import dev.payment.authservice.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,7 +37,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
+        log.debug("Processing request: {} {}, authHeader: {}", request.getMethod(), request.getRequestURI(), 
+                  authHeader != null ? authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "null");
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.debug("No valid auth header, continuing filter chain");
             filterChain.doFilter(request, response);
             return;
         }
@@ -45,20 +50,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String username = jwtService.extractUsername(token);
+            log.debug("Extracted username from token: {}", username);
+            
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 List<String> roles = jwtService.extractRoles(token);
+                log.debug("Extracted roles: {}", roles);
+                
                 List<SimpleGrantedAuthority> authorities = roles.stream()
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                        .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 
-                if (authorities.isEmpty()) {
-                    authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-                }
-
-                var auth = new UsernamePasswordAuthenticationToken(username, null, authorities);
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(auth);
-                log.debug("Authenticated user: {} with roles: {}", username, roles);
+                UsernamePasswordAuthenticationToken authentication = 
+                        new UsernamePasswordAuthenticationToken(username, null, authorities);
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.debug("Set authentication in security context");
             }
         } catch (Exception e) {
             log.debug("JWT validation failed: {}", e.getMessage());

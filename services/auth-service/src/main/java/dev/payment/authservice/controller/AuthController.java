@@ -63,11 +63,13 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
+    public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser() {
+        var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getPrincipal() == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        UserResponse user = authService.getCurrentUser(userDetails.getUsername());
+        String username = authentication.getPrincipal().toString();
+        UserResponse user = authService.getCurrentUser(username);
         return ResponseEntity.ok(ApiResponse.success(user));
     }
 }
