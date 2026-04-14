@@ -132,7 +132,7 @@ public class PaymentReconciliationJob {
 
     private String expectedProviderStatus(Payment payment) {
         return switch (payment.getStatus()) {
-            case PENDING, CREATED, AUTHORIZATION_PENDING, PROCESSING, AUTHORIZED -> "CREATED";
+            case PENDING, CREATED, AWAITING_UPI_PAYMENT, AUTHORIZATION_PENDING, PROCESSING, AUTHORIZED -> "CREATED";
             case CAPTURED, PARTIALLY_REFUNDED, REFUNDED -> "CAPTURED";
             case EXPIRED -> "EXPIRED";
             case FAILED -> "FAILED";

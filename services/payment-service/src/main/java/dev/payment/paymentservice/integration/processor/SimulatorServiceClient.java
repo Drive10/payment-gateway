@@ -163,4 +163,12 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
         }
         return Boolean.TRUE.equals(data.testMode());
     }
+
+    @Override
+    public boolean verifyOtp(Payment payment, String otp) {
+        if (payment.getTransactionMode() == TransactionMode.TEST) {
+            return "123456".equals(otp);
+        }
+        return otp != null && otp.length() >= 4 && !otp.isBlank();
+    }
 }

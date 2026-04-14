@@ -5,6 +5,7 @@ import dev.payment.common.dto.PageResponse;
 import dev.payment.paymentservice.domain.User;
 import dev.payment.paymentservice.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.dto.request.CapturePaymentRequest;
+import dev.payment.paymentservice.dto.request.CardTokenizationRequest;
 import dev.payment.paymentservice.dto.request.CreatePaymentLinkRequest;
 import dev.payment.paymentservice.dto.request.CreatePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreateRefundRequest;
