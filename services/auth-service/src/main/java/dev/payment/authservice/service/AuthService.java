@@ -113,4 +113,10 @@ public class AuthService {
             }
         }
     }
+
+    public UserResponse getCurrentUser(String email) {
+        User user = userService.findByEmail(email)
+                .orElseThrow(() -> new AuthException("User not found", "USER_NOT_FOUND"));
+        return UserResponse.from(user);
+    }
 }

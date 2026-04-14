@@ -11,6 +11,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class AuthExceptionHandler {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthExceptionHandler.class);
+
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<Map<String, Object>> handleAuthException(AuthException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -37,6 +39,7 @@ public class AuthExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+        log.error("Unhandled exception", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of(
                         "success", false,

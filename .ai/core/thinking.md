@@ -54,6 +54,7 @@ Proceed in AUTO     RESUME after clarification
 - **Maintainability** - Is this readable? Extensible?
 - **User requirements** - Does this solve the problem?
 - **Future scalability** - Will this work at scale?
+- **Payment reality** - Is payment async? No sync success assumed
 
 ### ❌ NEVER THINK ABOUT
 
@@ -64,6 +65,7 @@ Proceed in AUTO     RESUME after clarification
 - Writing code that doesn't follow conventions
 - Making assumptions without verification
 - Proceeding when blocked or unclear
+- Assuming sync success for payments (always webhook-driven)
 
 ---
 

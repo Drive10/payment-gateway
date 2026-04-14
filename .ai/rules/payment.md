@@ -136,14 +136,41 @@ AUTHORIZED → CAPTURED → REFUNDED
 
 ```java
 public enum PaymentStatus {
-    CREATED,        // Payment created, not yet processed
-    PROCESSING,     // Currently being processed
-    AUTHORIZED,     // Authorized but not captured
-    CAPTURED,       // Successfully captured
-    FAILED,         // Payment failed
-    REFUNDED,       // Fully refunded
-    PARTIALLY_REFUNDED  // Partial refund
+    PENDING,                 // Initial state
+    CREATED,                  // Payment created, not yet processed
+    AWAITING_UPI_PAYMENT,     // UPI: Waiting for user to pay in UPI app
+    AUTHORIZATION_PENDING,     // Awaiting OTP/3D secure
+    AUTHORIZED,              // Authorized but not captured
+    PROCESSING,              // Currently being processed
+    CAPTURED,                // Successfully captured
+    EXPIRED,                 // Payment expired (no action taken)
+    FAILED,                  // Payment failed
+    REFUNDED,                // Fully refunded
+    PARTIALLY_REFUNDED       // Partial refund
 }
+```
+
+---
+
+## 4b. UPI Payment States
+
+### UPI Flow (Async)
+
+```
+CREATED → AWAITING_UPI_PAYMENT → (webhook/polling) → CAPTRED
+                                          ↓
+                                    FAILED/EXPIRED
+```
+
+### UPI Intent Deep Link
+
+```
+upi://pay?pa={vpa}&pn={merchant}&am={amount}&cu={currency}&tn={reference}
+```
+
+### UPI Timeout
+- UPI payments expire in 5 minutes (vs 15 minutes for card)
+- Expired payments cannot be reused
 ```
 
 ---

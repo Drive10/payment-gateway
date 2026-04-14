@@ -170,36 +170,6 @@ export default function Processing() {
       setStatus("pending_otp");
     }
   };
-        navigate("/success", { replace: true, state: { transaction } });
-        return;
-      }
-
-      // If payment is already captured (race condition), go to success
-      if (data.error?.code === "INVALID_STATE" || data.data?.status === "CAPTURED") {
-        const transaction = {
-          id: checkout.payment.id,
-          orderId: checkout.order.id,
-          orderReference: checkout.order.externalReference,
-          status: "CAPTURED",
-          amount: checkout.amount,
-          amountLabel: formatCurrency(checkout.amount),
-          method: checkout.method,
-          methodLabel: checkout.method === "upi" ? "UPI" : "Card",
-          customerLabel: checkout.cardholder || `${checkout.customer?.firstName} ${checkout.customer?.lastName}`.trim(),
-          environmentLabel: "Sandbox lane",
-          correlationId: checkout.correlationId,
-        };
-        navigate("/success", { replace: true, state: { transaction } });
-        return;
-      }
-
-      setOtpError(data.error?.message || "Invalid OTP. Try 123456");
-      setStatus("pending_otp");
-    } catch (err) {
-      setOtpError("Verification failed. Try 123456");
-      setStatus("pending_otp");
-    }
-  };
 
   const pollPaymentStatus = async (initialData) => {
     setShowOtpModal(false);
