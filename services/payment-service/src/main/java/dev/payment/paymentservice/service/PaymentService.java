@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.UUID;
 
@@ -117,6 +118,25 @@ public class PaymentService {
     private Payment executePaymentCreation(Payment payment, CreatePaymentRequest request, User actor, String idempotencyKey) {
         try {
             Order order = orderService.getOwnedOrder(request.orderId(), actor, false);
+            
+            // Check for duplicate payment - prevent same order from being paid twice
+            EnumSet<PaymentStatus> activeStatuses = EnumSet.of(
+                    PaymentStatus.PENDING,
+                    PaymentStatus.CREATED,
+                    PaymentStatus.AWAITING_UPI_PAYMENT,
+                    PaymentStatus.AUTHORIZATION_PENDING,
+                    PaymentStatus.AUTHORIZED,
+                    PaymentStatus.PROCESSING
+            );
+            
+            if (paymentRepository.existsByOrderIdAndStatusIn(order.getId(), activeStatuses)) {
+                throw new ApiException(
+                        HttpStatus.CONFLICT,
+                        "DUPLICATE_PAYMENT",
+                        "A payment for this order is already in progress or completed. Order ID: " + order.getId()
+                );
+            }
+            
             payment.setOrderId(order.getId());
             payment.setOrder(order);
             enrichPaymentFromOrder(payment, order);

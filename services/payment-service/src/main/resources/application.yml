@@ -83,6 +83,8 @@ application:
   payment:
     default-provider: RAZORPAY_SIMULATOR
     checkout-base-url: http://frontend:5173
+    vpa: payflow@upi
+    merchant-name: PayFlow Merchant
   simulator:
     base-url: http://simulator-service:8086
   webhook:
@@ -107,6 +109,10 @@ application:
   reconciliation:
     enabled: true
     batch-size: 50
+  expiration:
+    enabled: true
+    timeout: PT15M
+    upi-timeout: PT5M
     lookback: PT6H
 
 management:

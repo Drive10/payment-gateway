@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { CardInputForm } from './CardInputForm';
 import { CardPreview } from './CardPreview';
 import { PayButton } from './PayButton';
@@ -75,7 +76,19 @@ export function PaymentPage({
 
   const handleUpiSubmit = async (data: { upiId: string; email: string }) => {
     try {
-      await submitUPIPayment(data);
+      const result = await submitUPIPayment(data);
+      // Navigate to processing page to wait for UPI payment
+      if (result.transactionId) {
+        navigate('/processing', {
+          state: {
+            checkout: {
+              payment: { id: result.transactionId },
+              amount,
+              method: 'upi',
+            },
+          },
+        });
+      }
     } catch {
       // Error handled by usePayment hook
     }

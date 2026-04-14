@@ -22,6 +22,7 @@ export type PaymentMethod = 'card' | 'upi' | 'netbanking';
 export type PaymentStatus = 
   | 'idle'                    // No payment initiated
   | 'initiated'              // Payment created, awaiting user action
+  | 'pending'                // UPI: waiting for user to pay in UPI app
   | 'processing'             // Payment being processed
   | 'pending_otp'            // Awaiting OTP/3D secure verification
   | 'authorizing'            // Verifying with bank/payment provider
@@ -44,6 +45,7 @@ export interface OrderSummary {
 export interface InitiatePaymentResponse {
   transactionId: string;
   status: string;
+  checkoutUrl?: string;      // For UPI: deep link to UPI app
   redirectUrl?: string;
   message?: string;
   errorCode?: string;

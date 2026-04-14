@@ -81,7 +81,8 @@ public class RazorpayWebhookService {
         }
 
         switch (request.event()) {
-            case "payment.captured" -> processCaptured(request);
+            case "payment.captured", "payment.authorized" -> processCaptured(request);
+            case "payment.failed" -> processFailed(request);
             case "refund.processed" -> processRefund(request);
             default -> throw new ApiException(HttpStatus.BAD_REQUEST, "UNSUPPORTED_WEBHOOK_EVENT", "Unsupported webhook event: " + request.event());
         }
@@ -99,17 +100,54 @@ public class RazorpayWebhookService {
         Payment payment = paymentRepository.findByProviderOrderId(entity.orderId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Payment not found for webhook"));
 
+        // Already captured - skip duplicate
         if (payment.getStatus() == PaymentStatus.CAPTURED) {
             return;
         }
 
+        // Handle UPI payments that come via "authorized" then "captured"
+        // Or direct "captured" for card payments
+        if (payment.getStatus() == PaymentStatus.AWAITING_UPI_PAYMENT) {
+            paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
+        } else if (payment.getStatus() != PaymentStatus.AUTHORIZED && payment.getStatus() != PaymentStatus.PROCESSING) {
+            // For other states, need to go through PROCESSING
+            paymentStateMachine.transition(payment, PaymentStatus.PROCESSING);
+            paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
+        }
+
         payment.setProviderPaymentId(entity.id());
-        paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
         paymentRepository.save(payment);
         transactionService.createCaptureSuccess(payment, entity.id());
-        orderService.markPaid(payment.getOrderId(), "ORD-UNKNOWN");
+        orderService.markPaid(payment.getOrderId(), entity.orderId());
         auditService.record("RAZORPAY_WEBHOOK_CAPTURED", "system", "PAYMENT", payment.getId().toString(), "Webhook marked payment captured");
         paymentEventPublisher.publish("payment.webhook.captured", payment, Map.of("providerPaymentId", entity.id()));
+    }
+
+    private void processFailed(RazorpayWebhookRequest request) {
+        RazorpayWebhookRequest.EntityWrapper entity = request.payload().payment().entity();
+        Payment payment = paymentRepository.findByProviderOrderId(entity.orderId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "Payment not found for webhook"));
+
+        // Already in final state - skip duplicate
+        if (payment.getStatus() == PaymentStatus.CAPTURED 
+                || payment.getStatus() == PaymentStatus.FAILED 
+                || payment.getStatus() == PaymentStatus.EXPIRED) {
+            return;
+        }
+
+        // Check if there's error notes in the webhook
+        String failureReason = entity.notes() != null && !entity.notes().isEmpty() 
+                ? entity.notes() 
+                : "Payment failed via webhook";
+
+        paymentStateMachine.transition(payment, PaymentStatus.FAILED);
+        payment.setNotes(failureReason);
+        paymentRepository.save(payment);
+        
+        orderService.markFailed(payment.getOrderId(), entity.orderId());
+        
+        auditService.record("RAZORPAY_WEBHOOK_FAILED", "system", "PAYMENT", payment.getId().toString(), failureReason);
+        paymentEventPublisher.publish("payment.webhook.failed", payment, Map.of("reason", failureReason));
     }
 
     private void processRefund(RazorpayWebhookRequest request) {

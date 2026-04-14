@@ -57,4 +57,9 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     Page<Payment> findByMerchantId(UUID merchantId, Pageable pageable);
 
     Page<Payment> findByMerchantIdAndStatus(UUID merchantId, PaymentStatus status, Pageable pageable);
+
+    // Order-level duplicate payment protection
+    List<Payment> findByOrderIdAndStatusIn(UUID orderId, Collection<PaymentStatus> statuses);
+
+    boolean existsByOrderIdAndStatusIn(UUID orderId, Collection<PaymentStatus> statuses);
 }

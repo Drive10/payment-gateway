@@ -14,6 +14,7 @@ import type {
 const BACKEND_STATUS_TO_FRONTEND: Record<string, PaymentStatus> = {
   'PENDING': 'initiated',
   'CREATED': 'initiated',
+  'AWAITING_UPI_PAYMENT': 'pending',  // UPI: waiting for user to pay
   'AUTHORIZATION_PENDING': 'pending_otp',
   'AUTHORIZED': 'authorized',
   'PROCESSING': 'processing',
@@ -105,8 +106,13 @@ export function usePayment({
         email: upiDetails.email,
       });
 
-      const { transactionId, status: backendStatus, message } = response.data;
+      const { transactionId, status: backendStatus, checkoutUrl, message } = response.data;
       const frontendStatus = mapBackendStatus(backendStatus);
+
+      // For UPI payments, redirect to UPI app if deep link provided
+      if (checkoutUrl && checkoutUrl.startsWith('upi://')) {
+        window.location.href = checkoutUrl;
+      }
 
       setState({
         status: frontendStatus,
@@ -114,7 +120,13 @@ export function usePayment({
         transactionId,
       });
 
-      return { transactionId, status: frontendStatus };
+      // For UPI, automatically start polling if in awaiting state
+      if (frontendStatus === 'initiated' || frontendStatus === 'pending') {
+        // Return transaction ID and let caller handle navigation to processing page
+        // The Processing page will handle polling
+      }
+
+      return { transactionId, status: frontendStatus, checkoutUrl };
     } catch (error: any) {
       const message = error.response?.data?.error?.message || error.response?.data?.message || 'Payment failed. Please try again.';
       setState(prev => ({

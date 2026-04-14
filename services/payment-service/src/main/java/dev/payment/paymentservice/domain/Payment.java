@@ -90,6 +90,12 @@ public class Payment {
     @Column(name = "provider_signature", length = 255)
     private String providerSignature;
 
+    @Column(name = "upi_id", length = 50)
+    private String upiId;
+
+    @Column(name = "upi_link", length = 255)
+    private String upiLink;
+
     @Column(name = "checkout_url", nullable = false, length = 255)
     private String checkoutUrl;
 
@@ -249,6 +255,22 @@ public class Payment {
 
     public void setProviderSignature(String providerSignature) {
         this.providerSignature = providerSignature;
+    }
+
+    public String getUpiId() {
+        return upiId;
+    }
+
+    public void setUpiId(String upiId) {
+        this.upiId = upiId;
+    }
+
+    public String getUpiLink() {
+        return upiLink;
+    }
+
+    public void setUpiLink(String upiLink) {
+        this.upiLink = upiLink;
     }
 
     public String getCheckoutUrl() {
