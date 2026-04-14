@@ -19,7 +19,18 @@ export interface NetBankingDetails {
 
 export type PaymentMethod = 'card' | 'upi' | 'netbanking';
 
-export type PaymentStatus = 'idle' | 'processing' | 'pending_otp' | 'success' | 'failed';
+export type PaymentStatus = 
+  | 'idle'                    // No payment initiated
+  | 'initiated'              // Payment created, awaiting user action
+  | 'processing'             // Payment being processed
+  | 'pending_otp'            // Awaiting OTP/3D secure verification
+  | 'authorizing'            // Verifying with bank/payment provider
+  | 'authorized'             // Payment authorized, awaiting capture
+  | 'success'                // Payment completed successfully
+  | 'failed'                 // Payment failed
+  | 'expired'                // Payment expired
+  | 'refunded'               // Payment was refunded
+  | 'cancelled';             // Payment cancelled by user
 
 export interface OrderSummary {
   productName: string;
@@ -32,8 +43,10 @@ export interface OrderSummary {
 
 export interface InitiatePaymentResponse {
   transactionId: string;
-  status: 'PENDING_OTP' | 'COMPLETED' | 'FAILED';
+  status: string;
   redirectUrl?: string;
+  message?: string;
+  errorCode?: string;
 }
 
 export interface VerifyOtpResponse {

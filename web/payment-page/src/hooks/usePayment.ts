@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import api from '../lib/axios';
 import { usePaymentSecurity } from './usePaymentSecurity';
 import type { 
@@ -10,6 +10,23 @@ import type {
   NetBankingDetails,
   PaymentMethod 
 } from '../types/payment';
+
+const BACKEND_STATUS_TO_FRONTEND: Record<string, PaymentStatus> = {
+  'PENDING': 'initiated',
+  'CREATED': 'initiated',
+  'AUTHORIZATION_PENDING': 'pending_otp',
+  'AUTHORIZED': 'authorized',
+  'PROCESSING': 'processing',
+  'CAPTURED': 'success',
+  'PARTIALLY_REFUNDED': 'refunded',
+  'REFUNDED': 'refunded',
+  'FAILED': 'failed',
+  'EXPIRED': 'expired',
+};
+
+function mapBackendStatus(backendStatus: string): PaymentStatus {
+  return BACKEND_STATUS_TO_FRONTEND[backendStatus] || 'idle';
+}
 
 interface UsePaymentOptions {
   amount: number;
@@ -28,6 +45,7 @@ export function usePayment({
     transactionId: null,
   });
 
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const idempotencyKeyRef = useRef<string>(
     `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   );
@@ -52,28 +70,18 @@ export function usePayment({
         idempotencyKey: idempotencyKeyRef.current,
       });
 
-      const { transactionId, status } = response.data;
+      const { transactionId, status: backendStatus, errorCode, message } = response.data;
+      const frontendStatus = mapBackendStatus(backendStatus);
 
-      if (status === 'PENDING_OTP') {
-        setState({
-          status: 'pending_otp',
-          error: null,
-          transactionId,
-        });
-      } else if (status === 'COMPLETED') {
-        clearSensitiveData({ cardNumber: cardDetails.cardNumber, cvv: cardDetails.cvv });
-        setState({
-          status: 'success',
-          error: null,
-          transactionId,
-        });
-      } else {
-        throw new Error('Payment failed');
-      }
+      setState({
+        status: frontendStatus,
+        error: frontendStatus === 'failed' ? (message || 'Payment failed') : null,
+        transactionId,
+      });
 
-      return { transactionId, status };
+      return { transactionId, status: frontendStatus };
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Payment failed. Please try again.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Payment failed. Please try again.';
       setState(prev => ({
         ...prev,
         status: 'failed',
@@ -81,7 +89,7 @@ export function usePayment({
       }));
       throw error;
     }
-  }, [amount, currency, merchantId, generateToken, clearSensitiveData]);
+  }, [amount, currency, merchantId, generateToken]);
 
   const submitUPIPayment = useCallback(async (upiDetails: UPIDetails) => {
     setState(prev => ({ ...prev, status: 'processing', error: null }));
@@ -97,25 +105,18 @@ export function usePayment({
         email: upiDetails.email,
       });
 
-      const { transactionId, status } = response.data;
+      const { transactionId, status: backendStatus, message } = response.data;
+      const frontendStatus = mapBackendStatus(backendStatus);
 
-      if (status === 'PENDING_OTP') {
-        setState({
-          status: 'pending_otp',
-          error: null,
-          transactionId,
-        });
-      } else if (status === 'COMPLETED') {
-        setState({
-          status: 'success',
-          error: null,
-          transactionId,
-        });
-      }
+      setState({
+        status: frontendStatus,
+        error: frontendStatus === 'failed' ? (message || 'Payment failed') : null,
+        transactionId,
+      });
 
-      return { transactionId, status };
+      return { transactionId, status: frontendStatus };
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Payment failed. Please try again.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Payment failed. Please try again.';
       setState(prev => ({
         ...prev,
         status: 'failed',
@@ -139,25 +140,18 @@ export function usePayment({
         email: netBankingDetails.email,
       });
 
-      const { transactionId, status } = response.data;
+      const { transactionId, status: backendStatus, message } = response.data;
+      const frontendStatus = mapBackendStatus(backendStatus);
 
-      if (status === 'PENDING_OTP') {
-        setState({
-          status: 'pending_otp',
-          error: null,
-          transactionId,
-        });
-      } else if (status === 'COMPLETED') {
-        setState({
-          status: 'success',
-          error: null,
-          transactionId,
-        });
-      }
+      setState({
+        status: frontendStatus,
+        error: frontendStatus === 'failed' ? (message || 'Payment failed') : null,
+        transactionId,
+      });
 
-      return { transactionId, status };
+      return { transactionId, status: frontendStatus };
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Payment failed. Please try again.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Payment failed. Please try again.';
       setState(prev => ({
         ...prev,
         status: 'failed',
@@ -172,7 +166,7 @@ export function usePayment({
       throw new Error('No transaction ID');
     }
 
-    setState(prev => ({ ...prev, status: 'processing' }));
+    setState(prev => ({ ...prev, status: 'authorizing' }));
 
     try {
       const response = await api.post('/api/v1/payments/verify-otp', {
@@ -180,7 +174,10 @@ export function usePayment({
         otp,
       });
 
-      if (response.data.status === 'COMPLETED') {
+      const backendStatus = response.data.status;
+      const frontendStatus = mapBackendStatus(backendStatus);
+
+      if (frontendStatus === 'success') {
         setState(prev => ({
           ...prev,
           status: 'success',
@@ -202,24 +199,39 @@ export function usePayment({
     }
   }, [state.transactionId]);
 
-  const pollStatus = useCallback(async (maxPolls = 10, intervalMs = 2000) => {
+  const pollStatus = useCallback(async (maxPolls = 15, intervalMs = 2000) => {
     if (!state.transactionId) return null;
 
     for (let i = 0; i < maxPolls; i++) {
       try {
         const response = await api.get(`/api/v1/payments/${state.transactionId}/status`);
+        const backendStatus = response.data.status;
+        const frontendStatus = mapBackendStatus(backendStatus);
         
-        if (response.data.status === 'COMPLETED') {
+        if (frontendStatus === 'success') {
           setState(prev => ({
             ...prev,
             status: 'success',
           }));
           return response.data;
-        } else if (response.data.status === 'FAILED') {
+        } else if (frontendStatus === 'failed') {
           setState(prev => ({
             ...prev,
             status: 'failed',
             error: 'Payment failed',
+          }));
+          return response.data;
+        } else if (frontendStatus === 'expired') {
+          setState(prev => ({
+            ...prev,
+            status: 'expired',
+            error: 'Payment expired',
+          }));
+          return response.data;
+        } else if (frontendStatus === 'pending_otp') {
+          setState(prev => ({
+            ...prev,
+            status: 'pending_otp',
           }));
           return response.data;
         }
@@ -233,19 +245,31 @@ export function usePayment({
     setState(prev => ({
       ...prev,
       status: 'failed',
-      error: 'Payment verification timed out',
+      error: 'Payment verification timed out. Please check your payment status.',
     }));
     
     return null;
   }, [state.transactionId]);
 
   const reset = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
     setState({
       status: 'idle',
       error: null,
       transactionId: null,
     });
     idempotencyKeyRef.current = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+      }
+    };
   }, []);
 
   return {

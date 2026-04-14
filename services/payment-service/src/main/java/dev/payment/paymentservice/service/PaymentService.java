@@ -101,7 +101,7 @@ public class PaymentService {
         payment.setIdempotencyKey(idempotencyKey);
         payment.setProvider(normalizeProvider(request.provider()));
         payment.setMethod(request.method());
-        payment.setStatus(PaymentStatus.CREATED);
+        payment.setStatus(PaymentStatus.PENDING);
         payment.setTransactionMode(resolveMode(request.transactionMode()));
         payment.setNotes(request.notes());
         payment.setMerchantId(request.merchantId());
@@ -129,6 +129,7 @@ public class PaymentService {
             payment.setProviderOrderId(processorIntent.providerOrderId());
             payment.setCheckoutUrl(processorIntent.checkoutUrl());
             payment.setSimulated(processorIntent.simulated());
+            paymentStateMachine.transition(payment, PaymentStatus.CREATED);
 
             return savePayment(payment, idempotencyKey);
         } catch (DataIntegrityViolationException exception) {
