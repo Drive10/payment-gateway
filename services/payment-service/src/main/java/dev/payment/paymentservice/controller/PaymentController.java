@@ -201,9 +201,9 @@ public class PaymentController {
                 idempotencyKey != null ? idempotencyKey : "idem_" + System.currentTimeMillis(), 
                 actor);
         
-        InitiatePaymentResponse initiateResponse = new InitiatePaymentResponse(
-                paymentResponse.id().toString(),
+        InitiatePaymentResponse initiateResponse = InitiatePaymentResponse.fromStatus(
                 paymentResponse.status(),
+                paymentResponse.id().toString(),
                 paymentResponse.checkoutUrl()
         );
         
@@ -221,9 +221,9 @@ public class PaymentController {
     @GetMapping("/{transactionId}/status")
     public ApiResponse<InitiatePaymentResponse> getPaymentStatus(@PathVariable("transactionId") String transactionId) {
         PaymentResponse payment = queryService.findById(UUID.fromString(transactionId));
-        InitiatePaymentResponse response = new InitiatePaymentResponse(
-                payment.id().toString(),
+        InitiatePaymentResponse response = InitiatePaymentResponse.fromStatus(
                 payment.status(),
+                payment.id().toString(),
                 payment.checkoutUrl()
         );
         return ApiResponse.success(response);

@@ -1,13 +1,14 @@
 package dev.payment.paymentservice.domain.enums;
 
 public enum PaymentStatus {
-    PENDING,
-    CREATED,
-    PROCESSING,
-    AUTHORIZED,
-    CAPTURED,
-    PARTIALLY_REFUNDED,
-    REFUNDED,
-    FAILED,
-    EXPIRED
+    PENDING,         // Initial state - payment created, awaiting initiation
+    CREATED,         // Payment initiated, awaiting authorization
+    AUTHORIZATION_PENDING,  // Awaiting user/bank verification (OTP, 3D secure)
+    AUTHORIZED,      // Payment authorized, awaiting capture
+    PROCESSING,      // Currently being processed by payment provider
+    CAPTURED,        // Money received - final success state
+    PARTIALLY_REFUNDED,  // Partial refund issued
+    REFUNDED,        // Full refund issued
+    FAILED,          // Payment failed - final failure state
+    EXPIRED          // Payment expired - no action taken
 }

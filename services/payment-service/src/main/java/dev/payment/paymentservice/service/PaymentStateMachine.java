@@ -12,12 +12,18 @@ import java.util.Map;
 @Component
 public class PaymentStateMachine {
 
+    // Valid state transitions - backend owns this, not frontend
     private static final Map<PaymentStatus, EnumSet<PaymentStatus>> ALLOWED_TRANSITIONS = Map.of(
-            PaymentStatus.CREATED, EnumSet.of(PaymentStatus.PROCESSING, PaymentStatus.CAPTURED, PaymentStatus.FAILED, PaymentStatus.EXPIRED),
+            PaymentStatus.PENDING, EnumSet.of(PaymentStatus.CREATED),
+            PaymentStatus.CREATED, EnumSet.of(PaymentStatus.AUTHORIZATION_PENDING, PaymentStatus.FAILED, PaymentStatus.EXPIRED),
+            PaymentStatus.AUTHORIZATION_PENDING, EnumSet.of(PaymentStatus.AUTHORIZED, PaymentStatus.FAILED, PaymentStatus.EXPIRED),
+            PaymentStatus.AUTHORIZED, EnumSet.of(PaymentStatus.CAPTURED, PaymentStatus.FAILED, PaymentStatus.EXPIRED),
             PaymentStatus.PROCESSING, EnumSet.of(PaymentStatus.CAPTURED, PaymentStatus.FAILED, PaymentStatus.EXPIRED),
             PaymentStatus.CAPTURED, EnumSet.of(PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED),
             PaymentStatus.PARTIALLY_REFUNDED, EnumSet.of(PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED),
-            PaymentStatus.EXPIRED, EnumSet.noneOf(PaymentStatus.class)
+            PaymentStatus.FAILED, EnumSet.noneOf(PaymentStatus.class),
+            PaymentStatus.EXPIRED, EnumSet.noneOf(PaymentStatus.class),
+            PaymentStatus.REFUNDED, EnumSet.noneOf(PaymentStatus.class)
     );
 
     public void transition(Payment payment, PaymentStatus targetStatus) {
@@ -31,10 +37,14 @@ public class PaymentStateMachine {
             throw new ApiException(
                     HttpStatus.CONFLICT,
                     "INVALID_PAYMENT_STATE_TRANSITION",
-                    "Cannot transition payment from " + current + " to " + targetStatus
+                    "Cannot transition payment from " + current + " to " + targetStatus + ". Allowed: " + allowedTargets
             );
         }
 
+        PaymentStatus previousStatus = current;
         payment.setStatus(targetStatus);
+        
+        // Log state transition for debugging/tracing
+        payment.setNotes(previousStatus + " -> " + targetStatus);
     }
 }
