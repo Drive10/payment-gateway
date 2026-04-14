@@ -23,7 +23,14 @@ test.describe("Fullstack checkout E2E", () => {
     await expect(payButton).toBeEnabled();
     await payButton.click();
 
-    await page.waitForURL(/\/(success|failure)/, { timeout: 90_000 });
+    const otpInput = page.getByPlaceholder("Enter 6-digit OTP");
+    if (await otpInput.isVisible({ timeout: 5000 })) {
+      await otpInput.fill("123456");
+      await page.getByRole("button", { name: "Verify OTP" }).click();
+      await page.waitForLoadState("networkidle", { timeout: 10000 });
+    }
+
+    await page.waitForURL(/\/(success|failure)/, { timeout: 60_000 });
     expect(page.url(), "checkout should complete successfully").toMatch(/\/success/);
 
     await expect(page.getByRole("heading", { name: /payment successful/i })).toBeVisible();

@@ -1,11 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  captureCheckout,
-  formatCurrency,
-  getStoredTransaction,
-} from "../lib/payment";
+import { formatCurrency, getStoredTransaction } from "../lib/payment";
 
 const API_BASE_URL = window.__ENV__?.API_BASE_URL || "/api/v1";
 const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION || false;
@@ -33,22 +29,6 @@ export default function Processing() {
     }
 
     handleOtpRequired();
-  }, [checkout, navigate]);
-
-  const handleOtpRequired = () => {
-    setShowOtpModal(true);
-    setStatus("pending_otp");
-  };
-      } catch (err) {
-        setStatus("failed");
-        setError(err.message || "Payment failed. Please try again.");
-        setTimeout(() => {
-          navigate("/failure", { replace: true, state: { transaction: checkout, error: err.message } });
-        }, 1500);
-      }
-    };
-
-    processPayment();
   }, [checkout, navigate]);
 
   const handleOtpRequired = () => {
@@ -95,13 +75,63 @@ export default function Processing() {
         };
         navigate("/success", { replace: true, state: { transaction } });
       } else {
-        setOtpError(data.error?.message || "Invalid OTP. Try 123456");
-        setStatus("pending_otp");
+        if (data.data?.status === "PROCESSING" || data.data?.status === "CREATED") {
+          await pollPaymentStatus(data.data);
+        } else {
+          setOtpError(data.error?.message || "Invalid OTP. Try 123456");
+          setStatus("pending_otp");
+        }
       }
     } catch (err) {
       setOtpError("Verification failed. Try 123456");
       setStatus("pending_otp");
     }
+  };
+
+  const pollPaymentStatus = async (initialData) => {
+    setShowOtpModal(false);
+    setStatus("processing");
+
+    for (let i = 0; i < 15; i++) {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/payments/${checkout.payment.id}`,
+          {
+            headers: { Authorization: `Bearer ${checkout.token}` },
+          }
+        );
+        const data = await response.json();
+
+        if (data.success && (data.data?.status === "COMPLETED" || data.data?.status === "CAPTURED")) {
+          const transaction = {
+            id: checkout.payment.id,
+            orderId: checkout.order.id,
+            orderReference: checkout.order.externalReference,
+            status: data.data.status,
+            amount: checkout.amount,
+            amountLabel: formatCurrency(checkout.amount),
+            method: checkout.method,
+            methodLabel: checkout.method === "upi" ? "UPI" : "Card",
+            customerLabel: checkout.cardholder || `${checkout.customer?.firstName} ${checkout.customer?.lastName}`.trim(),
+            environmentLabel: "Sandbox lane",
+            correlationId: checkout.correlationId,
+          };
+          navigate("/success", { replace: true, state: { transaction } });
+          return;
+        }
+
+        setPollAttempt(i + 1);
+        await new Promise(r => setTimeout(r, 3000));
+      } catch {
+        await new Promise(r => setTimeout(r, 3000));
+      }
+    }
+
+    setStatus("failed");
+    setError("Payment verification timed out");
+    setTimeout(() => {
+      navigate("/failure", { replace: true, state: { transaction: checkout, error: "Payment verification timed out" } });
+    }, 2000);
   };
 
   const handleCancel = () => {
