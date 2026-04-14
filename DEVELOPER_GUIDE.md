@@ -48,7 +48,8 @@ npm run dev
 
 | Service | Port |
 |---------|------|
-| Frontend | http://localhost:5173 |
+| Frontend (payment-page) | http://localhost:5173 |
+| Dashboard | http://localhost:3000 |
 | API Gateway | http://localhost:8080 |
 | Auth Service | http://localhost:8081 |
 | Order Service | http://localhost:8082 |
@@ -66,6 +67,7 @@ npm run dev
 | MongoDB | 27017 |
 | Redis | 6379 |
 | Kafka | 9092 |
+| Zookeeper | 2181 |
 | Zipkin | 9411 |
 
 ## Common Commands

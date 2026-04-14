@@ -1,50 +1,73 @@
-# PayFlow Production Architecture
+# PayFlow Architecture
 
-This document outlines the transition from a monolithic repository to a distributed microservices ecosystem.
+> Enterprise Payment Gateway Architecture
 
-## Repository Structure
+## Monorepo Structure
 
-The system is split into five autonomous repositories:
+PayFlow is currently a **monorepo** containing all microservices:
 
-1. **payflow-payment-core** - Consolidated backend (Auth, Order, Payment, Notification, Analytics, Audit)
-2. **payflow-api-gateway** - Entry point with routing, security, and resilience
-3. **payflow-simulator** - Testing sandbox for payment provider behavior
-4. **payflow-payment-page** - Customer checkout UI
-5. **payflow-dashboard** - Merchant administration portal
+```
+payflow/
+├── libs/common/              # Shared library (DTOs, exceptions, utils)
+├── services/
+│   ├── api-gateway/          # Central API gateway (8080)
+│   ├── auth-service/         # Authentication & authorization (8081)
+│   ├── order-service/        # Orders, merchants, KYC, API keys (8082)
+│   ├── payment-service/      # Payment orchestration (8083)
+│   ├── notification-service/ # Notifications, webhooks, feature flags (8084)
+│   ├── simulator-service/    # Payment simulation & testing (8086)
+│   ├── analytics-service/    # Risk, settlements, disputes, reports (8089)
+│   └── audit-service/        # MongoDB audit logging (8090)
+├── web/
+│   ├── payment-page/        # Customer checkout (React 18)
+│   └── dashboard/           # Merchant dashboard (Next.js)
+├── infra/                    # Infrastructure configs
+└── docker-compose.yml        # Infrastructure services
+```
 
 ## Services
 
-- **Payment Core**: Auth, Order, Payment, Notification, Analytics, Audit services
-- **API Gateway**: Spring Cloud Gateway
-- **Simulator**: Payment simulation service
-- **Payment Page**: React + Vite checkout
-- **Dashboard**: Next.js admin portal
+| Service | Port | Tech | Database |
+|---------|------|------|----------|
+| **api-gateway** | 8080 | Spring Cloud Gateway | Redis |
+| **auth-service** | 8081 | Spring Boot 3 | PostgreSQL, Redis |
+| **order-service** | 8082 | Spring Boot 3 | PostgreSQL |
+| **payment-service** | 8083 | Spring Boot 3 | PostgreSQL, Redis |
+| **notification-service** | 8084 | Spring Boot 3 | PostgreSQL |
+| **simulator-service** | 8086 | Spring Boot 3 | PostgreSQL |
+| **analytics-service** | 8089 | Spring Boot 3 | PostgreSQL |
+| **audit-service** | 8090 | Spring Boot 3 | MongoDB |
 
-## CI/CD Pipeline
+## Infrastructure
 
-Quality gates implemented:
-1. **Lint** → Checkstyle, ESLint, OpenAPI validation
-2. **Unit Tests** → Maven Surefire, Jest
-3. **Integration Tests** → Testcontainers
-4. **Security Scan** → Trivy, Snyk
-5. **Build** → Maven package, npm build
+| Service | Port | Purpose |
+|---------|------|---------|
+| PostgreSQL | 5432 | Primary database |
+| MongoDB | 27017 | Audit logs |
+| Redis | 6379 | Cache, rate limiting |
+| Kafka | 9092 | Event streaming |
+| Zipkin | 9411 | Distributed tracing |
 
-## API Contracts
+## Communication Patterns
 
-OpenAPI specifications are defined in `docs/api-specs/`:
-- `payment-service.yaml`
-- `auth-service.yaml`
-- `order-service.yaml`
-- `api-gateway.yaml`
+### Synchronous (REST/Feign)
+- API Gateway → All services
+- Auth → Order → Payment
 
-## Contract Testing
-
-Pact contract tests in `tests/contracts/`.
+### Asynchronous (Kafka)
+- Payment → Notification
+- Payment → Analytics
+- Payment → Audit
 
 ## Security
 
-- JWT authentication
-- Rate limiting (Redis)
+- JWT authentication with refresh tokens
+- Rate limiting (Redis-based)
 - Circuit breaking (Resilience4j)
-- mTLS for service-to-service communication
-- Secrets management via environment variables
+- API keys for merchant integrations
+- PCI DSS compliance (tokenization)
+
+## Planned Services
+
+- **graphql-gateway** (8087) - GraphQL API with federation
+- **search-service** (8088) - Elasticsearch-powered search

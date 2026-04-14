@@ -199,7 +199,6 @@
 ### Async (Kafka)
 - Payment → Notification
 - Payment → Analytics
-- Payment → Search
 - Payment → Audit
 
 ---
@@ -214,7 +213,5 @@
 | payment-service | 8083 | /actuator/health |
 | notification-service | 8084 | /actuator/health |
 | simulator-service | 8086 | /actuator/health |
-| graphql-gateway | 8087 | /actuator/health |
-| search-service | 8088 | /actuator/health |
 | analytics-service | 8089 | /actuator/health |
 | audit-service | 8090 | /actuator/health |

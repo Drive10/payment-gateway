@@ -10,6 +10,52 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Client Layer                              │
 │  ┌──────────────────┐              ┌──────────────────────────┐ │
+│  │  Checkout UI     │              │  Merchant Dashboard       │ │
+│  │ (payment-page)   │              │  (Next.js)                │ │
+│  └────────┬─────────┘              └───────────┬──────────────┘ │
+└───────────┼─────────────────────────────────────┼────────────────┘
+            │                                     │
+            ▼                                     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              API Gateway (8080) - Spring Cloud Gateway          │
+│  ┌────────────┬────────────┬────────────┬──────────────────┐   │
+│  │ JWT Auth   │ Rate Limit │  CORS      │ Circuit Breaker  │   │
+│  │ Validation │ (Redis)    │  Security  │  (Resilience4j)   │   │
+│  └────────────┴────────────┴────────────┴──────────────────┘   │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+    ┌───────────┬─────────────┼─────────────┬───────────┐
+    ▼           ▼             ▼             ▼           ▼
+┌────────┐ ┌────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐
+│  Auth  │ │ Order  │ │ Payment  │ │ Notif    │ │Analytics│
+│ 8081   │ │ 8082   │ │   8083   │ │  8084    │ │  8089   │
+└────────┘ └────────┘ └──────────┘ └──────────┘ └─────────┘
+                              │
+    ┌───────────┬─────────────┼─────────────┬───────────┐
+    ▼           ▼             ▼             ▼           ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+│Simulator │ │  Audit   │ │   N/A    │ │   N/A    │ │ Notif    │
+│  (8086)  │ │  (8090)  │ │ (planned)│ │ (planned)│ │ Consumer │
+└──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Event-Driven Messaging                       │
+│              Apache Kafka (payment.*, order.*)                 │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+    ┌───────────┬─────────────┼─────────────┬───────────┐
+    ▼           ▼             ▼             ▼           ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+│PostgreSQL│ │ MongoDB  │ │  Redis   │ │     -    │ │   Kafka  │
+│  (5432)  │ │ (27017)  │ │ (6379)   │ │         │ │ (9092)   │
+└──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
+```
+
+> ⚠️ **Note**: GraphQL Gateway (8087) and Search Service (8088) are planned but not yet implemented
+┌─────────────────────────────────────────────────────────────────┐
+│                        Client Layer                              │
+│  ┌──────────────────┐              ┌──────────────────────────┐ │
 │  │  Checkout UI     │              │  GraphQL Playground      │ │
 │  │ (web/frontend)   │              │  (localhost:8087)        │ │
 │  └────────┬─────────┘              └───────────┬──────────────┘ │
@@ -60,16 +106,17 @@
 |-------|------------|
 | **Backend** | Java 21, Spring Boot 3.3, Spring Cloud |
 | **API Gateway** | Spring Cloud Gateway (WebFlux) |
-| **GraphQL** | Spring GraphQL |
 | **Database** | PostgreSQL 16, MongoDB 7, Redis 7 |
-| **Search** | Elasticsearch 8 |
 | **Messaging** | Apache Kafka 3.7 |
 | **Security** | Spring Security, JWT (HS512), BCrypt |
 | **Resilience** | Resilience4j |
-| **Observability** | OpenTelemetry, Prometheus, Grafana |
+| **Observability** | OpenTelemetry, Prometheus, Grafana, Zipkin |
 | **Frontend** | React 18, Vite 5, Tailwind CSS |
+| **Dashboard** | Next.js 14, TypeScript |
 | **Container** | Docker, Docker Compose |
 | **Build** | Maven 3.9 |
+
+> ⚠️ **Planned**: GraphQL Gateway, Elasticsearch |
 
 ---
 
@@ -85,10 +132,8 @@
 | payment-service | 8083 | Payment orchestration |
 | notification-service | 8084 | Email, SMS, push, webhooks |
 | simulator-service | 8086 | Payment simulation, testing |
-| graphql-gateway | 8087 | GraphQL API |
-| search-service | 8088 | Elasticsearch search |
 | analytics-service | 8089 | Reports, metrics, risk |
-| audit-service | 8089 | MongoDB audit logging |
+| audit-service | 8090 | MongoDB audit logging |
 
 ### Infrastructure Services
 
@@ -97,12 +142,11 @@
 | PostgreSQL | 5432 | Primary database |
 | MongoDB | 27017 | Audit logs, events |
 | Redis | 6379 | Cache, rate limiting |
-| Elasticsearch | 9200 | Full-text search |
 | Kafka | 9092 | Event streaming |
 | Zookeeper | 2181 | Kafka coordination |
-| Grafana | 3000 | Dashboards |
-| Prometheus | 9090 | Metrics |
-| Jaeger | 16686 | Distributed tracing |
+| Zipkin | 9411 | Distributed tracing |
+
+> ⚠️ Elasticsearch (9200) is planned but not currently running
 
 ---
 
@@ -157,11 +201,13 @@ payflow/
 │   ├── payment-service/      # Payment orchestration
 │   ├── notification-service/ # Notifications
 │   ├── simulator-service/    # Payment simulation
-│   ├── graphql-gateway/      # GraphQL API
-│   ├── search-service/       # Elasticsearch
 │   ├── analytics-service/    # Analytics & reporting
 │   └── audit-service/        # Audit logging
-├── web/frontend/             # React checkout UI
+├── web/
+│   ├── payment-page/         # React checkout UI
+│   └── dashboard/            # Next.js merchant dashboard
 ├── infra/                    # Infrastructure configs
 └── scripts/                  # Dev scripts
 ```
+
+> ⚠️ **Planned**: graphql-gateway, search-service

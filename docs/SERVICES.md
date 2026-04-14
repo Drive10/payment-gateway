@@ -16,6 +16,7 @@
 | **simulator-service** | 8086 | Spring Boot 3 | Payment simulation, testing |
 | **analytics-service** | 8089 | Spring Boot 3 | Risk, settlements, reports |
 | **audit-service** | 8090 | Spring Boot 3 | MongoDB audit logging |
+| **dashboard-service** | - | Next.js | Merchant dashboard (frontend) |
 
 ---
 
@@ -261,9 +262,9 @@
 |---------|-----------|----------|
 | api-gateway | 8080 | Redis |
 | auth-service | 8081 | PostgreSQL, Redis |
-| order-service | 8082 | PostgreSQL, Redis |
+| order-service | 8082 | PostgreSQL |
 | payment-service | 8083 | PostgreSQL, Redis |
-| notification-service | 8084 | PostgreSQL, Redis |
-| simulator-service | 8086 | None |
-| analytics-service | 8089 | PostgreSQL, Redis |
+| notification-service | 8084 | PostgreSQL |
+| simulator-service | 8086 | PostgreSQL |
+| analytics-service | 8089 | PostgreSQL |
 | audit-service | 8090 | MongoDB |
