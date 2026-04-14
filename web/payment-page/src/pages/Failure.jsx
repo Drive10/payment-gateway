@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { getStoredTransaction } from "../lib/payment";
 
 export default function Failure() {
@@ -54,14 +54,10 @@ export default function Failure() {
               ))}
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                to="/"
-                state={{ retry: true, transaction }}
-                className="inline-flex flex-1 items-center justify-center rounded-[1.25rem] bg-slate-950 px-6 py-3 font-semibold text-white transition hover:bg-slate-800"
-              >
-                Try Again
-              </Link>
+            <div className="mt-8">
+              <p className="text-center text-sm text-slate-500">
+                Please contact support with payment ID: {transaction?.id}
+              </p>
             </div>
           </div>
         </div>
