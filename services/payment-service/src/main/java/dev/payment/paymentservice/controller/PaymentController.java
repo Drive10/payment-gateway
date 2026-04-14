@@ -100,6 +100,19 @@ public class PaymentController {
         return ApiResponse.success(paymentService.capturePayment(paymentId, request, actor));
     }
 
+    @PostMapping("/{paymentId}/verify-otp")
+    public ApiResponse<PaymentResponse> verifyOtp(
+            @PathVariable("paymentId") UUID paymentId,
+            @RequestBody java.util.Map<String, String> body,
+            Authentication authentication) {
+        String otp = body.get("otp");
+        if (otp == null || otp.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "MISSING_OTP", "OTP is required");
+        }
+        User actor = authService.getCurrentUser(authentication.getName());
+        return ApiResponse.success(paymentService.verifyOtp(paymentId, otp, actor));
+    }
+
     @PostMapping("/{paymentId}/refunds")
     public ApiResponse<RefundResponse> refundPayment(
             @PathVariable("paymentId") UUID paymentId,

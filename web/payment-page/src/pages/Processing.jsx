@@ -7,6 +7,9 @@ import {
   getStoredTransaction,
 } from "../lib/payment";
 
+const API_BASE_URL = window.__ENV__?.API_BASE_URL || "/api/v1";
+const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION || false;
+
 export default function Processing() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -14,6 +17,9 @@ export default function Processing() {
   const [error, setError] = useState(null);
   const [status, setStatus] = useState("processing");
   const [pollAttempt, setPollAttempt] = useState(0);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
 
   useEffect(() => {
     if (!checkout?.payment?.id) {
@@ -21,22 +27,18 @@ export default function Processing() {
       return;
     }
 
-    const processPayment = async () => {
-      try {
-        setStatus("processing");
-        const transaction = await captureCheckout(checkout, (currentStatus, attempt) => {
-          setPollAttempt(attempt);
-        });
-        
-        if (transaction.status === "FAILED") {
-          setStatus("failed");
-          setError(transaction.errorMessage || "Payment failed");
-          setTimeout(() => {
-            navigate("/failure", { replace: true, state: { transaction, error: transaction.errorMessage } });
-          }, 1500);
-        } else {
-          navigate("/success", { replace: true, state: { transaction } });
-        }
+    if (IS_PRODUCTION && checkout.payment.checkoutUrl) {
+      window.location.href = checkout.payment.checkoutUrl;
+      return;
+    }
+
+    handleOtpRequired();
+  }, [checkout, navigate]);
+
+  const handleOtpRequired = () => {
+    setShowOtpModal(true);
+    setStatus("pending_otp");
+  };
       } catch (err) {
         setStatus("failed");
         setError(err.message || "Payment failed. Please try again.");
@@ -48,6 +50,119 @@ export default function Processing() {
 
     processPayment();
   }, [checkout, navigate]);
+
+  const handleOtpRequired = () => {
+    setShowOtpModal(true);
+    setStatus("pending_otp");
+  };
+
+  const handleOtpSubmit = async () => {
+    if (!otp || otp.length !== 6) {
+      setOtpError("Please enter 6-digit OTP");
+      return;
+    }
+
+    setOtpError("");
+    setStatus("processing");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/payments/${checkout.payment.id}/verify-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${checkout.token}`,
+          },
+          body: JSON.stringify({ otp }),
+        }
+      );
+      const data = await response.json();
+
+      if (data.success && (data.data?.status === "COMPLETED" || data.data?.status === "CAPTURED")) {
+        const transaction = {
+          id: checkout.payment.id,
+          orderId: checkout.order.id,
+          orderReference: checkout.order.externalReference,
+          status: data.data.status,
+          amount: checkout.amount,
+          amountLabel: formatCurrency(checkout.amount),
+          method: checkout.method,
+          methodLabel: checkout.method === "upi" ? "UPI" : "Card",
+          customerLabel: checkout.cardholder || `${checkout.customer?.firstName} ${checkout.customer?.lastName}`.trim(),
+          environmentLabel: "Sandbox lane",
+          correlationId: checkout.correlationId,
+        };
+        navigate("/success", { replace: true, state: { transaction } });
+      } else {
+        setOtpError(data.error?.message || "Invalid OTP. Try 123456");
+        setStatus("pending_otp");
+      }
+    } catch (err) {
+      setOtpError("Verification failed. Try 123456");
+      setStatus("pending_otp");
+    }
+  };
+
+  const handleCancel = () => {
+    setShowOtpModal(false);
+    navigate("/failure", { replace: true, state: { transaction: checkout, error: "Payment cancelled by user" } });
+  };
+
+  if (showOtpModal) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-4 py-10">
+        <motion.section
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+        >
+          <div className="bg-gradient-to-r from-cyan-600 to-teal-600 p-6 text-white">
+            <h1 className="text-xl font-semibold">Verify Payment</h1>
+            <p className="mt-2 text-sm text-cyan-100">
+              Enter the 6-digit OTP sent to your registered mobile number
+            </p>
+          </div>
+          <div className="p-6">
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                OTP Code
+              </label>
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="Enter 6-digit OTP"
+                className="w-full rounded-xl border-2 border-slate-300 px-4 py-3 text-center text-2xl tracking-widest focus:border-cyan-500 focus:outline-none"
+                maxLength={6}
+              />
+              {otpError && (
+                <p className="mt-2 text-sm text-red-600">{otpError}</p>
+              )}
+            </div>
+            <p className="mb-4 text-center text-sm text-slate-500">
+              Test OTP: <span className="font-mono font-semibold">123456</span>
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancel}
+                className="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleOtpSubmit}
+                disabled={status === "processing"}
+                className="flex-1 rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white"
+              >
+                {status === "processing" ? "Verifying..." : "Verify OTP"}
+              </button>
+            </div>
+          </div>
+        </motion.section>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">

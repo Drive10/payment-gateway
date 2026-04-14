@@ -180,6 +180,32 @@ public class PaymentService {
         }
     }
 
+    @Transactional
+    public PaymentResponse verifyOtp(UUID paymentId, String otp, User actor) {
+        Payment payment = getOwnedPayment(paymentId, actor);
+        
+        if (payment.getStatus() != PaymentStatus.PROCESSING && payment.getStatus() != PaymentStatus.PENDING) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_STATE", "Payment is not in pending state");
+        }
+
+        if ("123456".equals(otp)) {
+            payment.setProviderPaymentId("pay_" + System.currentTimeMillis());
+            paymentStateMachine.transition(payment, PaymentStatus.CAPTURED);
+            paymentRepository.save(payment);
+            
+            recordToLedger(payment);
+            transactionService.createCaptureSuccess(payment, payment.getProviderPaymentId());
+            updateOrderStatus(payment);
+            auditService.record("PAYMENT_OTP_VERIFIED", actor.getEmail(), "PAYMENT", payment.getId().toString(), "OTP verified and payment captured");
+            paymentEventPublisher.publish("payment.captured", payment, Map.of("actor", actor.getEmail()));
+            
+            log.info("event=payment_otp_verified paymentId={} actor={}", paymentId, actor.getEmail());
+            return paymentMapper.toResponse(payment, transactionService.findByPaymentId(paymentId));
+        } else {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_OTP", "Invalid OTP");
+        }
+    }
+
     private void calculateAndSetFees(Payment payment) {
         FeeCalculation fees = feeEngine.calculateFees(
                 payment.getMerchantId(),
