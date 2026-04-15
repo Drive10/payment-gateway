@@ -39,7 +39,7 @@
     "jspdf": "^2.5.1",
     "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react-dom": "^19.2.5",
     "react-hook-form": "^7.72.1",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^6.22.0",
