@@ -60,6 +60,33 @@ export default function Processing() {
           setProgressMessage(message);
           setPollAttempt(attempt);
 
+          // Auto-capture for simulator/test mode when status is CREATED
+          if (paymentStatus === "CREATED") {
+            setProgressMessage("Capturing payment...");
+            try {
+              const captureResponse = await fetch(
+                `${API_BASE_URL}/payments/${checkout.payment.id}/capture`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}),
+                  },
+                  body: JSON.stringify({}),
+                }
+              );
+              const captureData = await captureResponse.json();
+              if (captureData.success && captureData.data) {
+                setStatus(captureData.data.status);
+                setProgressMessage("Payment captured!");
+              }
+            } catch (captureErr) {
+              console.error("Capture error:", captureErr);
+            }
+            await new Promise((r) => setTimeout(r, 1000));
+            continue;
+          }
+
           // Check final states
           if (FINAL_STATES.includes(paymentStatus)) {
             navigate("/success", {

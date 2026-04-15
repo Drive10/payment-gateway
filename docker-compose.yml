@@ -288,6 +288,54 @@ services:
     networks:
       - payflow-network
 
+  # Dashboard Service (NestJS)
+  dashboard-service:
+    profiles: [services]
+    build:
+      context: ./services/dashboard-service
+      dockerfile: Dockerfile
+    container_name: payflow-dashboard-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=payflow_dashboard
+      - DB_USERNAME=payflow
+      - DB_PASSWORD=payflow
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=payflow-redis
+      - JWT_SECRET=payflow-secret-key-min-32-chars!
+      - JWT_EXPIRES_IN=1h
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - payflow-network
+
+  # Dashboard Frontend (Next.js)
+  dashboard-frontend:
+    profiles: [services]
+    build:
+      context: ./web/dashboard
+      dockerfile: Dockerfile
+    container_name: payflow-dashboard-frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://dashboard-service:3001
+      - NEXT_PUBLIC_API_BASE_URL=http://api-gateway:8080
+    depends_on:
+      - dashboard-service
+      - api-gateway
+    ports:
+      - "3000:3000"
+    networks:
+      - payflow-network
+
 volumes:
   postgres_data:
   mongodb_data:

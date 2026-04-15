@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { login } from '@/src/lib/auth';
+import axios from 'axios';
+import { login as saveToken } from '@/src/lib/auth';
+import { API_BASE_URL } from '@/src/lib/constants';
 import { useToast } from '@/src/lib/toast';
 
 export default function LoginPage() {
@@ -15,21 +17,44 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      // In a real implementation, this would call the auth service
-      // For demo purposes, we'll simulate a successful login
-      const mockToken = 'mock_jwt_token_' + Date.now();
-      
-      // Save token
-      login(mockToken);
-      
-      // Show success message
-      toast.success('Login successful!');
-      
-      // Redirect to dashboard
-      router.push('/dashboard');
-    } catch (error) {
-      toast.error('Invalid email or password');
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+        email,
+        password,
+      });
+
+      if (response.data.accessToken) {
+        saveToken(response.data.accessToken);
+        toast.success('Login successful!');
+        router.push('/');
+      } else {
+        toast.error('Invalid credentials');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Login failed. Try demo credentials.');
       console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+        email: 'demo@payflow.com',
+        password: 'demo123',
+      });
+
+      if (response.data.accessToken) {
+        saveToken(response.data.accessToken);
+        toast.success('Demo login successful!');
+        router.push('/');
+      }
+    } catch {
+      const mockToken = 'demo_token_' + Date.now();
+      saveToken(mockToken);
+      toast.success('Demo mode - using local storage');
+      router.push('/');
     } finally {
       setIsLoading(false);
     }
@@ -39,8 +64,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <h2 className="text-2xl font-bold">Welcome to PayFlow Dashboard</h2>
-          <p className="text-gray-600">Sign in to access your payment monitoring dashboard</p>
+          <h2 className="text-2xl font-bold">PayFlow Dashboard</h2>
+          <p className="text-gray-600 mt-2">Sign in to access your payment dashboard</p>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -95,16 +120,34 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-600 disabled:opacity-50"
+              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-600 disabled:opacity-50"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
         </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-gray-50 px-2 text-gray-500">Or continue with</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleDemoLogin}
+          disabled={isLoading}
+          className="flex w-full justify-center rounded-md bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300 disabled:opacity-50"
+        >
+          Demo Account
+        </button>
         
         <p className="text-center text-sm text-gray-500">
           Don't have an account?
-          <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500">
+          <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500 ml-1">
             Sign up
           </a>
         </p>
