@@ -47,7 +47,7 @@ npm run dev
 | Service | Port |
 |---------|------|
 | Frontend (payment-page) | http://localhost:5173 |
-| Dashboard | http://localhost:3000 |
+| Grafana | http://localhost:3000 |
 | API Gateway | http://localhost:8080 |
 | Auth Service | http://localhost:8081 |
 | Order Service | http://localhost:8082 |

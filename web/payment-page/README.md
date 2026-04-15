@@ -2,7 +2,7 @@
 
 A polished fintech checkout demo built with React, Vite, and Tailwind CSS. This is the frontend component of the PayFlow enterprise payment gateway.
 
-> **Note**: This is part of the [PayFlow](https://github.com/Drive10/payflow) monorepo. See the [root README](../README.md) for full project details.
+> **Note**: This is part of the [PayFlow](https://github.com/Drive10/payflow) monorepo. See the [root README](../../README.md) for full project details.
 
 ## Highlights
 
@@ -123,13 +123,13 @@ API endpoints:
 
 - This is a frontend demo and does not process real payments.
 - Transaction data is stored locally in the browser for the receipt flow.
-- For full payment processing, see the [PayFlow backend services](../README.md).
+- For full payment processing, see the [PayFlow backend services](../../README.md).
 
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the local workflow and expectations.
-Or see [root CONTRIBUTING.md](../CONTRIBUTING.md) for project-wide guidelines.
+Or see [root CONTRIBUTING.md](../../CONTRIBUTING.md) for project-wide guidelines.
 
 ## License
 
-This project is available under the [MIT License](../LICENSE).
+This project is available under the [MIT License](../../LICENSE).

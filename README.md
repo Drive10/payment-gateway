@@ -1,208 +1,84 @@
-# PayFlow — Enterprise Payment Gateway
+# PayFlow - Enterprise Payment Gateway
 
-> A production-grade, cloud-native payment processing platform built with Spring Boot 3, Kafka, PostgreSQL, MongoDB, and React. Designed for high-throughput, low-latency payment orchestration with real-time analytics, multi-currency support, and enterprise-grade security.
+Cloud-native payment platform built with Spring Boot microservices, Kafka eventing, PostgreSQL, Redis, and a React checkout UI.
 
 ![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3-6DB33F?logo=springboot&logoColor=white)
 ![Kafka](https://img.shields.io/badge/Apache_Kafka-3.7-231F20?logo=apachekafka&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)
-![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8-005571?logo=elasticsearch&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
----
+## Current Scope (Active)
+
+- `api-gateway` (`8080`): routing, auth validation, rate limiting, security headers
+- `auth-service` (`8081`): registration/login, JWT, RBAC
+- `order-service` (`8082`): order lifecycle, merchant-facing order flow
+- `payment-service` (`8083`): payment orchestration, idempotency, webhook handling
+- `notification-service` (`8084`): notifications and webhook delivery
+- `simulator-service` (`8086`): simulated providers for local testing
+- `web/payment-page` (`5173`): checkout frontend
+
+## Planned / Optional Scope
+
+- `analytics-service` (`8089`)
+- `audit-service` (`8090`)
+- `graphql-gateway` (`8087`)
+- `search-service` (`8088`)
 
 ## Architecture
 
-```
-┌───────────────────────────────────────────────────────────────────────────────┐
-│                              Client Layer                                      │
-│  ┌──────────────────┐              ┌──────────────────────────────────────┐  │
-│  │  Checkout UI      │              │  GraphQL Playground (GraphiQL)        │  │
-│  │  (web/payment-page)│             │  localhost:8087/graphiql              │  │
-│  └────────┬─────────┘              └──────────────────┬───────────────────┘  │
-└───────────┼─────────────────────────────────────────────┼─────────────────────┘
-            │                                              │
-            ▼                                              ▼
-┌───────────────────────────────────────────────────────────────────────────────┐
-│                     API Gateway (Spring Cloud Gateway)                          │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │
-│  │ JWT Auth    │  │ Rate Limiting│  │ CORS Policy  │  │ Circuit Breaker │  │
-│  │ Validation  │  │ (Redis)      │  │ Security     │  │ (Resilience4j)  │  │
-│  └─────────────┘  └──────────────┘  └──────────────┘  └─────────────────┘  │
-└─────────────────────────────┬────────────────────────────────────────────────┘
-                               │
-                     ┌───────────────────┼───────────────────┬───────────────────┐
-                     ▼                   ▼                   ▼                   ▼
-             ┌──────────────────┐ ┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐
-              │  Auth Service    │ │Order Service │ │  Payment Service  │ │ GraphQL Gateway  │
-              │  (8081)          │ │  (8082)      │ │  (8083)           │ │  (8087)          │
-             │                  │ │              │ │                  │ │                  │
-             │  • JWT Auth     │ │  • Orders   │ │  • Payments     │ │  • GraphQL API   │
-             │  • OAuth2       │ │  • Merchants│ │  • Refunds      │ │  • Federation    │
-             │  • RBAC         │ │  • API Keys │ │  • Webhooks     │ │  • DataLoader    │
-             │  • Sessions     │ │  • KYC      │ │  • Idempotency  │ │                  │
-             └──────────────────┘ └──────────────┘ └──────────────────┘ └──────────────────┘
-                              │
-                    ┌───────────────────┼───────────────────┬───────────────────┐
-                    ▼                   ▼                   ▼                   ▼
-            ┌──────────────────┐ ┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐
-            │ Notification     │ │ Analytics    │ │  Simulator       │ │  Search Service  │
-            │ Service (8084)   │ │ Service      │ │  Service (8086)  │ │  (8088)          │
-            │                  │ │  (8089)      │ │                  │ │                  │
-            │  • Email/SMS    │ │  • Reports  │ │  • Load Testing │ │  • Elasticsearch │
-            │  • Push         │ │  • Metrics  │ │  • Demo Mode    │ │  • Full-text    │
-            │  • Webhooks     │ │  • Dashboards│ │  • Mock Providers│ │  • Aggregations │
-            │  • Feature Flags│ │  • Alerts   │ │                  │ │                  │
-            └──────────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘
-                              │
-                    ┌───────────────────┼───────────────────┐
-                    ▼                   ▼                   ▼
-            ┌───────────────────────────────────────────────────────────────────────────────┐
-            │                        Event-Driven Messaging (Kafka)                          │
-            │  payment.created │ payment.completed │ order.events │ webhook.updates │ audit  │
-            └─────────────────────────────┬────────────────────────────────────────────────┘
-                              │
-                    ┌───────────────────┼───────────────────┬───────────────────┐
-                    ▼                   ▼                   ▼                   ▼
-            ┌──────────────────┐ ┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐
-            │ Notification     │ │ Analytics    │ │  Simulator       │ │  Search Service  │
-            │ Service (8084)   │ │ Service      │ │  Service (8086)  │ │  (8088)          │
-            │                  │ │  (8089)      │ │                  │ │                  │
-            │  • Email/SMS    │ │  • Reports  │ │  • Load Testing │ │  • Elasticsearch │
-            │  • Push         │ │  • Metrics  │ │  • Dashboards│ │  • Mock Providers│ │  • Aggregations │
-            │  • Feature Flags│ │  • Alerts   │ │                  │ │                  │
-            └──────────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘
-                              │
-                              ▼
-┌───────────────────────────────────────────────────────────────────────────────┐
-│                          Audit Service (8089)                                  │
-│                                                                               │
-│  • MongoDB-based audit logging                                                │
-│  • Event sourcing support                                                     │
-│  • Compliance & regulatory requirements                                        │
-│  • User activity tracking                                                     │
-└───────────────────────────────────────────────────────────────────────────────┘
+```text
+Checkout UI -> API Gateway -> Auth / Order / Payment / Notification / Simulator
+                               |
+                               +-> Kafka events (payment.*, order.*, webhook.updates)
+                               |
+                               +-> PostgreSQL + Redis
 
-## Infrastructure
-
-```
-┌───────────────────────────────────────────────────────────────────────────────┐
-│                            Infrastructure                                     │
-│                                                                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ PostgreSQL   │  │   MongoDB    │  │    Redis     │  │  Elasticsearch   │  │
-│  │ (Primary DB) │  │ (Audit Logs) │  │  (Cache)     │  │  (Search)        │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────────┘  │
-│                                                                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │   Kafka      │  │  Prometheus  │  │   Grafana    │  │    Jaeger        │  │
-│  │ (Events)     │  │  (Metrics)   │  │  (Dashboards)│  │  (Tracing)       │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────────┘  │
-└───────────────────────────────────────────────────────────────────────────────┘
+Observability: Prometheus + Loki + Grafana + Zipkin
 ```
 
-## Services
+## Payment Flow Reality
 
-| Service | Port | Description | Tech |
-|---------|------|-------------|------|
-| **api-gateway** | 8080 | Central routing, auth, rate limiting | Spring Cloud Gateway |
-| **auth-service** | 8081 | JWT auth, OAuth2, RBAC, sessions | Spring Security |
-| **order-service** | 8082 | Order management, merchants, KYC, API keys | Spring Data JPA |
-| **payment-service** | 8083 | Payment orchestration, multi-provider integration | Spring Boot |
-| **notification-service** | 8084 | Email, SMS, push, webhooks, feature flags | Kafka, Redis |
-| **simulator-service** | 8086 | Payment simulation, load testing, demo mode | Spring Boot |
-| **analytics-service** | 8089 | Risk scoring, settlements, disputes, reports | Kafka, JPA |
-| **audit-service** | 8090 | Audit logging, compliance | MongoDB |
-
-## Features
-
-### Payment Processing
-- **Multi-Provider**: Stripe, Razorpay, PayPal integration
-- **Multi-Currency**: 150+ currencies with real-time conversion
-- **Smart Routing**: Automatic provider selection based on cost/success rate
-- **Idempotency**: Guaranteed exactly-once processing with idempotency keys
-- **Retry Logic**: Exponential backoff with circuit breaker (Resilience4j)
-
-### GraphQL API
-> ⚠️ **Planned** - Not yet implemented
-
-### Search & Analytics
-- **Full-text Search**: Elasticsearch-powered payment and order search
-- **Aggregations**: Revenue analytics, payment trends, merchant reports
-- **Real-time Dashboards**: Live metrics via WebSocket
-
-### Security
-- **JWT Authentication**: HS512 signed tokens with refresh flow
-- **RBAC**: Admin, Merchant, User roles with method-level security
-- **Rate Limiting**: Token bucket algorithm via Redis (1000 req/min per user)
-- **API Keys**: HMAC-signed keys for merchant integrations
-- **PCI DSS**: Card data never touches our servers (tokenization)
-- **Secrets Management**: Zero hardcoded secrets via environment variables
-
-### Polyglot Persistence
-- **PostgreSQL**: Primary datastore for payments, orders, users
-- **MongoDB**: Audit logs, event sourcing, flexible schemas
-- **Redis**: Caching, rate limiting, session management
-- **Elasticsearch**: Full-text search, analytics aggregations
-
-### Real-Time
-- **Event Streaming**: Kafka for all payment state changes
-- **WebSocket**: Live payment status updates
-- **Webhooks**: Configurable event delivery to merchant endpoints
-- **Feature Flags**: Runtime toggling without restarts
-
-### Observability
-- **Metrics**: Prometheus + Micrometer (100+ custom metrics)
-- **Tracing**: OpenTelemetry + Jaeger distributed tracing
-- **Dashboards**: Pre-built Grafana dashboards
-- **Health Checks**: Kubernetes-ready liveness/readiness probes
+- Payment responses are not final truth.
+- Status progresses asynchronously: `PENDING -> webhook/event -> CAPTURED|FAILED`.
+- Idempotency key is required for create/refund/retry paths.
 
 ## Quick Start
 
 ### Prerequisites
+
 - Java 21+
-- Docker & Docker Compose
-- Node.js 20+ (for frontend)
 - Maven 3.9+
-- IntelliJ IDEA (backend) + VSCode (frontend)
+- Docker + Docker Compose
+- Node.js 20+
 
-### Local Development
+### 1) Start full stack in Docker
 
-**1. Start Infrastructure (Docker)**
 ```bash
-docker compose up -d
+docker compose --profile infra --profile services up -d --build
 ```
 
-**2. Start Backend (IntelliJ)**
-```bash
-# Run each service via Maven
-mvn spring-boot:run -pl services/api-gateway
-mvn spring-boot:run -pl services/auth-service
-mvn spring-boot:run -pl services/order-service
-# ... etc
-```
+### 2) Open key endpoints
 
-**3. Start Frontend (VSCode)**
+- Checkout UI: `http://localhost:5173`
+- API Gateway health: `http://localhost:8080/actuator/health`
+- Grafana: `http://localhost:3000`
+- Prometheus: `http://localhost:9090`
+- Loki API: `http://localhost:3100`
+
+### 3) Local frontend-only development
+
 ```bash
 cd web/payment-page
+npm ci
 npm run dev
 ```
 
-### Build
+## Core API Examples
+
 ```bash
-# Build all services
-mvn clean package -DskipTests
-```
-
-## API Endpoints
-
-### REST API (via API Gateway)
-```bash
-# Health check
-curl http://localhost:8080/actuator/health
-
 # Register
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -211,90 +87,56 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 # Login
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@payflow.com","password":"Test@1234"}'
+  -d '{"email":"demo@payflow.dev","password":"Demo@1234"}'
 
-# Create Order (requires auth token)
+# Create order (replace <token>)
 curl -X POST http://localhost:8080/api/v1/orders \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"amount":5000,"currency":"USD","customerEmail":"test@example.com","description":"Test Order"}'
 
-# Create Payment
+# Create payment with idempotency key
 curl -X POST http://localhost:8080/api/v1/payments \
   -H "Authorization: Bearer <token>" \
+  -H "Idempotency-Key: demo-idem-001" \
   -H "Content-Type: application/json" \
-  -d '{"orderId":"<order-id>","provider":"STRIPE","paymentMethod":"CARD"}'
+  -d '{"orderId":"<order-id>","provider":"RAZORPAY_SIMULATOR","method":"CARD"}'
 ```
-
-### GraphQL API
-> ⚠️ Planned (not active in current compose profile)
-
-```bash
-# Access GraphiQL playground
-open http://localhost:8087/graphiql
-
-# Example queries
-query {
-  payments(page: 0, pageSize: 10) {
-    payments {
-      id
-      amount
-      status
-    }
-    totalCount
-  }
-}
-
-query {
-  analyticsSummary(startDate: "2026-01-01", endDate: "2026-04-01") {
-    totalTransactions
-    totalVolume
-    successRate
-  }
-}
-```
-
-## Technology Stack
-
-| Layer | Technology |
-|-------|------------|
-| **Backend** | Java 21, Spring Boot 3.3, Spring Cloud 2023 |
-| **Database** | PostgreSQL 16, Redis 7 |
-| **Search** | Planned (Elasticsearch) |
-| **Messaging** | Apache Kafka 3.7 |
-| **Gateway** | Spring Cloud Gateway (WebFlux) |
-| **Security** | Spring Security, JWT (JJWT), BCrypt |
-| **Resilience** | Resilience4j (Circuit Breaker, Retry, Bulkhead) |
-| **Observability** | OpenTelemetry, Prometheus, Grafana, Jaeger |
-| **Container** | Docker, Docker Compose, Kubernetes-ready |
-| **Build** | Maven 3.9 |
 
 ## Project Structure
 
-```
+```text
 payflow/
-├── libs/common/              # Shared library (DTOs, exceptions, utils)
-├── services/
-│   ├── api-gateway/          # Central API gateway (8080)
-│   ├── auth-service/         # Authentication & authorization (8081)
-│   ├── order-service/        # Orders, merchants, KYC, API keys (8082)
-│   ├── payment-service/      # Payment orchestration (8083)
-│   ├── notification-service/ # Notifications, webhooks, feature flags (8084)
-│   ├── simulator-service/    # Payment simulation & testing (8086)
-│   ├── analytics-service/    # Planned/optional service
-│   └── audit-service/        # Planned/optional service
-├── web/
-│   └── payment-page/         # Customer checkout (React 18)
-├── infra/                    # Infrastructure configs
-└── docker-compose.yml        # Infrastructure services
+|- libs/common/
+|- services/
+|  |- api-gateway/
+|  |- auth-service/
+|  |- order-service/
+|  |- payment-service/
+|  |- notification-service/
+|  |- simulator-service/
+|  |- analytics-service/     # optional/planned
+|  \- audit-service/         # optional/planned
+|- web/
+|  \- payment-page/
+|- infra/
+|- docs/
+\- docker-compose.yml
 ```
 
-## Documentation
+## Security and Configuration
 
-- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - Local development setup
-- [docs/SERVICES.md](docs/SERVICES.md) - Complete service reference
-- [docs/API.md](docs/API.md) - API endpoints and examples
+- No production secrets should be committed.
+- Use environment variables (`JWT_SECRET`, `GATEWAY_INTERNAL_SECRET`, `DB_USERNAME`, `DB_PASSWORD`, `REDIS_PASSWORD`).
+- See `SECURITY.md` and `.github/example-configs/.env.example`.
+
+## Developer Docs
+
+- `DEVELOPER_GUIDE.md` - local setup and troubleshooting
+- `docs/SERVICES.md` - service-by-service reference
+- `docs/INFRASTRUCTURE.md` - infra and observability details
+- `docs/API.md` - API overview
 
 ## License
 
-MIT License — see [LICENSE](LICENSE)
+MIT - see `LICENSE`.
