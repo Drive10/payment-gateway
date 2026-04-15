@@ -1,6 +1,21 @@
+server:
+  port: 8090
+
 spring:
   data:
     mongodb:
       uri: mongodb://localhost:27017/audit_db
+      database: payflow_audit
   kafka:
     bootstrap-servers: localhost:9092
+
+logging:
+  level:
+    root: INFO
+    dev.payment.audit: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

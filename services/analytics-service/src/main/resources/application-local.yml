@@ -1,8 +1,29 @@
+server:
+  port: 8089
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow_analytics
+    username: payflow
+    password: payflow
   data:
     redis:
       host: localhost
+      port: 6379
   kafka:
     bootstrap-servers: localhost:9092
+
+application:
+  payment-service:
+    url: http://localhost:8083
+
+logging:
+  level:
+    root: INFO
+    dev.payment.analyticsservice: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

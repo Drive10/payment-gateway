@@ -23,11 +23,14 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ObjectMapper objectMapper;
     private final OrderEventPublisher orderEventPublisher;
+    private final OrderStateMachine orderStateMachine;
 
-    public OrderService(OrderRepository orderRepository, ObjectMapper objectMapper, OrderEventPublisher orderEventPublisher) {
+    public OrderService(OrderRepository orderRepository, ObjectMapper objectMapper, 
+                       OrderEventPublisher orderEventPublisher, OrderStateMachine orderStateMachine) {
         this.orderRepository = orderRepository;
         this.objectMapper = objectMapper;
         this.orderEventPublisher = orderEventPublisher;
+        this.orderStateMachine = orderStateMachine;
     }
 
     @Transactional

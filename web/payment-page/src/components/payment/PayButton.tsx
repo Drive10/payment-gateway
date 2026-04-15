@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface PayButtonProps {
   amount: number;
   currency?: string;
-  status: 'idle' | 'processing' | 'pending_otp' | 'authorizing' | 'success' | 'failed' | 'expired';
+  status: 'idle' | 'initiated' | 'pending' | 'processing' | 'pending_otp' | 'authorizing' | 'success' | 'failed' | 'expired';
   error?: string | null;
   onClick: () => void;
   disabled?: boolean;
@@ -39,6 +39,10 @@ export function PayButton({
             Processing...
           </div>
         );
+      case 'initiated':
+        return 'Payment initiated';
+      case 'pending':
+        return 'Waiting for payment...';
       case 'pending_otp':
         return 'Verify OTP';
       case 'authorizing':

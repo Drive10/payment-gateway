@@ -54,6 +54,9 @@ public class Order {
     @Column(nullable = false, length = 32)
     private OrderStatus status;
 
+    @Column(name = "status_message", length = 100)
+    private String statusMessage;
+
     @Column(length = 255)
     private String description;
 

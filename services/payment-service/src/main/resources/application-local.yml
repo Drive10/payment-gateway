@@ -1,6 +1,13 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow_payment
+    username: payflow
+    password: payflow
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: payflow-redis
   kafka:
     bootstrap-servers: localhost:9092
 
@@ -15,3 +22,11 @@ application:
     service-url: http://localhost:8081
   gateway-trust:
     enabled: false
+
+server:
+  port: 8083
+
+logging:
+  level:
+    root: INFO
+    dev.payment.paymentservice: DEBUG

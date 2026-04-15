@@ -76,7 +76,7 @@ start_services() {
         port="${svc##*:}"
         
         info "Starting $service on port $port..."
-        nohup mvn spring-boot:run -pl services/$service -q > /tmp/$service.log 2>&1 &
+        nohup mvn spring-boot:run -pl services/$service -Dspring-boot.run.profiles=local -q > /tmp/$service.log 2>&1 &
     done
     
     log "All backend services started (check logs in /tmp/<service>.log)"

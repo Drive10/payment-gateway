@@ -11,7 +11,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:devpassword}
+      password: ${REDIS_PASSWORD:payflow-redis}
 
   cloud.gateway.routes:
     - id: auth-service
@@ -57,10 +57,19 @@ spring:
       filters:
         - StripPrefix=2
 
-application:
-  gateway:
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:internal-gateway-secret}
+server:
+  port: 8080
 
-security:
-  jwt:
-    secret-key: ${JWT_SECRET:YEh9YrZWacfeeM0F3PjuvPxvVuuB6ZCn2p7bsjcdBHY}
+logging:
+  level:
+    root: INFO
+    dev.payment.apigateway: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always

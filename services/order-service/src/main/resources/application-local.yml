@@ -1,6 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow_order
+    username: payflow
+    password: payflow
   kafka:
     bootstrap-servers: localhost:9092
 
@@ -9,3 +11,11 @@ application:
     url: http://localhost:8083
   notification-service:
     url: http://localhost:8084
+
+server:
+  port: 8082
+
+logging:
+  level:
+    root: INFO
+    dev.payment.orderservice: DEBUG

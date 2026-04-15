@@ -1,2 +1,15 @@
-webhook:
-  service-url: http://localhost:8084
+server:
+  port: 8086
+
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+
+application:
+  webhook:
+    service-url: http://localhost:8084
+
+logging:
+  level:
+    root: INFO
+    dev.payment.simulatorservice: DEBUG

@@ -1,12 +1,28 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow_notification
+    username: payflow
+    password: payflow
   data:
     redis:
       host: localhost
+      port: 6379
   kafka:
     bootstrap-servers: localhost:9092
 
 application:
   payment-service:
     url: http://localhost:8083
+  email:
+    host: localhost
+    port: 1025
+  sms:
+    provider: console
+
+server:
+  port: 8084
+
+logging:
+  level:
+    root: INFO
+    dev.payment.notificationservice: DEBUG

@@ -29,7 +29,7 @@ public class PaymentStateMachine {
         ALLOWED_TRANSITIONS.put(PaymentStatus.PENDING, EnumSet.of(PaymentStatus.CREATED, PaymentStatus.FAILED, PaymentStatus.EXPIRED));
         ALLOWED_TRANSITIONS.put(PaymentStatus.CREATED, EnumSet.of(
                 PaymentStatus.AWAITING_UPI_PAYMENT, PaymentStatus.AUTHORIZATION_PENDING, 
-                PaymentStatus.AUTHORIZED, PaymentStatus.FAILED, PaymentStatus.EXPIRED));
+                PaymentStatus.AUTHORIZED, PaymentStatus.PROCESSING, PaymentStatus.FAILED, PaymentStatus.EXPIRED));
         ALLOWED_TRANSITIONS.put(PaymentStatus.AWAITING_UPI_PAYMENT, EnumSet.of(
                 PaymentStatus.CAPTURED, PaymentStatus.FAILED, PaymentStatus.EXPIRED));
         ALLOWED_TRANSITIONS.put(PaymentStatus.AUTHORIZATION_PENDING, EnumSet.of(

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../lib/axios';
 import { usePaymentSecurity } from './usePaymentSecurity';
 import type { 
@@ -10,6 +11,9 @@ import type {
   NetBankingDetails,
   PaymentMethod 
 } from '../types/payment';
+
+const TXN_PARAM = 'txn';
+const ERROR_PARAM = 'error';
 
 const BACKEND_STATUS_TO_FRONTEND: Record<string, PaymentStatus> = {
   'PENDING': 'initiated',
@@ -40,15 +44,20 @@ export function usePayment({
   currency = 'INR',
   merchantId = 'MERCHANT_001' 
 }: UsePaymentOptions) {
-  const [state, setState] = useState<PaymentState>({
-    status: 'idle',
-    error: null,
-    transactionId: null,
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const initialTxnId = searchParams.get(TXN_PARAM);
+  const initialError = searchParams.get(ERROR_PARAM);
+  
+  const [state, setState] = useState<PaymentState>(() => ({
+    status: initialTxnId ? 'initiated' : 'idle',
+    error: initialError,
+    transactionId: initialTxnId,
+  }));
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const idempotencyKeyRef = useRef<string>(
-    `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    initialTxnId || `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   );
 
   const { generateToken, clearSensitiveData } = usePaymentSecurity({ merchantId });
@@ -79,6 +88,10 @@ export function usePayment({
         error: frontendStatus === 'failed' ? (message || 'Payment failed') : null,
         transactionId,
       });
+
+      if (transactionId && frontendStatus !== 'failed') {
+        setSearchParams({ [TXN_PARAM]: transactionId });
+      }
 
       return { transactionId, status: frontendStatus };
     } catch (error: any) {
@@ -273,8 +286,9 @@ export function usePayment({
       error: null,
       transactionId: null,
     });
+    setSearchParams({});
     idempotencyKeyRef.current = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }, []);
+  }, [setSearchParams]);
 
   useEffect(() => {
     return () => {
