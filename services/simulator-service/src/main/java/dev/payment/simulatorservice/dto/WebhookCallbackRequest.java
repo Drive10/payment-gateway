@@ -1,10 +1,14 @@
 package dev.payment.simulatorservice.dto;
 
+import lombok.Builder;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+@Builder
 public record WebhookCallbackRequest(
+        String event,
         UUID transactionId,
         String paymentReference,
         String providerOrderId,
@@ -12,6 +16,6 @@ public record WebhookCallbackRequest(
         String status,
         BigDecimal amount,
         String currency,
-        Instant timestamp
-) {
-}
+        int attempt,
+        String timestamp
+) {}

@@ -116,6 +116,18 @@ export default function Processing() {
             return;
           }
 
+          // Check if needs 3D Secure challenge
+          if (paymentStatus === "CHALLENGE_REQUIRED" || data.data?.requires3ds) {
+            const challengeUrl = data.data?.threeDsChallengeUrl;
+            if (challengeUrl) {
+              setProgressMessage("Redirecting to 3D Secure verification...");
+              setTimeout(() => {
+                window.location.href = challengeUrl;
+              }, 1500);
+              return;
+            }
+          }
+
           // Still processing, wait and poll again
           await new Promise((r) => setTimeout(r, 3000));
         }

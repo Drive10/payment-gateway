@@ -1,5 +1,6 @@
 package dev.payment.simulatorservice.dto.request;
 
+import dev.payment.simulatorservice.model.CardInfo;
 import dev.payment.simulatorservice.model.SimulationMode;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +16,6 @@ public record CreateSimulationRequest(
         @NotBlank @Size(min = 3, max = 3) String currency,
         @NotNull SimulationMode simulationMode,
         @Size(max = 255) String notes,
-        @Size(max = 512) String webhookCallbackUrl
-) {
-}
+        @Size(max = 512) String webhookCallbackUrl,
+        CardInfo cardInfo
+) {}

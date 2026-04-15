@@ -7,6 +7,7 @@ const Processing = lazy(() => import("./pages/Processing"));
 const Receipt = lazy(() => import("./pages/Receipt"));
 const Success = lazy(() => import("./pages/Success"));
 const Failure = lazy(() => import("./pages/Failure"));
+const ThreeDsChallenge = lazy(() => import("./pages/ThreeDsChallenge"));
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/success" element={<Success />} />
             <Route path="/failure" element={<Failure />} />
             <Route path="/receipt" element={<Receipt />} />
+            <Route path="/3ds/challenge" element={<ThreeDsChallenge />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

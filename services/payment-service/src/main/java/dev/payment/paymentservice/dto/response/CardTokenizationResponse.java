@@ -1,18 +1,31 @@
 package dev.payment.paymentservice.dto.response;
 
+import dev.payment.paymentservice.service.bin.CardBinService.CardBinData;
+
 public record CardTokenizationResponse(
     String token,
     String lastFour,
-    String cardBrand
+    String cardBrand,
+    String cardType,
+    String cardCategory,
+    String bankName,
+    String country,
+    String countryName,
+    boolean requires3ds,
+    boolean isInternational
 ) {
-    public CardTokenizationResponse(String token) {
-        this(token, token.substring(token.length() - 4), detectBrand(token));
-    }
-    
-    private static String detectBrand(String token) {
-        if (token.startsWith("4")) return "VISA";
-        if (token.startsWith("5")) return "MASTERCARD";
-        if (token.startsWith("3")) return "AMEX";
-        return "UNKNOWN";
+    public CardTokenizationResponse(String token, CardBinData binData) {
+        this(
+            token,
+            token.length() >= 4 ? token.substring(token.length() - 4) : "****",
+            binData.brand(),
+            binData.type(),
+            binData.category(),
+            binData.bankName(),
+            binData.country(),
+            binData.countryName(),
+            binData.is3dsSupported(),
+            binData.isInternational()
+        );
     }
 }

@@ -164,8 +164,8 @@ public class PaymentController {
     @PostMapping("/tokenize")
     public ApiResponse<CardTokenizationResponse> tokenizeCard(
             @RequestBody CardTokenizationRequest request) {
-        String token = paymentService.tokenizeCard(request);
-        return ApiResponse.success(new CardTokenizationResponse(token));
+        CardTokenizationResponse tokenizationResponse = paymentService.tokenizeCard(request);
+        return ApiResponse.success(tokenizationResponse);
     }
 
     @PostMapping("/{paymentId}/retry")

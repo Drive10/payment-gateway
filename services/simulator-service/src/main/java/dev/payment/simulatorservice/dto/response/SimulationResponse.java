@@ -13,12 +13,23 @@ public record SimulationResponse(
         String provider,
         String providerOrderId,
         String providerPaymentId,
+        String providerSignature,
         String status,
         BigDecimal amount,
         String currency,
         String checkoutUrl,
         boolean testMode,
         String notes,
-        Instant createdAt
-) {
-}
+        Instant createdAt,
+        Instant processedAt,
+        boolean requires3ds,
+        String threeDsChallengeUrl,
+        String threeDsTransactionId,
+        String threeDsStatus,
+        String declineCode,
+        String declineReason,
+        String riskScore,
+        String velocityCheck,
+        String networkRef,
+        int retryCount
+) {}

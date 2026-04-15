@@ -12,6 +12,7 @@ import dev.payment.paymentservice.dto.request.CapturePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreatePaymentRequest;
 import dev.payment.paymentservice.dto.request.CreateRefundRequest;
 import dev.payment.paymentservice.dto.response.PaymentResponse;
+import dev.payment.paymentservice.dto.response.CardTokenizationResponse;
 import dev.payment.paymentservice.dto.response.RefundResponse;
 import dev.payment.paymentservice.exception.ApiException;
 import dev.payment.paymentservice.integration.processor.PaymentProcessorCaptureResponse;
@@ -20,6 +21,8 @@ import dev.payment.paymentservice.integration.processor.PaymentProcessorIntentRe
 import dev.payment.paymentservice.mapper.PaymentMapper;
 import dev.payment.paymentservice.repository.PaymentRefundRepository;
 import dev.payment.paymentservice.repository.PaymentRepository;
+import dev.payment.paymentservice.service.bin.CardBinService;
+import dev.payment.paymentservice.service.bin.CardBinService.CardBinData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -50,6 +53,7 @@ public class PaymentService {
     private final LedgerService ledgerService;
     private final PaymentTransactionService transactionService;
     private final PaymentMapper paymentMapper;
+    private final CardBinService cardBinService;
 
     public PaymentService(
             PaymentRepository paymentRepository,
@@ -63,7 +67,8 @@ public class PaymentService {
             FeeEngine feeEngine,
             LedgerService ledgerService,
             PaymentTransactionService transactionService,
-            PaymentMapper paymentMapper) {
+            PaymentMapper paymentMapper,
+            CardBinService cardBinService) {
         this.paymentRepository = paymentRepository;
         this.paymentRefundRepository = paymentRefundRepository;
         this.orderService = orderService;
@@ -76,6 +81,7 @@ public class PaymentService {
         this.ledgerService = ledgerService;
         this.transactionService = transactionService;
         this.paymentMapper = paymentMapper;
+        this.cardBinService = cardBinService;
     }
 
     @Transactional
@@ -414,18 +420,24 @@ private String resolveSimulationMode(Payment payment) {
         return "SUCCESS";
     }
 
-    public String tokenizeCard(dev.payment.paymentservice.dto.request.CardTokenizationRequest request) {
+    public CardTokenizationResponse tokenizeCard(dev.payment.paymentservice.dto.request.CardTokenizationRequest request) {
         String cardNumber = request.cardNumber().replaceAll("\\s", "");
         
         if (cardNumber.length() < 13 || cardNumber.length() > 19) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_CARD", "Invalid card number");
         }
         
+        CardBinService.CardBinData binData = cardBinService.getCardData(cardNumber);
+        
         String token = "tok_" + cardNumber.substring(cardNumber.length() - 4) + "_" + System.currentTimeMillis();
         
-        log.info("Card tokenized: {}****{}", token.substring(0, 8), token.substring(token.length() - 4));
+        log.info("Card tokenized: {}****{} brand={} bank={}", 
+            token.substring(0, 8), 
+            token.substring(token.length() - 4),
+            binData.brand(),
+            binData.bankName());
         
-        return token;
+        return new CardTokenizationResponse(token, binData);
     }
 
     @Transactional

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -30,6 +31,15 @@ public class SimulatorController {
     @PostMapping("/{providerOrderId}/capture")
     public ApiResponse<SimulationResponse> capture(@PathVariable("providerOrderId") String providerOrderId) {
         return ApiResponse.success(simulatorService.capture(providerOrderId));
+    }
+
+    @PostMapping("/{providerOrderId}/verify-3ds")
+    public ApiResponse<SimulationResponse> verify3ds(
+            @PathVariable("providerOrderId") String providerOrderId,
+            @RequestParam String authenticationStatus,
+            @RequestParam(required = false) String cardInfo
+    ) {
+        return ApiResponse.success(simulatorService.verify3ds(providerOrderId, authenticationStatus, cardInfo));
     }
 
     @GetMapping("/{providerOrderId}")
