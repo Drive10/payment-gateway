@@ -35,9 +35,7 @@
         <opentelemetry-exporter-jaeger.version>1.32.0</opentelemetry-exporter-jaeger.version>
         <sonar.host.url>http://localhost:9000</sonar.host.url>
         <sonar.projectKey>payflow</sonar.projectKey>
-        <sonar.login>admin</sonar.login>
-        <sonar.password>Payflow@2026!</sonar.password>
-        <sonar.token></sonar.token>
+        <sonar.token>${env.SONAR_TOKEN}</sonar.token>
         <archunit.version>1.3.0</archunit.version>
         <bucket4j.version>8.10.1</bucket4j.version>
     </properties>

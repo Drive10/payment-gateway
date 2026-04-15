@@ -46,23 +46,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'web/frontend/node_modules'
+          cache: 'npm'
+          cache-dependency-path: web/payment-page/package-lock.json
 
       - name: Install frontend dependencies
-        run: cd web/frontend && npm ci
+        run: cd web/payment-page && npm ci
 
       - name: Run ESLint
-        run: cd web/frontend && npm run lint
+        run: cd web/payment-page && npm run lint
 
       - name: Run Tests
-        run: cd web/frontend && npm run test -- --coverage
+        run: cd web/payment-page && npm run test -- --coverage
 
       - name: SonarCloud Frontend Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          projectBaseDir: web/frontend
+          projectBaseDir: web/payment-page
           args: >
             -Dsonar.projectKey=payflow_frontend
             -Dsonar.organization=drive10

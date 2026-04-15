@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow_notification
-    username: payflow
-    password: payflow
+    username: ${DB_USERNAME:payflow}
+    password: ${DB_PASSWORD:payflow}
   data:
     redis:
       host: localhost

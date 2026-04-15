@@ -22,7 +22,7 @@ SECURITY.md @Drive10
 /services/audit-service/ @Drive10
 
 # Frontend application
-/web/frontend/ @Drive10
+/web/payment-page/ @Drive10
 
 # Shared library
 /libs/common/ @Drive10

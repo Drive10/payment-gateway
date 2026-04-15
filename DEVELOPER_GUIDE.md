@@ -19,7 +19,7 @@ Welcome to PayFlow! This guide will help you get started with local development.
 docker compose up -d
 ```
 
-This starts: PostgreSQL, MongoDB, Redis, Kafka, Zipkin
+This starts: PostgreSQL, Redis, Kafka, Zipkin, Prometheus, Loki, Grafana
 
 ### Terminal 2: Start Backend (IntelliJ)
 
@@ -31,8 +31,6 @@ mvn spring-boot:run -pl services/order-service
 mvn spring-boot:run -pl services/payment-service
 mvn spring-boot:run -pl services/notification-service
 mvn spring-boot:run -pl services/simulator-service
-mvn spring-boot:run -pl services/analytics-service
-mvn spring-boot:run -pl services/audit-service
 ```
 
 Or create IntelliJ Run Configurations for each service.
@@ -40,7 +38,7 @@ Or create IntelliJ Run Configurations for each service.
 ### Terminal 3: Start Frontend (VSCode)
 
 ```bash
-cd web/frontend
+cd web/payment-page
 npm run dev
 ```
 
@@ -56,15 +54,12 @@ npm run dev
 | Payment Service | http://localhost:8083 |
 | Notification | http://localhost:8084 |
 | Simulator | http://localhost:8086 |
-| Analytics | http://localhost:8089 |
-| Audit Service | http://localhost:8090 |
 
 ## Infrastructure Ports
 
 | Service | Port |
 |---------|------|
 | PostgreSQL | 5432 |
-| MongoDB | 27017 |
 | Redis | 6379 |
 | Kafka | 9092 |
 | Zookeeper | 2181 |
@@ -84,7 +79,7 @@ docker compose down -v
 docker compose up -d
 
 # Frontend
-cd web/frontend
+cd web/payment-page
 npm run dev      # Development
 npm run build    # Production build
 
@@ -92,7 +87,7 @@ npm run build    # Production build
 mvn test -pl services/payment-service
 
 # Frontend tests
-cd web/frontend
+cd web/payment-page
 npm test
 ```
 
@@ -103,7 +98,7 @@ Main config in `.env` file. Key variables:
 - `REDIS_HOST=localhost` - Redis
 - `KAFKA_BOOTSTRAP_SERVERS=localhost:9092` - Kafka
 
-For frontend, create `web/frontend/.env`:
+For frontend, create `web/payment-page/.env`:
 ```
 VITE_API_BASE_URL=http://localhost:8080
 ```

@@ -6,7 +6,7 @@ Thanks for helping improve the PayFlow checkout UI!
 
 1. Install dependencies:
 ```bash
-cd web/frontend
+cd web/payment-page
 npm install
 ```
 

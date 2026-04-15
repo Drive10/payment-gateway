@@ -14,9 +14,9 @@
 | **payment-service** | 8083 | Spring Boot 3 | Payment orchestration, multi-provider |
 | **notification-service** | 8084 | Spring Boot 3 | Email, SMS, push, webhooks |
 | **simulator-service** | 8086 | Spring Boot 3 | Payment simulation, testing |
-| **analytics-service** | 8089 | Spring Boot 3 | Risk, settlements, reports |
-| **audit-service** | 8090 | Spring Boot 3 | MongoDB audit logging |
-| **dashboard-service** | - | Next.js | Merchant dashboard (frontend) |
+| **analytics-service** | 8089 | Spring Boot 3 | Optional/planned risk & reporting service |
+| **audit-service** | 8090 | Spring Boot 3 | Optional/planned audit logging service |
+| **payment-page** | 5173 | React 18 | Checkout frontend |
 
 ---
 
@@ -266,5 +266,5 @@
 | payment-service | 8083 | PostgreSQL, Redis |
 | notification-service | 8084 | PostgreSQL |
 | simulator-service | 8086 | PostgreSQL |
-| analytics-service | 8089 | PostgreSQL |
-| audit-service | 8090 | MongoDB |
+| analytics-service | 8089 | PostgreSQL (optional) |
+| audit-service | 8090 | MongoDB (optional) |

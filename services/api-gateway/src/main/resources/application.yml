@@ -8,17 +8,17 @@ spring:
     exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
   data:
     redis:
-      host: redis
-      port: 6379
-      password: payflow-redis
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:payflow-redis}
 
 application:
   gateway:
-    internal-secret: internal-gateway-secret
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-gateway-secret-change-me}
 
 security:
   jwt:
-    secret-key: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
+    secret-key: ${JWT_SECRET:ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
 
 spring.cloud.gateway:
   globalcors:

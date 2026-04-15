@@ -122,7 +122,7 @@ mvn clean package -DskipTests
 
 5. Start the frontend
 ```bash
-cd web/frontend && npm run dev
+cd web/payment-page && npm run dev
 ```
 
 ## Code Style
@@ -169,7 +169,7 @@ mvn test -pl services/payment-service -Djacoco.skip=false
 ### Frontend Tests
 
 ```bash
-cd web/frontend
+cd web/payment-page
 npm run test
 npm run test:coverage
 ```

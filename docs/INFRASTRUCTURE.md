@@ -11,10 +11,12 @@
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
 | **postgres** | postgres:16-alpine | 5432 | Primary database |
-| **mongodb** | mongo:7 | 27017 | Audit logs |
 | **redis** | redis:7-alpine | 6379 | Cache, rate limiting |
 | **zookeeper** | confluentinc/cp-zookeeper:7.5.0 | 2181 | Kafka coordination |
 | **kafka** | confluentinc/cp-kafka:7.5.0 | 9092 | Event streaming |
+| **prometheus** | prom/prometheus:v2.50.1 | 9090 | Metrics collection |
+| **loki** | grafana/loki:2.9.5 | 3100 | Log aggregation |
+| **grafana** | grafana/grafana:11.0.0 | 3000 | Dashboards |
 
 ### Application Services
 
@@ -26,8 +28,6 @@
 | **payment-service** | 8083 | /actuator/health |
 | **notification-service** | 8084 | /actuator/health |
 | **simulator-service** | 8086 | /actuator/health |
-| **analytics-service** | 8089 | /actuator/health |
-| **audit-service** | 8090 | /actuator/health |
 | **frontend** | 5173 | N/A |
 
 ---
@@ -70,7 +70,6 @@
 postgres:5432
 redis:6379
 kafka:29092
-mongodb:27017
 ```
 
 ---
@@ -80,7 +79,9 @@ mongodb:27017
 | Volume | Service | Path |
 |--------|---------|------|
 | `postgres_data` | postgres | /var/lib/postgresql/data |
-| `mongodb_data` | mongodb | /data/db |
+| `prometheus_data` | prometheus | /prometheus |
+| `loki_data` | loki | /loki |
+| `grafana_data` | grafana | /var/lib/grafana |
 
 ---
 
@@ -99,10 +100,11 @@ start_period: 30s
 
 ## Monitoring Stack
 
-See `docker-compose.monitoring.yml`:
+Monitoring is included in `docker-compose.yml` under `infra`/`services` profiles:
 - Prometheus (9090)
 - Grafana (3000)
-- Jaeger (16686)
+- Loki (3100)
+- Zipkin (9411)
 
 ---
 
@@ -115,8 +117,8 @@ docker compose up -d
 # Start infrastructure only
 docker compose --profile infra up -d
 
-# Start monitoring
-docker compose -f docker-compose.monitoring.yml up -d
+# Start monitoring + infra only
+docker compose --profile infra up -d
 
 # View logs
 docker compose logs -f

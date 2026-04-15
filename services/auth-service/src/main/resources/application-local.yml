@@ -10,7 +10,7 @@ spring:
 
 application:
   jwt:
-    secret: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
+    secret: ${JWT_SECRET:ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
   redis:
     host: localhost
     port: 6379

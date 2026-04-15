@@ -11,8 +11,8 @@ spring:
     name: payment-service
   datasource:
     url: jdbc:postgresql://postgres:5432/payflow_payment
-    username: payflow
-    password: payflow
+    username: ${DB_USERNAME:payflow}
+    password: ${DB_PASSWORD:payflow}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 30
@@ -24,9 +24,9 @@ spring:
       register-mbeans: true
   data:
     redis:
-      host: redis
-      port: 6379
-      password: payflow-redis
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:payflow-redis}
       timeout: 2000ms
       lettuce:
         pool:
@@ -74,10 +74,10 @@ spring:
 application:
   gateway-trust:
     enabled: false
-    internal-secret: ""
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-gateway-secret-change-me}
   security:
     jwt:
-      secret-key: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
+      secret-key: ${JWT_SECRET:ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
       expiration-seconds: 3600
       refresh-expiration-seconds: 2592000
   payment:

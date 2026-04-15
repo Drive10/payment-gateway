@@ -6,8 +6,8 @@ spring:
     name: auth-service
   datasource:
     url: jdbc:postgresql://postgres:5432/payflow_auth
-    username: payflow
-    password: payflow
+    username: ${DB_USERNAME:payflow}
+    password: ${DB_PASSWORD:payflow}
     hikari:
       maximum-pool-size: 15
       minimum-idle: 3
@@ -33,13 +33,13 @@ spring:
     enabled: false
   data:
     redis:
-      host: redis
-      port: 6379
-      password: payflow-redis
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:payflow-redis}
 
 application:
   jwt:
-    secret: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LWZvci1maW50ZWNoLXBheW1lbnQta2V5LWJhc2U2NC1lbmNvZGVk
+    secret: ${JWT_SECRET:ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
     expiration: 86400000
     refresh-expiration: 604800000
 

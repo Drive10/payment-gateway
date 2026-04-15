@@ -26,7 +26,7 @@ A polished fintech checkout demo built with React, Vite, and Tailwind CSS. This 
 ## Project Structure
 
 ```
-web/frontend/
+web/payment-page/
 ├── .github/               # CI workflow, issue templates, PR template
 ├── src/
 │   ├── components/        # Reusable UI building blocks
@@ -50,7 +50,7 @@ web/frontend/
 ### Install
 
 ```bash
-cd web/frontend
+cd web/payment-page
 npm install
 ```
 

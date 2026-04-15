@@ -102,12 +102,12 @@ test:
 lint:
 	@echo "Running linters..."
 	mvn spotless:check || true
-	cd web/frontend && npm run lint || true
+	cd web/payment-page && npm run lint || true
 
 format:
 	@echo "Formatting code..."
 	mvn spotless:apply
-	cd web/frontend && npm run format || true
+	cd web/payment-page && npm run format || true
 
 # ===========================================
 # Cleanup

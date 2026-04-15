@@ -45,7 +45,7 @@ services:
   redis:
     profiles: [infra, services]
     image: redis:7-alpine
-    command: redis-server --requirepass payflow-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-payflow-redis}
     ports:
       - "6379:6379"
     healthcheck:
@@ -134,8 +134,8 @@ services:
     profiles: [infra, services]
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: payflow
-      POSTGRES_PASSWORD: payflow
+      POSTGRES_USER: ${DB_USERNAME:-payflow}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-payflow}
     ports:
       - "5432:5432"
     volumes:
@@ -159,6 +159,10 @@ services:
     container_name: payflow-api-gateway
     ports:
       - "8080:8080"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-payflow-redis}
+      - JWT_SECRET=${JWT_SECRET:-ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
+      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET:-dev-only-gateway-secret-change-me}
     depends_on:
       redis:
         condition: service_healthy
@@ -176,8 +180,10 @@ services:
       - "8081:8081"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_auth
-      - SPRING_DATASOURCE_USERNAME=payflow
-      - SPRING_DATASOURCE_PASSWORD=payflow
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-payflow-redis}
+      - JWT_SECRET=${JWT_SECRET:-ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
     depends_on:
       postgres:
         condition: service_healthy
@@ -195,8 +201,9 @@ services:
       - "8082:8082"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_order
-      - SPRING_DATASOURCE_USERNAME=payflow
-      - SPRING_DATASOURCE_PASSWORD=payflow
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
+      - JWT_SECRET=${JWT_SECRET:-ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
     depends_on:
       postgres:
         condition: service_healthy
@@ -216,10 +223,12 @@ services:
       - "8083:8083"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_payment
-      - SPRING_DATASOURCE_USERNAME=payflow
-      - SPRING_DATASOURCE_PASSWORD=payflow
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
       - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PASSWORD=payflow-redis
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:-payflow-redis}
+      - JWT_SECRET=${JWT_SECRET:-ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
+      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET:-dev-only-gateway-secret-change-me}
     depends_on:
       postgres:
         condition: service_healthy
@@ -241,8 +250,10 @@ services:
       - "8084:8084"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_notification
-      - SPRING_DATASOURCE_USERNAME=payflow
-      - SPRING_DATASOURCE_PASSWORD=payflow
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:-payflow-redis}
+
     depends_on:
       postgres:
         condition: service_healthy

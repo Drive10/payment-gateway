@@ -35,7 +35,7 @@ updates:
 
   # Node.js dependencies - Frontend
   - package-ecosystem: "npm"
-    directory: "/web/frontend"
+    directory: "/web/payment-page"
     schedule:
       interval: "weekly"
       day: "monday"

@@ -20,7 +20,7 @@
 │                              Client Layer                                      │
 │  ┌──────────────────┐              ┌──────────────────────────────────────┐  │
 │  │  Checkout UI      │              │  GraphQL Playground (GraphiQL)        │  │
-│  │  (web/frontend)   │              │  localhost:8087/graphiql              │  │
+│  │  (web/payment-page)│             │  localhost:8087/graphiql              │  │
 │  └────────┬─────────┘              └──────────────────┬───────────────────┘  │
 └───────────┼─────────────────────────────────────────────┼─────────────────────┘
             │                                              │
@@ -186,7 +186,7 @@ mvn spring-boot:run -pl services/order-service
 
 **3. Start Frontend (VSCode)**
 ```bash
-cd web/frontend
+cd web/payment-page
 npm run dev
 ```
 
@@ -227,6 +227,8 @@ curl -X POST http://localhost:8080/api/v1/payments \
 ```
 
 ### GraphQL API
+> ⚠️ Planned (not active in current compose profile)
+
 ```bash
 # Access GraphiQL playground
 open http://localhost:8087/graphiql
@@ -257,10 +259,10 @@ query {
 | Layer | Technology |
 |-------|------------|
 | **Backend** | Java 21, Spring Boot 3.3, Spring Cloud 2023 |
-| **Database** | PostgreSQL 16, MongoDB 7, Redis 7 |
-| **Search** | Elasticsearch 8 |
+| **Database** | PostgreSQL 16, Redis 7 |
+| **Search** | Planned (Elasticsearch) |
 | **Messaging** | Apache Kafka 3.7 |
-| **Gateway** | Spring Cloud Gateway (WebFlux), Spring GraphQL |
+| **Gateway** | Spring Cloud Gateway (WebFlux) |
 | **Security** | Spring Security, JWT (JJWT), BCrypt |
 | **Resilience** | Resilience4j (Circuit Breaker, Retry, Bulkhead) |
 | **Observability** | OpenTelemetry, Prometheus, Grafana, Jaeger |
@@ -279,10 +281,10 @@ payflow/
 │   ├── payment-service/      # Payment orchestration (8083)
 │   ├── notification-service/ # Notifications, webhooks, feature flags (8084)
 │   ├── simulator-service/    # Payment simulation & testing (8086)
-│   ├── analytics-service/    # Risk, settlements, disputes, reports (8089)
-│   └── audit-service/        # MongoDB audit logging (8090)
+│   ├── analytics-service/    # Planned/optional service
+│   └── audit-service/        # Planned/optional service
 ├── web/
-│   └── frontend/             # Customer checkout (React 18)
+│   └── payment-page/         # Customer checkout (React 18)
 ├── infra/                    # Infrastructure configs
 └── docker-compose.yml        # Infrastructure services
 ```
