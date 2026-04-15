@@ -39,6 +39,10 @@ payflow/
 | PostgreSQL | 5432 | Primary database |
 | Redis | 6379 | Cache, rate limiting |
 | Kafka | 9092 | Event streaming |
+| Zipkin | 9411 | Distributed tracing |
+| **Prometheus** | 9090 | Metrics collection |
+| **Loki** | 3100 | Log aggregation |
+| **Grafana** | 3000 | Metrics & logs visualization |
 
 ## Communication Patterns
 

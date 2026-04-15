@@ -15,59 +15,57 @@ services:
       timeout: 3s
       retries: 10
       start_period: 5s
+networks:
+      - payflow-network
+
+  # Prometheus for metrics
+  prometheus:
+    profiles: [infra, observability]
+    image: prom/prometheus:v2.50.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
     networks:
       - payflow-network
 
-  kafka:
-    profiles: [infra, services]
-    image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      zookeeper:
-        condition: service_healthy
+  # Loki for logs
+  loki:
+    profiles: [infra, observability]
+    image: grafana/loki:2.9.5
+    container_name: payflow-loki
     ports:
-      - "9092:9092"
+      - "3100:3100"
+    volumes:
+      - ./infra/loki/config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - payflow-network
+
+  # Grafana for metrics & logs visualization
+  grafana:
+    profiles: [infra, observability]
+    image: grafana/grafana:11.0.0
+    container_name: payflow-grafana
+    ports:
+      - "3000:3000"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 15s
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_FEATURE_TOGGLES_ENABLE=lokiLogging
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+      - loki
     networks:
       - payflow-network
-
-  redis:
-    profiles: [infra, services]
-    image: redis:7-alpine
-    command: redis-server --requirepass payflow-redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "payflow-redis", "ping"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 3s
-    networks:
-      - payflow-network
-
-  zipkin:
-    profiles: [infra, services]
-    image: openzipkin/zipkin:3.4
-    ports:
-      - "9411:9411"
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9411/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 5s
 
   # PostgreSQL - Single instance with multiple databases
   postgres:
@@ -230,6 +228,9 @@ services:
 
 volumes:
   postgres_data:
+  prometheus_data:
+  loki_data:
+  grafana_data:
 
 networks:
   payflow-network:
