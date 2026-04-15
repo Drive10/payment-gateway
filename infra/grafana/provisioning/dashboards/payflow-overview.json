@@ -1,97 +1,99 @@
 {
-  "dashboard": {
-    "id": null,
-    "uid": "payflow-overview",
-    "title": "PayFlow Overview",
-    "tags": ["payflow", "microservices"],
-    "timezone": "browser",
-    "schemaVersion": 16,
-    "version": 1,
-    "refresh": "10s",
-    "panels": [
-      {
-        "id": 1,
-        "title": "Request Rate (rpm)",
-        "type": "graph",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
-        "targets": [
-          {
-            "expr": "rate(http_server_requests_seconds_count[1m]) * 60",
-            "legendFormat": "{{job}} - {{uri}}",
-            "refId": "A"
-          }
-        ]
-      },
-      {
-        "id": 2,
-        "title": "Response Time (ms)",
-        "type": "graph",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
-        "targets": [
-          {
-            "expr": "rate(http_server_requests_seconds_sum[1m]) / rate(http_server_requests_seconds_count[1m]) * 1000",
-            "legendFormat": "{{job}} - {{uri}}",
-            "refId": "A"
-          }
-        ]
-      },
-      {
-        "id": 3,
-        "title": "JVM Memory Usage",
-        "type": "graph",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
-        "targets": [
-          {
-            "expr": "jvm_memory_used_bytes{area=\"heap\"}",
-            "legendFormat": "{{job}} - used",
-            "refId": "A"
-          },
-          {
-            "expr": "jvm_memory_max_bytes{area=\"heap\"}",
-            "legendFormat": "{{job}} - max",
-            "refId": "B"
-          }
-        ]
-      },
-      {
-        "id": 4,
-        "title": "JVM CPU Usage",
-        "type": "graph",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
-        "targets": [
-          {
-            "expr": "process_cpu_seconds_total",
-            "legendFormat": "{{job}}",
-            "refId": "A"
-          }
-        ]
-      },
-      {
-        "id": 5,
-        "title": "Error Rate",
-        "type": "graph",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
-        "targets": [
-          {
-            "expr": "rate(http_server_requests_seconds_count{status=~\"5..\"}[1m]) * 60",
-            "legendFormat": "{{job}} - 5xx",
-            "refId": "A"
-          }
-        ]
-      },
-      {
-        "id": 6,
-        "title": "Active Threads",
-        "type": "graph",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
-        "targets": [
-          {
-            "expr": "jvm_threads_live_threads",
-            "legendFormat": "{{job}}",
-            "refId": "A"
-          }
-        ]
-      }
-    ]
-  }
+  "id": null,
+  "uid": "payflow-overview",
+  "title": "PayFlow Overview",
+  "tags": ["payflow", "microservices"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate (rpm)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count[1m]) * 60",
+          "legendFormat": "{{job}} - {{uri}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Response Time (ms)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_sum[1m]) / rate(http_server_requests_seconds_count[1m]) * 1000",
+          "legendFormat": "{{job}} - {{uri}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "JVM Memory Usage",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{area=\"heap\"}",
+          "legendFormat": "{{job}} - used",
+          "refId": "A"
+        },
+        {
+          "expr": "jvm_memory_max_bytes{area=\"heap\"}",
+          "legendFormat": "{{job}} - max",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "JVM CPU Usage",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {
+          "expr": "rate(process_cpu_seconds_total[1m])",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Error Rate",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count{status=~\"5..\"}[1m]) * 60",
+          "legendFormat": "{{job}} - 5xx",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Active Threads",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "targets": [
+        {
+          "expr": "jvm_threads_live_threads",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
 }

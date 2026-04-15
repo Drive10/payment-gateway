@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../lib/config';
+
+const API_BASE_URL = window.__ENV__?.API_BASE_URL || '/api/v1';
 
 export default function ThreeDsChallenge() {
   const [searchParams] = useSearchParams();

@@ -29,7 +29,6 @@ public class SecurityHeadersFilter implements WebFilter, Ordered {
 
     public SecurityHeadersFilter(@Value("${spring.profiles.active:}") String activeProfiles) {
         this.devProfile = activeProfiles.contains("dev");
-        log.info("SecurityHeadersFilter initialized (dev profile: {})", devProfile);
     }
 
     @Override

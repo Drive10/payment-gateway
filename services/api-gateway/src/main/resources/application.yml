@@ -133,3 +133,12 @@ spring.cloud.gateway:
         - Path=/platform/simulator/**
       filters:
         - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always

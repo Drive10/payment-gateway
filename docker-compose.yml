@@ -67,7 +67,7 @@ services:
 
   # Prometheus for metrics
   prometheus:
-    profiles: [infra, observability]
+    profiles: [infra, services]
     image: prom/prometheus:v2.50.1
     ports:
       - "9090:9090"
@@ -82,7 +82,7 @@ services:
 
   # Loki for logs
   loki:
-    profiles: [infra, observability]
+    profiles: [infra, services]
     image: grafana/loki:2.9.5
     container_name: payflow-loki
     ports:
@@ -94,9 +94,24 @@ services:
     networks:
       - payflow-network
 
+  # Promtail for log shipping to Loki
+  promtail:
+    profiles: [infra, services]
+    image: grafana/promtail:2.9.5
+    container_name: payflow-promtail
+    volumes:
+      - ./infra/promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - payflow-network
+
   # Grafana for metrics & logs visualization
   grafana:
-    profiles: [infra, observability]
+    profiles: [infra, services]
     image: grafana/grafana:11.0.0
     container_name: payflow-grafana
     ports:
@@ -107,7 +122,7 @@ services:
       - GF_FEATURE_TOGGLES_ENABLE=lokiLogging
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./infra/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
       - loki
