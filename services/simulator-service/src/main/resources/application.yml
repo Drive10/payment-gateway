@@ -5,8 +5,6 @@ server:
 spring:
   application:
     name: simulator-service
-  main:
-    web-application-type: reactive
 
 simulator:
   enabled: true

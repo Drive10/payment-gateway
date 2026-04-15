@@ -28,7 +28,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/swagger-ui.html",
             "/v3/api-docs",
             "/api/v1/auth",
-            "/api/v1/webhooks"
+            "/api/v1/webhooks",
+            "/api/v1/payments/tokenize"
     );
 
     private final GatewayJwtService gatewayJwtService;
