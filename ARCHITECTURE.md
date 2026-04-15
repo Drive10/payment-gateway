@@ -12,17 +12,13 @@ payflow/
 ├── services/
 │   ├── api-gateway/          # Central API gateway (8080)
 │   ├── auth-service/         # Authentication & authorization (8081)
-│   ├── order-service/        # Orders, merchants, KYC, API keys (8082)
+│   ├── order-service/        # Orders, merchants, API keys (8082)
 │   ├── payment-service/      # Payment orchestration (8083)
-│   ├── notification-service/ # Notifications, webhooks, feature flags (8084)
-│   ├── simulator-service/    # Payment simulation & testing (8086)
-│   ├── analytics-service/    # Risk, settlements, disputes, reports (8089)
-│   └── audit-service/        # MongoDB audit logging (8090)
+│   ├── notification-service/ # Notifications, webhooks (8084)
+│   └── simulator-service/    # Payment simulation (8086)
 ├── web/
-│   ├── payment-page/        # Customer checkout (React 18)
-│   └── dashboard/           # Merchant dashboard (Next.js)
-├── infra/                    # Infrastructure configs
-└── docker-compose.yml        # Infrastructure services
+│   └── payment-page/        # Customer checkout (React 18)
+└── docker-compose.yml       # Infrastructure services
 ```
 
 ## Services
@@ -30,23 +26,19 @@ payflow/
 | Service | Port | Tech | Database |
 |---------|------|------|----------|
 | **api-gateway** | 8080 | Spring Cloud Gateway | Redis |
-| **auth-service** | 8081 | Spring Boot 3 | PostgreSQL, Redis |
+| **auth-service** | 8081 | Spring Boot 3 | PostgreSQL |
 | **order-service** | 8082 | Spring Boot 3 | PostgreSQL |
-| **payment-service** | 8083 | Spring Boot 3 | PostgreSQL, Redis |
+| **payment-service** | 8083 | Spring Boot 3 | PostgreSQL |
 | **notification-service** | 8084 | Spring Boot 3 | PostgreSQL |
 | **simulator-service** | 8086 | Spring Boot 3 | PostgreSQL |
-| **analytics-service** | 8089 | Spring Boot 3 | PostgreSQL |
-| **audit-service** | 8090 | Spring Boot 3 | MongoDB |
 
 ## Infrastructure
 
 | Service | Port | Purpose |
 |---------|------|---------|
 | PostgreSQL | 5432 | Primary database |
-| MongoDB | 27017 | Audit logs |
 | Redis | 6379 | Cache, rate limiting |
 | Kafka | 9092 | Event streaming |
-| Zipkin | 9411 | Distributed tracing |
 
 ## Communication Patterns
 

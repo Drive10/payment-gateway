@@ -5,37 +5,26 @@ server:
 spring:
   application:
     name: simulator-service
-  datasource:
-    url: jdbc:postgresql://postgres:5432/payflow_simulator
-    username: payflow
-    password: payflow
-    driver-class-name: org.postgresql.Driver
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      idle-timeout: 300000
-      max-lifetime: 1200000
-      connection-timeout: 25000
-      pool-name: SimulatorHikariPool
-  jpa:
-    hibernate:
-      ddl-auto: update
-    open-in-view: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        jdbc:
-          batch_size: 20
-        order_inserts: true
-        order_updates: true
-  flyway:
-    enabled: false
+  main:
+    web-application-type: reactive
 
-webhook:
-  service-url: http://notification-service:8084
-  simulator-success-rate: 90
-  simulator-mode: random
+simulator:
+  enabled: true
+  async-webhooks: true
+  latency:
+    min-ms: 300
+    max-ms: 800
+  failure-rate: 0.1
+  modes:
+    success: "4111111111111111"
+    declined: "4000000000000002"
+    insufficient-funds: "4000000000009995"
+    expired: "4000000000000001"
+    processing-error: "5000000000000000"
+  webhook:
+    enabled: true
+    retry-attempts: 3
+    retry-delay-ms: 1000
 
 management:
   endpoints:
@@ -49,3 +38,4 @@ management:
 logging:
   level:
     root: INFO
+    dev.payment.simulatorservice: DEBUG

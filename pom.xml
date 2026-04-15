@@ -17,8 +17,6 @@
         <module>services/payment-service</module>
         <module>services/order-service</module>
         <module>services/notification-service</module>
-        <module>services/audit-service</module>
-        <module>services/analytics-service</module>
         <module>services/simulator-service</module>
     </modules>
 
