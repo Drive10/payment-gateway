@@ -66,9 +66,13 @@ spring.cloud.gateway:
     - id: payment-service
       uri: http://payment-service:8083
       predicates:
-        - Path=/api/v1/payments/**,/api/v1/admin/**
+        - Path=/api/v1/payments/**
       filters:
         - StripPrefix=2
+    - id: payment-service-tokenize
+      uri: http://payment-service:8083/payments
+      predicates:
+        - Path=/api/v1/payments/tokenize
     - id: notification-service
       uri: http://notification-service:8084
       predicates:
