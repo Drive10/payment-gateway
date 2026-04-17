@@ -30,6 +30,7 @@ SERVICES=(
 log() { echo -e "${GREEN}[PayFlow]${NC} $1"; }
 warn() { echo -e "${YELLOW}[PayFlow]${NC} $1"; }
 info() { echo -e "${CYAN}[PayFlow]${NC} $1"; }
+error() { echo -e "${RED}[PayFlow]${NC} $1"; }
 
 cleanup() {
     log "Stopping all services..."
@@ -44,14 +45,14 @@ trap cleanup SIGINT SIGTERM
 check_infra() {
     log "Checking infrastructure..."
     local missing=()
+    local ports=(5432 6379)
+    local names=("PostgreSQL" "Redis")
     
-    for port in 5432 6379 27017; do
+    for i in "${!ports[@]}"; do
+        port="${ports[$i]}"
+        name="${names[$i]}"
         if ! lsof -i :$port >/dev/null 2>&1; then
-            case $port in
-                5432) missing+=("PostgreSQL") ;;
-                6379) missing+=("Redis") ;;
-                27017) missing+=("MongoDB") ;;
-            esac
+            missing+=("$name")
         fi
     done
     
@@ -76,7 +77,7 @@ start_services() {
         port="${svc##*:}"
         
         info "Starting $service on port $port..."
-        nohup mvn spring-boot:run -pl services/$service -Dspring-boot.run.profiles=local -q > /tmp/$service.log 2>&1 &
+        nohup mvn spring-boot:run -pl src/$service -Dspring-boot.run.profiles=local -q > /tmp/$service.log 2>&1 &
     done
     
     log "All backend services started (check logs in /tmp/<service>.log)"
@@ -84,7 +85,7 @@ start_services() {
 
 start_frontend() {
     info "Starting frontend..."
-    cd "$SCRIPT_DIR/web/payment-page"
+    cd "$SCRIPT_DIR/frontend/payment-page"
     nohup npm run dev > /tmp/frontend.log 2>&1 &
     cd "$SCRIPT_DIR"
 }

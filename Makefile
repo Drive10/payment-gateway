@@ -1,9 +1,10 @@
 .PHONY: help \
   docker-up docker-down \
   infra-up infra-down infra-logs \
-  dev dev-stop \
+  dev dev-stop dev-single \
   logs ps health diagnose \
-  test lint format \
+  test test-single lint format \
+  build build-single \
   k8s-validate k8s-deploy-staging k8s-deploy-prod \
   helm-install-staging helm-install-prod \
   hooks-install clean
@@ -18,15 +19,23 @@ help:
 	@echo "  LOCAL MODE (Backend local, infra in Docker)"
 	@echo "    make infra-up      - Start Docker infra only"
 	@echo "    make infra-down    - Stop Docker infra"
-	@echo "    make dev           - Start backend services locally (IDE)"
+	@echo "    make dev           - Start all backend services locally"
+	@echo "    make dev-single S=auth-service - Start single service"
 	@echo "    make dev-stop      - Stop local backend services"
+	@echo ""
+	@echo "  BUILD"
+	@echo "    make build          - Build all services"
+	@echo "    make build-single S=payment-service - Build single service"
 	@echo ""
 	@echo "  UTILS"
 	@echo "    make logs          - View Docker logs"
 	@echo "    make ps            - Show Docker containers"
 	@echo "    make health        - Check service health"
 	@echo "    make diagnose      - Full diagnostics"
-	@echo "    make test          - Run tests"
+	@echo ""
+	@echo "  TESTING"
+	@echo "    make test          - Run all tests"
+	@echo "    make test-single S=payment-service - Test single service"
 	@echo "    make lint          - Run linters"
 	@echo "    make format        - Format code"
 	@echo ""
@@ -75,12 +84,30 @@ infra-logs:
 	docker compose logs -f
 
 dev:
-	./run-local.sh
+	./run-local.sh start
 
 dev-stop:
 	@pkill -f "spring-boot:run" || true
 	@pkill -f "vite" || true
 	@echo "Local services stopped"
+
+dev-single:
+	@if [ -z "$(S)" ]; then echo "Usage: make dev-single S=auth-service"; exit 1; fi
+	@echo "Starting $(S)..."
+	mvn spring-boot:run -pl src/$(S) -Dspring-boot.run.profiles=local
+
+# ===========================================
+# Build
+# ===========================================
+
+build:
+	@echo "Building all services..."
+	mvn clean package -DskipTests
+
+build-single:
+	@if [ -z "$(S)" ]; then echo "Usage: make build-single S=payment-service"; exit 1; fi
+	@echo "Building $(S)..."
+	mvn clean package -DskipTests -pl src/$(S) -am
 
 # ===========================================
 # Utils
@@ -112,6 +139,11 @@ diagnose:
 test:
 	@echo "Running tests..."
 	mvn test -q
+
+test-single:
+	@if [ -z "$(S)" ]; then echo "Usage: make test-single S=payment-service"; exit 1; fi
+	@echo "Testing $(S)..."
+	mvn test -pl src/$(S)
 
 lint:
 	@echo "Running linters..."

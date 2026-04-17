@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <localRepository>${user.home}/.m2/repository</localRepository>
+
+  <mirrors>
+    <mirror>
+      <id>central-mirror</id>
+      <name>Maven Central</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+
+  <profiles>
+    <profile>
+      <id>local</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <spring.profiles.active>local</spring.profiles.active>
+        <db.host>localhost</db.host>
+        <db.port>5432</db.port>
+        <redis.host>localhost</redis.port>
+        <redis.port>6379</redis.port>
+      </properties>
+    </profile>
+    <profile>
+      <id>dev</id>
+      <properties>
+        <spring.profiles.active>dev</spring.profiles.active>
+      </properties>
+    </profile>
+  </profiles>
+
+  <activeProfiles>
+    <activeProfile>local</activeProfile>
+  </activeProfiles>
+
+  <servers>
+    <!-- Add deployment servers here -->
+  </servers>
+
+  <pluginGroups>
+    <pluginGroup>org.apache.maven.plugins</pluginGroup>
+  </pluginGroups>
+
+</settings>

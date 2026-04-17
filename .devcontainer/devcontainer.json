@@ -1,0 +1,50 @@
+{
+  "name": "PayFlow Development",
+  "image": "maven:3.9-eclipse-temurin-21",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "redhat.java",
+        "vscjava.vscode-maven",
+        "vscjava.vscode-spring-boot-dashboard",
+        "vscjava.vscode-spring-boot",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "java.configuration.runtimes": [
+          {
+            "name": "JavaSE-21",
+            "path": "/usr/lib/jvm/temurin-21-jdk",
+            "default": true
+          }
+        ],
+        "java.home": "/usr/lib/jvm/temurin-21-jdk",
+        "maven.executable.path": "/usr/bin/mvn",
+        "spring-boot.dashboard.showTasks": true,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        }
+      }
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "nodeGypVersion": "9.8.0"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postCreateCommand": "mvn dependency:go-offline -q",
+  "remoteUser": "root",
+  "runArgs": [
+    "--network=payflow-network",
+    "-p",
+    "8080-8090:8080-8090"
+  ]
+}
