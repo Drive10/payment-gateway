@@ -3,26 +3,41 @@ spring:
     url: jdbc:postgresql://localhost:5432/payflow_payment
     username: ${DB_USERNAME:payflow}
     password: ${DB_PASSWORD:payflow}
+    driver-class-name: org.postgresql.Driver
   data:
     redis:
-      host: localhost
-      port: 6379
-      password: ${REDIS_PASSWORD:payflow-redis}
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:dev-redis-password-123}
   kafka:
     bootstrap-servers: localhost:9092
 
 application:
+  gateway-trust:
+    enabled: false
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-gateway-secret-for-local-testing}
+  internal-auth:
+    signing-secret: ${INTERNAL_SERVICE_SIGNING_SECRET:dev-internal-signing-secret}
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET:dev-only-jwt-secret-minimum-32-chars-required}
+  payment:
+    default-provider: RAZORPAY_SIMULATOR
   simulator:
     base-url: http://localhost:8086
   webhook:
     service-url: http://localhost:8084
+    razorpay:
+      secret: ${RAZORPAY_WEBHOOK_SECRET:dev-webhook-secret-for-testing}
+    stripe:
+      secret: ${STRIPE_WEBHOOK_SECRET:dev-stripe-webhook-secret}
+      signing-secret: ${STRIPE_SIGNING_SECRET:dev-stripe-signing-secret}
+    paypal:
+      webhook-id: ${PAYPAL_WEBHOOK_ID:dev-paypal-webhook-id}
   order:
     service-url: http://localhost:8082
   auth:
     service-url: http://localhost:8081
-  gateway-trust:
-    enabled: false
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-gateway-secret-change-me}
 
 server:
   port: 8083

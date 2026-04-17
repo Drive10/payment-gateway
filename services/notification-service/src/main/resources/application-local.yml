@@ -3,21 +3,46 @@ spring:
     url: jdbc:postgresql://localhost:5432/payflow_notification
     username: ${DB_USERNAME:payflow}
     password: ${DB_PASSWORD:payflow}
+    driver-class-name: org.postgresql.Driver
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:dev-redis-password-123}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: false
   kafka:
     bootstrap-servers: localhost:9092
+    properties:
+      spring.json.trusted.packages: "*"
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 application:
   payment-service:
     url: http://localhost:8083
+  webhook:
+    signature:
+      enabled: true
+      secret: ${WEBHOOK_SIGNATURE_SECRET:change-me-in-production}
+      tolerance-seconds: 300
+    retry:
+      interval-ms: 30000
+      max-attempts: 5
   email:
-    host: localhost
-    port: 1025
+    from-address: noreply@payment-gateway.local
+    from-name: Payment Gateway
   sms:
-    provider: console
+    provider: SIMULATOR
 
 server:
   port: 8084

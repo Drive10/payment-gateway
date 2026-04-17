@@ -6,7 +6,7 @@ const TX_STORAGE_KEY = "payflow-checkout-transaction";
 test.describe("Fullstack checkout E2E", () => {
   test.setTimeout(120_000);
 
-test("creates and verifies payment across frontend + backend", async ({ page, request }) => {
+  test("creates and verifies payment across frontend + backend", async ({ page, request }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
@@ -33,7 +33,6 @@ test("creates and verifies payment across frontend + backend", async ({ page, re
       await page.waitForURL("**/success", { timeout: 30000 });
     } else {
       await page.waitForURL("**/success", { timeout: 60000 });
-    }
     }
     expect(page.url(), "checkout should complete successfully").toMatch(/\/success/);
 

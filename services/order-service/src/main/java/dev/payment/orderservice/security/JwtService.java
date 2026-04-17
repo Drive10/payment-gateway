@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
@@ -21,7 +22,13 @@ public class JwtService {
     public JwtService(
             @Value("${application.security.jwt.secret-key}") String secretKey
     ) {
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+        byte[] keyBytes;
+        try {
+            keyBytes = Base64.getDecoder().decode(secretKey);
+        } catch (IllegalArgumentException e) {
+            keyBytes = secretKey.getBytes();
+        }
+        this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String extractUsername(String token) {

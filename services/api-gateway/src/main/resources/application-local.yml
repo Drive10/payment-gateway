@@ -11,7 +11,15 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:payflow-redis}
+      password: ${REDIS_PASSWORD:dev-redis-password-123}
+
+application:
+  gateway:
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-gateway-secret-for-local-testing}
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET:dev-only-jwt-secret-minimum-32-chars-required}
 
   cloud.gateway.routes:
     - id: auth-service

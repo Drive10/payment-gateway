@@ -35,11 +35,11 @@ spring:
     redis:
       host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:payflow-redis}
+      password: ${REDIS_PASSWORD:}
 
 application:
   jwt:
-    secret: ${JWT_SECRET:ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
+    secret: ${JWT_SECRET:}
     expiration: 86400000
     refresh-expiration: 604800000
 

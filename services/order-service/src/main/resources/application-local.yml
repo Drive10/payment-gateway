@@ -3,10 +3,29 @@ spring:
     url: jdbc:postgresql://localhost:5432/payflow_order
     username: ${DB_USERNAME:payflow}
     password: ${DB_PASSWORD:payflow}
+    driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:dev-redis-password-123}
   kafka:
     bootstrap-servers: localhost:9092
+    properties:
+      spring.json.trusted.packages: "*"
+    consumer:
+      group-id: order-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET:dev-only-jwt-secret-minimum-32-chars-required}
   payment-service:
     url: http://localhost:8083
   notification-service:
@@ -17,5 +36,5 @@ server:
 
 logging:
   level:
-    root: INFO
+    root: DEBUG
     dev.payment.orderservice: DEBUG
