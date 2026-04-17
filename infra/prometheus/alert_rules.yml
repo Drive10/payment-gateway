@@ -1,0 +1,150 @@
+groups:
+  - name: payment_alerts
+    interval: 30s
+    rules:
+      - alert: HighPaymentFailureRate
+        expr: |
+          (
+            rate(payment_failed_total[5m]) /
+            (rate(payment_created_total[5m]) + 0.001)
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "High payment failure rate detected"
+          description: "Payment failure rate is above 10% for the past 5 minutes. Current rate: {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.payflow.dev/runbooks/payment-failures"
+
+      - alert: PaymentServiceDown
+        expr: up{job="payment-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "Payment service is down"
+          description: "Payment service has been unreachable for more than 1 minute"
+          runbook_url: "https://docs.payflow.dev/runbooks/service-down"
+
+      - alert: HighPaymentLatency
+        expr: |
+          histogram_quantile(0.99, rate(payment_capture_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "High payment capture latency"
+          description: "99th percentile payment capture latency is above 5 seconds. Current p99: {{ $value | humanizeDuration }}"
+          runbook_url: "https://docs.payflow.dev/runbooks/high-latency"
+
+      - alert: HighWebhookDuplicateRate
+        expr: |
+          rate(webhook_duplicated_total[5m]) / (rate(webhook_received_total[5m]) + 0.001) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "High webhook duplicate rate"
+          description: "Webhook duplicate rate is above 5% - possible replay attack"
+          runbook_url: "https://docs.payflow.dev/runbooks/webhook-duplicates"
+
+      - alert: CircuitBreakerOpen
+        expr: |
+          payment_circuit_breaker_state{state="open"} > 0
+        for: 2m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "Circuit breaker is open for {{ $labels.circuit }}"
+          description: "Circuit breaker {{ $labels.circuit }} has been open for more than 2 minutes. Provider may be experiencing issues."
+          runbook_url: "https://docs.payflow.dev/runbooks/circuit-breaker"
+
+      - alert: HighRetryRate
+        expr: |
+          rate(payment_retry_failed_total[5m]) / (rate(payment_retry_success_total[5m]) + rate(payment_retry_failed_total[5m]) + 0.001) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "High payment retry failure rate"
+          description: "Payment retry failure rate is above 30%"
+          runbook_url: "https://docs.payflow.dev/runbooks/high-retry-rate"
+
+      - alert: KafkaConsumerLag
+        expr: |
+          sum by (group, topic) (kafka_consumer_lag_sum) > 10000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Kafka consumer lag is high"
+          description: "Consumer lag for topic {{ $labels.topic }} is {{ $value }}"
+          runbook_url: "https://docs.payflow.dev/runbooks/kafka-lag"
+
+      - alert: OutboxEventBacklog
+        expr: |
+          sum(payment_outbox_event{outcome="pending"}) > 100
+        for: 15m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "Outbox event backlog growing"
+          description: "There are {{ $value }} pending outbox events"
+          runbook_url: "https://docs.payflow.dev/runbooks/outbox-backlog"
+
+  - name: infrastructure_alerts
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by (job) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High CPU usage on {{ $labels.job }}"
+          description: "CPU usage is above 80% for 10 minutes"
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 85% for 10 minutes"
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          hikaricp_connections_active{pool="PaymentHikariPool"} / hikaricp_connections_max{pool="PaymentHikariPool"} > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Payment service HikariCP pool usage is above 90%"
+          runbook_url: "https://docs.payflow.dev/runbooks/db-pool-exhausted"
+
+      - alert: RedisConnectionFailure
+        expr: |
+          up{job="payment-service"} == 1 and absent(redis_connected_clients)
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Redis connection issues"
+          description: "Payment service cannot connect to Redis"
+          runbook_url: "https://docs.payflow.dev/runbooks/redis-connection"

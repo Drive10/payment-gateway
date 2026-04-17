@@ -138,6 +138,8 @@ application:
       retry-backoff-ms: 1000
   outbox:
     relay-delay-ms: 2000
+  idempotency:
+    redis-ttl-hours: 24
   reconciliation:
     enabled: true
     batch-size: 50
@@ -165,19 +167,96 @@ logging:
 resilience4j:
   retry:
     instances:
-      simulator:
+      razorpay:
         max-attempts: 3
-        wait-duration: 300ms
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+        ignore-exceptions:
+          - dev.payment.paymentservice.exception.ApiException
+      stripe:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+        ignore-exceptions:
+          - dev.payment.paymentservice.exception.ApiException
+      paypal:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+        ignore-exceptions:
+          - dev.payment.paymentservice.exception.ApiException
       orderService:
         max-attempts: 3
         wait-duration: 300ms
+      notificationService:
+        max-attempts: 2
+        wait-duration: 200ms
   circuitbreaker:
     instances:
-      simulator:
+      razorpay:
+        sliding-window-type: COUNT_BASED
         sliding-window-size: 10
+        minimum-number-of-calls: 5
         failure-rate-threshold: 50
-        wait-duration-in-open-state: 30s
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-rate-threshold: 80
+        slow-call-duration-threshold: 5s
+        record-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+        ignore-exceptions:
+          - dev.payment.paymentservice.exception.ApiException
+      stripe:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-rate-threshold: 80
+        slow-call-duration-threshold: 5s
+        record-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+        ignore-exceptions:
+          - dev.payment.paymentservice.exception.ApiException
+      paypal:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-rate-threshold: 80
+        slow-call-duration-threshold: 5s
+        record-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+        ignore-exceptions:
+          - dev.payment.paymentservice.exception.ApiException
       orderService:
         sliding-window-size: 10
         failure-rate-threshold: 50
         wait-duration-in-open-state: 30s
+      notificationService:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+  timelimiter:
+    instances:
+      razorpay:
+        timeout-duration: 10s
+        cancel-running-future: true
+      stripe:
+        timeout-duration: 10s
+        cancel-running-future: true
+      paypal:
+        timeout-duration: 10s
+        cancel-running-future: true

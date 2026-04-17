@@ -50,6 +50,14 @@ application:
     topic:
       notification-events: notification.events
       webhook-updates: webhook.updates
+  webhook:
+    signature:
+      enabled: true
+      secret: ${WEBHOOK_SIGNATURE_SECRET:change-me-in-production}
+      tolerance-seconds: 300
+    retry:
+      interval-ms: 30000
+      max-attempts: 5
   email:
     from-address: noreply@payment-gateway.local
     from-name: Payment Gateway
