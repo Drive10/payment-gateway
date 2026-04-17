@@ -127,7 +127,7 @@
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-test</artifactId>
-            <version>3.6.8</version>
+            <version>3.8.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>
