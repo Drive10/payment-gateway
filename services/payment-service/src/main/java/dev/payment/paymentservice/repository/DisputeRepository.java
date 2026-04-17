@@ -15,6 +15,8 @@ public interface DisputeRepository extends JpaRepository<Dispute, UUID> {
     
     Optional<Dispute> findByDisputeReference(String reference);
     
+    boolean existsByDisputeReference(String reference);
+    
     Page<Dispute> findByMerchantId(UUID merchantId, Pageable pageable);
     
     Page<Dispute> findByMerchantIdAndStatus(UUID merchantId, Dispute.DisputeStatus status, Pageable pageable);

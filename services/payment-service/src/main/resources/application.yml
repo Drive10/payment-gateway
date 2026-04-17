@@ -46,9 +46,9 @@ spring:
         order_updates: true
         generate_statistics: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
   flyway:
-    enabled: true
+    enabled: ${SPRING_FLYWAY_ENABLED:false}
     baseline-on-migrate: true
     locations: classpath:db/migration
   kafka:
@@ -56,7 +56,7 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      acks: 1
+      acks: all
       retries: 3
       batch-size: 32768
       buffer-memory: 67108864
@@ -68,6 +68,26 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       max-poll-records: 500
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: dev.payment.common.dto,dev.payment.paymentservice.dto
+        max.poll.interval.ms: 300000
+        session.timeout.ms: 10000
+    listener:
+      ack-mode: manual_immediate
+      concurrency: 3
+  # Kafka DLQ Configuration
+  custom:
+    kafka:
+      dlt:
+        topic: ${KAFKA_DLT_TOPIC:payment.events.dlt}
+        retention-ms: 604800000  # 7 days
+      retry:
+        max-attempts: 3
+        backoff-ms: 1000
+        multiplier: 2
+        max-backoff-ms: 30000
   cache:
     type: caffeine
     caffeine:

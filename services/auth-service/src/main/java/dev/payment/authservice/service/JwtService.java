@@ -6,11 +6,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -25,7 +25,13 @@ public class JwtService {
 
     public JwtService(JwtConfig jwtConfig) {
         this.jwtConfig = jwtConfig;
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtConfig.getSecret()));
+        byte[] keyBytes;
+        try {
+            keyBytes = Base64.getDecoder().decode(jwtConfig.getSecret());
+        } catch (IllegalArgumentException e) {
+            keyBytes = jwtConfig.getSecret().getBytes();
+        }
+        this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String generateAccessToken(User user) {
