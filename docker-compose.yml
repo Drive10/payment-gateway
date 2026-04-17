@@ -141,6 +141,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-postgres.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    read_only: true
+    tmpfs:
+      - /var/run/postgresql
+      - /var/cache/postgresql
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U payflow"]
       interval: 2s
@@ -159,6 +165,12 @@ services:
     container_name: payflow-api-gateway
     ports:
       - "8080:8080"
+    tmpfs:
+      - /tmp
+      - /var/cache
+      - /var/log
+    security_opt:
+      - no-new-privileges:true
     environment:
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
@@ -181,6 +193,12 @@ services:
     container_name: payflow-auth-service
     ports:
       - "8081:8081"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache
+    security_opt:
+      - no-new-privileges:true
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_auth
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
@@ -204,6 +222,12 @@ services:
     container_name: payflow-order-service
     ports:
       - "8082:8082"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache
+    security_opt:
+      - no-new-privileges:true
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_order
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
@@ -226,6 +250,12 @@ services:
     container_name: payflow-payment-service
     ports:
       - "8083:8083"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache
+    security_opt:
+      - no-new-privileges:true
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_payment
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
@@ -260,6 +290,12 @@ services:
     container_name: payflow-notification-service
     ports:
       - "8084:8084"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache
+    security_opt:
+      - no-new-privileges:true
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_notification
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
@@ -286,6 +322,12 @@ services:
     container_name: payflow-simulator-service
     ports:
       - "8086:8086"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache
+    security_opt:
+      - no-new-privileges:true
     networks:
       - payflow-network
 
@@ -296,6 +338,12 @@ services:
       context: ./web/payment-page
       dockerfile: Dockerfile
     container_name: payflow-frontend
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+    security_opt:
+      - no-new-privileges:true
     environment:
       - VITE_API_BASE_URL=http://api-gateway:8080
     depends_on:

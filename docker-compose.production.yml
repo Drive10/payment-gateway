@@ -1,0 +1,112 @@
+# Production environment configuration
+# Usage: docker compose -f docker-compose.yml -f docker-compose.production.yml up
+
+services:
+  api-gateway:
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - LOG_LEVEL=warn
+      - GATEWAY_TRUST_ENABLED=true
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache
+    security_opt:
+      - no-new-privileges:true
+
+  auth-service:
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - LOG_LEVEL=warn
+    deploy:
+      replicas: 2
+    restart: unless-stopped
+    read_only: true
+
+  order-service:
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - LOG_LEVEL=warn
+    deploy:
+      replicas: 2
+    restart: unless-stopped
+    read_only: true
+
+  payment-service:
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - LOG_LEVEL=warn
+      - GATEWAY_TRUST_ENABLED=true
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache
+    security_opt:
+      - no-new-privileges:true
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  notification-service:
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - LOG_LEVEL=warn
+    deploy:
+      replicas: 2
+    restart: unless-stopped
+    read_only: true
+
+  simulator-service:
+    deploy:
+      replicas: 0
+
+  postgres:
+    command: postgres -c max_connections=200 -c shared_buffers=256MB -c effective_cache_size=512MB
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - redis_prod_data:/data
+    restart: unless-stopped
+
+  prometheus:
+    deployment:
+      replicas: 1
+
+  grafana:
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    restart: unless-stopped
+
+networks:
+  payflow-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:

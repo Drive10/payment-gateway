@@ -1,0 +1,118 @@
+global:
+  imagePullSecrets: []
+  ingressClassName: nginx
+  domain: payflow.dev
+
+image:
+  repository: ghcr.io/your-org/payflow
+  pullPolicy: IfNotPresent
+  tag: latest
+
+replicaCount: 2
+
+apiGateway:
+  replicaCount: 2
+  image: api-gateway
+  port: 8080
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+authService:
+  replicaCount: 2
+  image: auth-service
+  port: 8081
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+orderService:
+  replicaCount: 2
+  image: order-service
+  port: 8082
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+paymentService:
+  replicaCount: 3
+  image: payment-service
+  port: 8083
+  resources:
+    requests:
+      memory: 384Mi
+      cpu: 200m
+    limits:
+      memory: 768Mi
+      cpu: 1000m
+
+notificationService:
+  replicaCount: 2
+  image: notification-service
+  port: 8084
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+simulatorService:
+  replicaCount: 1
+  image: simulator-service
+  port: 8086
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
+      cpu: 250m
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: api.payflow.dev
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: payflow-tls
+      hosts:
+        - api.payflow.dev
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app: payment-service
+          topologyKey: kubernetes.io/hostname

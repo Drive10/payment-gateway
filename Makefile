@@ -4,7 +4,9 @@
   dev dev-stop \
   logs ps health diagnose \
   test lint format \
-  clean
+  k8s-validate k8s-deploy-staging k8s-deploy-prod \
+  helm-install-staging helm-install-prod \
+  hooks-install clean
 
 help:
 	@echo "PayFlow - Development Commands"
@@ -27,6 +29,18 @@ help:
 	@echo "    make test          - Run tests"
 	@echo "    make lint          - Run linters"
 	@echo "    make format        - Format code"
+	@echo ""
+	@echo "  KUBERNETES"
+	@echo "    make k8s-validate    - Validate K8s configs"
+	@echo "    make k8s-deploy-staging - Deploy to staging"
+	@echo "    make k8s-deploy-prod  - Deploy to production"
+	@echo ""
+	@echo "  HELM"
+	@echo "    make helm-install-staging - Install Helm chart staging"
+	@echo "    make helm-install-prod  - Install Helm chart production"
+	@echo ""
+	@echo "  PRE-COMMIT"
+	@echo "    make hooks-install    - Install pre-commit hooks"
 	@echo ""
 	@echo "  CLEANUP"
 	@echo "    make clean         - Stop and remove volumes"
@@ -108,6 +122,48 @@ format:
 	@echo "Formatting code..."
 	mvn spotless:apply
 	cd web/payment-page && npm run format || true
+
+# ===========================================
+# Kubernetes (Kustomize)
+# ===========================================
+
+k8s-validate:
+	kubectl kustomize k8s/overlays/staging --dry-run=server
+	kubectl kustomize k8s/overlays/production --dry-run=server
+
+k8s-deploy-staging:
+	kubectl apply -k k8s/overlays/staging
+	kubectl rollout status deployment -n payflow-staging
+
+k8s-deploy-prod:
+	kubectl apply -k k8s/overlays/production
+	kubectl rollout status deployment -n payflow-prod
+
+# ===========================================
+# Helm
+# ===========================================
+
+helm-install-staging:
+	helm upgrade --install payflow-staging helm/payflow \
+		--namespace payflow-staging \
+		--create-namespace \
+		--set image.tag=staging \
+		-f helm/payflow/values-staging.yaml
+
+helm-install-prod:
+	helm upgrade --install payflow-prod helm/payflow \
+		--namespace payflow-prod \
+		--create-namespace \
+		--set image.tag=latest \
+		-f helm/payflow/values-production.yaml
+
+# ===========================================
+# Pre-commit
+# ===========================================
+
+hooks-install:
+	@echo "Installing pre-commit hooks..."
+	pre-commit install
 
 # ===========================================
 # Cleanup

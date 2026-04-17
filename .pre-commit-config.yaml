@@ -1,0 +1,81 @@
+repos:
+  - repo: local
+    hooks:
+      - id: maven-format
+        name: Format Maven
+        entry: mvn spotless:apply
+        language: system
+        pass_filenames: false
+        files: '\.java$'
+        stages: [pre-commit]
+
+      - id: maven-check
+        name: Check Maven Format
+        entry: mvn spotless:check
+        language: system
+        pass_filenames: false
+        files: '\.java$'
+        stages: [pre-commit]
+
+      - id: checkstyle
+        name: Checkstyle
+        entry: mvn checkstyle:check
+        language: system
+        pass_filenames: false
+        files: '\.java$'
+        stages: [pre-commit]
+
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: Frontend ESLint
+        entry: npm run lint
+        language: system
+        pass_filenames: true
+        files: 'web/payment-page/.*\.(ts|tsx)$'
+        stages: [pre-commit]
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: frontend-format
+        name: Frontend Format
+        entry: npm run format
+        language: system
+        pass_filenames: false
+        files: 'web/payment-page/.*\.(ts|tsx)$'
+        stages: [pre-commit]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=5000']
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  - repo: https://github.com/dnephin/pre-commit-gosec
+    rev: v0.10.0
+    hooks:
+      - id: gosec
+
+  - repo: https://github.com/trufflesecurity/trufflescan
+    rev: v0.4.22
+    hooks:
+      - id: trufflescan
+        args: [--exclude=target,node_modules,dist]
+
+default_stages: [pre-commit]
+
+default_install_hook_types: [pre-commit]
+default_stages: [pre-commit]
+
+ci:
+  skip: [maven-check, checkstyle, frontend-lint]

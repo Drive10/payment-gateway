@@ -1,0 +1,101 @@
+name: Continuous Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      services:
+        description: 'Services to deploy (comma-separated)'
+        required: false
+        default: 'api-gateway,auth-service,order-service,payment-service,notification-service'
+
+env:
+  JAVA_VERSION: '21'
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build and push images
+        run: |
+          SERVICES="${{ github.inputs.services }}"
+          echo "Building services: $SERVICES"
+          
+          for service in $(echo "$SERVICES" | tr ',' ' '); do
+            echo "Building and pushing $service..."
+            
+            # Build the service
+            mvn clean package -DskipTests -pl services/$service
+            
+            # Build and push Docker image
+            docker buildx build \
+              --platform linux/amd64,linux/arm64 \
+              --push \
+              -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/$service:${{ github.sha }} \
+              -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/$service:${{ github.inputs.environment }} \
+              -f services/$service/Dockerfile \
+              .
+          done
+
+      - name: Deploy to ${{ github.inputs.environment }}
+        run: |
+          echo "Deploying to ${{ github.inputs.environment }}..."
+          
+          # For Kustomize deployment
+          if [ "${{ github.inputs.environment }}" = "staging" ]; then
+            kubectl kustomize k8s/overlays/staging
+          else
+            kubectl kustomize k8s/overlays/production
+          fi
+          
+          # Or for Helm deployment
+          # helm upgrade --install payflow-${{ github.inputs.environment }} helm/payflow \
+          #   --namespace payflow-${{ github.inputs.environment }} \
+          #   --set image.tag=${{ github.sha }}
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployment..."
+          # Wait for rollout
+          kubectl rollout status deployment/api-gateway -n payflow-${{ github.inputs.environment }} --timeout=300s
+          
+          # Health check
+          curl -f https://api.${{ github.inputs.environment }}.payflow.dev/actuator/health || exit 1
+
+      - name: Notify deployment
+        if: always()
+        run: |
+          echo "Deployment status: ${{ job.status }}"
