@@ -56,7 +56,7 @@ jobs:
             echo "Building and pushing $service..."
             
             # Build the service
-            mvn clean package -DskipTests -pl services/$service
+            mvn clean package -DskipTests -pl src/$service
             
             # Build and push Docker image
             docker buildx build \
@@ -64,7 +64,7 @@ jobs:
               --push \
               -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/$service:${{ github.sha }} \
               -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/$service:${{ github.inputs.environment }} \
-              -f services/$service/Dockerfile \
+              -f src/$service/Dockerfile \
               .
           done
 
@@ -74,13 +74,13 @@ jobs:
           
           # For Kustomize deployment
           if [ "${{ github.inputs.environment }}" = "staging" ]; then
-            kubectl kustomize k8s/overlays/staging
+            kubectl kustomize config/k8s/overlays/staging
           else
-            kubectl kustomize k8s/overlays/production
+            kubectl kustomize config/k8s/overlays/production
           fi
           
           # Or for Helm deployment
-          # helm upgrade --install payflow-${{ github.inputs.environment }} helm/payflow \
+          # helm upgrade --install payflow-${{ github.inputs.environment }} config/helm/payflow \
           #   --namespace payflow-${{ github.inputs.environment }} \
           #   --set image.tag=${{ github.sha }}
         env:

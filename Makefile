@@ -116,27 +116,27 @@ test:
 lint:
 	@echo "Running linters..."
 	mvn spotless:check || true
-	cd web/payment-page && npm run lint || true
+	cd frontend/payment-page && npm run lint || true
 
 format:
 	@echo "Formatting code..."
 	mvn spotless:apply
-	cd web/payment-page && npm run format || true
+	cd frontend/payment-page && npm run format || true
 
 # ===========================================
 # Kubernetes (Kustomize)
 # ===========================================
 
 k8s-validate:
-	kubectl kustomize k8s/overlays/staging --dry-run=server
-	kubectl kustomize k8s/overlays/production --dry-run=server
+	kubectl kustomize config/k8s/overlays/staging --dry-run=server
+	kubectl kustomize config/k8s/overlays/production --dry-run=server
 
 k8s-deploy-staging:
-	kubectl apply -k k8s/overlays/staging
+	kubectl apply -k config/k8s/overlays/staging
 	kubectl rollout status deployment -n payflow-staging
 
 k8s-deploy-prod:
-	kubectl apply -k k8s/overlays/production
+	kubectl apply -k config/k8s/overlays/production
 	kubectl rollout status deployment -n payflow-prod
 
 # ===========================================
@@ -144,18 +144,18 @@ k8s-deploy-prod:
 # ===========================================
 
 helm-install-staging:
-	helm upgrade --install payflow-staging helm/payflow \
+	helm upgrade --install payflow-staging config/helm/payflow \
 		--namespace payflow-staging \
 		--create-namespace \
 		--set image.tag=staging \
-		-f helm/payflow/values-staging.yaml
+		-f config/helm/payflow/values-staging.yaml
 
 helm-install-prod:
-	helm upgrade --install payflow-prod helm/payflow \
+	helm upgrade --install payflow-prod config/helm/payflow \
 		--namespace payflow-prod \
 		--create-namespace \
 		--set image.tag=latest \
-		-f helm/payflow/values-production.yaml
+		-f config/helm/payflow/values-production.yaml
 
 # ===========================================
 # Pre-commit

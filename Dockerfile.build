@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for building any service
-# Usage: docker build --build-arg SERVICE_PATH=services/your-service -t your-image .
+# Usage: docker build --build-arg SERVICE_PATH=src/your-service -t your-image .
 
 # Stage 1: Build
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
@@ -8,7 +8,7 @@ WORKDIR /app
 # Copy only the pom.xml first to leverage Docker cache
 COPY pom.xml .
 COPY ${SERVICE_PATH}/pom.xml ${SERVICE_PATH}/pom.xml
-COPY libs/common/pom.xml libs/common/pom.xml
+COPY common/pom.xml common/pom.xml
 
 # Download dependencies
 RUN --mount=type=cache,target=/root/.m2 \
@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 # Copy source code
 COPY ${SERVICE_PATH}/src ${SERVICE_PATH}/src
-COPY libs/common/src libs/common/src
+COPY common/src common/src
 
 # Build the service
 RUN --mount=type=cache,target=/root/.m2 \

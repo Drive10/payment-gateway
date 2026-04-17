@@ -31,9 +31,9 @@ jobs:
           args: >
             -Dsonar.projectKey=Drive10_payflow
             -Dsonar.organization=drive10
-            -Dsonar.sources=services,libs
-            -Dsonar.tests=services
-            -Dsonar.java.binaries=target/classes
+            -Dsonar.sources=src,common
+            -Dsonar.tests=src
+            -Dsonar.java.binaries=src/*/target/classes
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
   frontend-scan:
@@ -47,23 +47,23 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: web/payment-page/package-lock.json
+          cache-dependency-path: frontend/payment-page/package-lock.json
 
       - name: Install frontend dependencies
-        run: cd web/payment-page && npm ci
+        run: cd frontend/payment-page && npm ci
 
       - name: Run ESLint
-        run: cd web/payment-page && npm run lint
+        run: cd frontend/payment-page && npm run lint
 
       - name: Run Tests
-        run: cd web/payment-page && npm run test -- --coverage
+        run: cd frontend/payment-page && npm run test -- --coverage
 
       - name: SonarCloud Frontend Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          projectBaseDir: web/payment-page
+          projectBaseDir: frontend/payment-page
           args: >
             -Dsonar.projectKey=payflow_frontend
             -Dsonar.organization=drive10

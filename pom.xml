@@ -11,13 +11,13 @@
     <name>PayFlow</name>
 
     <modules>
-        <module>libs/common</module>
-        <module>services/auth-service</module>
-        <module>services/api-gateway</module>
-        <module>services/payment-service</module>
-        <module>services/order-service</module>
-        <module>services/notification-service</module>
-        <module>services/simulator-service</module>
+        <module>common</module>
+        <module>src/auth-service</module>
+        <module>src/api-gateway</module>
+        <module>src/payment-service</module>
+        <module>src/order-service</module>
+        <module>src/notification-service</module>
+        <module>src/simulator-service</module>
     </modules>
 
     <properties>

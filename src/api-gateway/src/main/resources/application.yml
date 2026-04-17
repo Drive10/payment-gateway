@@ -132,6 +132,12 @@ spring.cloud.gateway:
       filters:
         - RewritePath=/platform/simulator/(?<segment>.*), /internal/platform/${segment}
 
+logging:
+  level:
+    root: INFO
+    dev.payment.apigateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+
 management:
   endpoints:
     web:

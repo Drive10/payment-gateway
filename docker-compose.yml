@@ -161,7 +161,7 @@ services:
     profiles: [services]
     build:
       context: .
-      dockerfile: services/api-gateway/Dockerfile
+      dockerfile: src/api-gateway/Dockerfile
     container_name: payflow-api-gateway
     ports:
       - "8080:8080"
@@ -189,7 +189,7 @@ services:
     profiles: [services]
     build:
       context: .
-      dockerfile: services/auth-service/Dockerfile
+      dockerfile: src/auth-service/Dockerfile
     container_name: payflow-auth-service
     ports:
       - "8081:8081"
@@ -218,7 +218,7 @@ services:
     profiles: [services]
     build:
       context: .
-      dockerfile: services/order-service/Dockerfile
+      dockerfile: src/order-service/Dockerfile
     container_name: payflow-order-service
     ports:
       - "8082:8082"
@@ -246,7 +246,7 @@ services:
     profiles: [services]
     build:
       context: .
-      dockerfile: services/payment-service/Dockerfile
+      dockerfile: src/payment-service/Dockerfile
     container_name: payflow-payment-service
     ports:
       - "8083:8083"
@@ -286,7 +286,7 @@ services:
     profiles: [services]
     build:
       context: .
-      dockerfile: services/notification-service/Dockerfile
+      dockerfile: src/notification-service/Dockerfile
     container_name: payflow-notification-service
     ports:
       - "8084:8084"
@@ -318,7 +318,7 @@ services:
     profiles: [services]
     build:
       context: .
-      dockerfile: services/simulator-service/Dockerfile
+      dockerfile: src/simulator-service/Dockerfile
     container_name: payflow-simulator-service
     ports:
       - "8086:8086"
@@ -335,7 +335,7 @@ services:
   frontend:
     profiles: [services]
     build:
-      context: ./web/payment-page
+      context: ./frontend/payment-page
       dockerfile: Dockerfile
     container_name: payflow-frontend
     read_only: true
