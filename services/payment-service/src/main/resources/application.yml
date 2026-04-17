@@ -9,6 +9,8 @@ server:
 spring:
   application:
     name: payment-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   datasource:
     url: jdbc:postgresql://postgres:5432/payflow_payment
     username: ${DB_USERNAME:payflow}
@@ -97,6 +99,8 @@ application:
   gateway-trust:
     enabled: ${GATEWAY_TRUST_ENABLED:true}
     internal-secret: ${GATEWAY_INTERNAL_SECRET:?}
+  internal-auth:
+    signing-secret: ${INTERNAL_SERVICE_SIGNING_SECRET:?}
   security:
     jwt:
       secret-key: ${JWT_SECRET:ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
@@ -113,8 +117,12 @@ application:
     service-url: http://notification-service:8084
     max-retries: 3
     timeout-ms: 5000
+    stripe:
+      secret: ${STRIPE_WEBHOOK_SECRET:?}
     razorpay:
       secret: ${RAZORPAY_WEBHOOK_SECRET:?}
+    paypal:
+      webhook-id: ${PAYPAL_WEBHOOK_ID:}
   order:
     service-url: http://order-service:8082
   auth:
