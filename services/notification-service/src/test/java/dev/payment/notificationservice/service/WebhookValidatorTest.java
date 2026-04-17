@@ -113,7 +113,7 @@ class WebhookValidatorTest {
     }
 
     @Test
-    void validateSignature_withModifiedPayload_shouldThrow() {
+    void validateSignature_withModifiedPayload_shouldThrow() throws Exception {
         String signature = computeSignature(PAYLOAD);
         String modifiedPayload = PAYLOAD + "modified";
         
