@@ -10,15 +10,15 @@ spring:
     redis:
       host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:payflow-redis}
+      password: ${REDIS_PASSWORD:?}
 
 application:
   gateway:
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-gateway-secret-change-me}
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:?}
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET:ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
+    secret-key: ${JWT_SECRET:?}
 
 spring.cloud.gateway:
   globalcors:
@@ -26,9 +26,7 @@ spring.cloud.gateway:
     cors-configurations:
       '[/**]':
         allowedOrigins:
-          - "http://localhost:3000"
-          - "http://localhost:5173"
-          - "http://localhost:5174"
+          - "${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:5174}"
         allowedMethods:
           - GET
           - POST

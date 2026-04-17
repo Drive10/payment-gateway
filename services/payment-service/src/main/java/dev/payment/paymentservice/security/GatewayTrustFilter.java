@@ -32,23 +32,22 @@ public class GatewayTrustFilter extends OncePerRequestFilter {
             "/api/v1/webhooks",
             "/internal/",
             "/payments/initiate",
+            "/payments/initiate-compat",
             "/payments/tokenize",
             "/internal/platform/",
             "/orders/",
-            "/payments"
+            "/payments/status"
     );
 
     private final ObjectMapper objectMapper;
-    private final boolean enabled;
+    private final boolean enabled = true;
     private final String expectedSecret;
 
     public GatewayTrustFilter(
             ObjectMapper objectMapper,
-            @Value("${application.gateway-trust.enabled:true}") boolean enabled,
             @Value("${application.gateway-trust.internal-secret:}") String expectedSecret
     ) {
         this.objectMapper = objectMapper;
-        this.enabled = enabled;
         this.expectedSecret = expectedSecret;
     }
 

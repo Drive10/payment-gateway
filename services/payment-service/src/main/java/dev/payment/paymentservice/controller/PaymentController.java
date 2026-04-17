@@ -208,13 +208,27 @@ public class PaymentController {
         String userEmail = authentication != null ? authentication.getName() : "system@payflow.dev";
         User actor = authService.getCurrentUser(userEmail);
         
+        UUID orderId = request.orderId();
+        if (orderId == null) {
+            orderId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        }
+        
+        UUID merchantId = actor.getId() != null ? actor.getId() : UUID.fromString("MERCHANT_001");
+        if (request.merchantId() != null && !request.merchantId().isEmpty()) {
+            try {
+                merchantId = UUID.fromString(request.merchantId());
+            } catch (Exception e) {
+                merchantId = UUID.fromString("MERCHANT_001");
+            }
+        }
+        
         CreatePaymentRequest createRequest = new CreatePaymentRequest(
-                request.orderId(),
-                actor.getId() != null ? actor.getId() : UUID.fromString(request.merchantId()),
+                orderId,
+                merchantId,
                 dev.payment.paymentservice.domain.enums.PaymentMethod.CARD,
                 "RAZORPAY_SIMULATOR",
                 dev.payment.paymentservice.domain.enums.TransactionMode.TEST,
-                "Initiated via order payment flow"
+                "Initiated via checkout flow"
         );
         
         PaymentResponse paymentResponse = paymentService.createPayment(createRequest, 

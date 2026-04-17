@@ -45,11 +45,11 @@ services:
   redis:
     profiles: [infra, services]
     image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD:-payflow-redis}
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD_required}
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "payflow-redis", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD_required}", "ping"]
       interval: 2s
       timeout: 2s
       retries: 10
@@ -160,9 +160,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-payflow-redis}
-      - JWT_SECRET=${JWT_SECRET:-ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
-      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET:-dev-only-gateway-secret-change-me}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD_required}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_required}
+      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET:?GATEWAY_INTERNAL_SECRET_required}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
     depends_on:
       redis:
         condition: service_healthy
@@ -182,8 +183,8 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_auth
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-payflow-redis}
-      - JWT_SECRET=${JWT_SECRET:-ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD_required}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_required}
     depends_on:
       postgres:
         condition: service_healthy
@@ -203,7 +204,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_order
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
-      - JWT_SECRET=${JWT_SECRET:-ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_required}
     depends_on:
       postgres:
         condition: service_healthy
@@ -226,9 +227,11 @@ services:
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
       - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:-payflow-redis}
-      - JWT_SECRET=${JWT_SECRET:-ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
-      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET:-dev-only-gateway-secret-change-me}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD_required}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_required}
+      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET:?GATEWAY_INTERNAL_SECRET_required}
+      - GATEWAY_TRUST_ENABLED=${GATEWAY_TRUST_ENABLED:-true}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET:?RAZORPAY_WEBHOOK_SECRET_required}
     depends_on:
       postgres:
         condition: service_healthy
@@ -252,7 +255,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_notification
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
-      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:-payflow-redis}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD_required}
 
     depends_on:
       postgres:

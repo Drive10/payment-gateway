@@ -44,6 +44,7 @@ public class ServiceConfig {
         private String serviceUrl;
         private int maxRetries = 3;
         private int timeoutMs = 5000;
+        private Razorpay razorpay = new Razorpay();
 
         public String getServiceUrl() {
             return serviceUrl;
@@ -67,6 +68,22 @@ public class ServiceConfig {
 
         public void setTimeoutMs(int timeoutMs) {
             this.timeoutMs = timeoutMs;
+        }
+
+        public Razorpay getRazorpay() {
+            return razorpay;
+        }
+
+        public static class Razorpay {
+            private String secret;
+
+            public String getSecret() {
+                return secret;
+            }
+
+            public void setSecret(String secret) {
+                this.secret = secret;
+            }
         }
     }
 

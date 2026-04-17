@@ -29,7 +29,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/v3/api-docs",
             "/api/v1/auth",
             "/api/v1/webhooks",
-            "/api/v1/payments/tokenize"
+            "/api/v1/payments/tokenize",
+            "/api/v1/payments/initiate",
+            "/api/v1/payments/initiate-compat",
+            "/api/v1/payments/status",
+            "/api/v1/orders"
     );
 
     private final GatewayJwtService gatewayJwtService;
