@@ -2,13 +2,13 @@ package dev.payment.apigateway.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -50,7 +50,7 @@ public class GatewayJwtService {
         }
 
         public Map<String, Object> asHeaders() {
-            Map<String, Object> headers = new java.util.HashMap<>();
+            Map<String, Object> headers = new HashMap<>();
             headers.put("X-Authenticated-User", username);
             headers.put("X-Authenticated-Roles", String.join(",", roles));
             return headers;
