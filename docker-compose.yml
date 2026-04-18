@@ -160,8 +160,8 @@ services:
   api-gateway:
     profiles: [services]
     build:
-      context: .
-      dockerfile: src/api-gateway/Dockerfile
+      context: ./src/api-gateway
+      dockerfile: Dockerfile
     container_name: payflow-api-gateway
     ports:
       - "8080:8080"
@@ -188,8 +188,8 @@ services:
   auth-service:
     profiles: [services]
     build:
-      context: .
-      dockerfile: src/auth-service/Dockerfile
+      context: ./src/auth-service
+      dockerfile: Dockerfile
     container_name: payflow-auth-service
     ports:
       - "8081:8081"
@@ -217,8 +217,8 @@ services:
   order-service:
     profiles: [services]
     build:
-      context: .
-      dockerfile: src/order-service/Dockerfile
+      context: ./src/order-service
+      dockerfile: Dockerfile
     container_name: payflow-order-service
     ports:
       - "8082:8082"
@@ -233,6 +233,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_required}
+      - LOG_PATH=/app/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -245,8 +246,8 @@ services:
   payment-service:
     profiles: [services]
     build:
-      context: .
-      dockerfile: src/payment-service/Dockerfile
+      context: ./src/payment-service
+      dockerfile: Dockerfile
     container_name: payflow-payment-service
     ports:
       - "8083:8083"
@@ -285,8 +286,8 @@ services:
   notification-service:
     profiles: [services]
     build:
-      context: .
-      dockerfile: src/notification-service/Dockerfile
+      context: ./src/notification-service
+      dockerfile: Dockerfile
     container_name: payflow-notification-service
     ports:
       - "8084:8084"
@@ -317,8 +318,8 @@ services:
   simulator-service:
     profiles: [services]
     build:
-      context: .
-      dockerfile: src/simulator-service/Dockerfile
+      context: ./src/simulator-service
+      dockerfile: Dockerfile
     container_name: payflow-simulator-service
     ports:
       - "8086:8086"
