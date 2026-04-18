@@ -15,6 +15,7 @@ import dev.payment.paymentservice.dto.response.PaymentResponse;
 import dev.payment.paymentservice.dto.response.CardTokenizationResponse;
 import dev.payment.paymentservice.dto.response.RefundResponse;
 import dev.payment.paymentservice.exception.ApiException;
+import dev.payment.paymentservice.integration.client.OrderServiceClient;
 import dev.payment.paymentservice.integration.processor.PaymentProcessorCaptureResponse;
 import dev.payment.paymentservice.integration.processor.PaymentProcessorClient;
 import dev.payment.paymentservice.integration.processor.PaymentProcessorIntentResponse;
@@ -43,7 +44,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final PaymentRefundRepository paymentRefundRepository;
-    private final OrderService orderService;
+    private final OrderServiceClient orderServiceClient;
     private final AuditService auditService;
     private final PaymentProcessorClient paymentProcessorClient;
     private final PaymentEventPublisher paymentEventPublisher;
@@ -58,7 +59,7 @@ public class PaymentService {
     public PaymentService(
             PaymentRepository paymentRepository,
             PaymentRefundRepository paymentRefundRepository,
-            OrderService orderService,
+            OrderServiceClient orderServiceClient,
             AuditService auditService,
             PaymentProcessorClient paymentProcessorClient,
             PaymentEventPublisher paymentEventPublisher,
@@ -71,7 +72,7 @@ public class PaymentService {
             CardBinService cardBinService) {
         this.paymentRepository = paymentRepository;
         this.paymentRefundRepository = paymentRefundRepository;
-        this.orderService = orderService;
+        this.orderServiceClient = orderServiceClient;
         this.auditService = auditService;
         this.paymentProcessorClient = paymentProcessorClient;
         this.paymentEventPublisher = paymentEventPublisher;
@@ -123,7 +124,7 @@ public class PaymentService {
 
     private Payment executePaymentCreation(Payment payment, CreatePaymentRequest request, User actor, String idempotencyKey) {
         try {
-            Order order = orderService.getOwnedOrder(request.orderId(), actor, false);
+            Order order = orderServiceClient.getOrderById(request.orderId());
             
             // Check for duplicate payment - prevent same order from being paid twice
             EnumSet<PaymentStatus> activeStatuses = EnumSet.of(
@@ -167,7 +168,7 @@ public class PaymentService {
     private Payment savePayment(Payment payment, String idempotencyKey) {
         Payment saved = paymentRepository.save(payment);
         transactionService.createPaymentInitiated(saved);
-        orderService.markPaymentPending(payment.getOrderId(), payment.getOrder().getOrderReference());
+        orderServiceClient.updateOrderStatus(payment.getOrder().getOrderReference(), "PAYMENT_PENDING");
         return saved;
     }
 
@@ -335,7 +336,7 @@ public class PaymentService {
         paymentRepository.save(payment);
 
         if (newStatus == PaymentStatus.REFUNDED) {
-            orderService.markRefunded(payment.getOrderId(), getOrderReference(payment));
+            orderServiceClient.updateOrderStatus(getOrderReference(payment), "REFUNDED");
         }
     }
 
@@ -371,7 +372,7 @@ public class PaymentService {
 
     private void updateOrderStatus(Payment payment) {
         try {
-            orderService.markPaid(payment.getOrderId(), getOrderReference(payment));
+            orderServiceClient.updateOrderStatus(getOrderReference(payment), "PAID");
         } catch (Exception orderException) {
             log.warn("event=order_status_update_failed paymentId={} error={}", payment.getId(), orderException.getMessage());
         }
@@ -379,7 +380,7 @@ public class PaymentService {
 
     private void updateOrderStatusOnFailure(Payment payment) {
         try {
-            orderService.markFailed(payment.getOrderId(), getOrderReference(payment));
+            orderServiceClient.updateOrderStatus(getOrderReference(payment), "FAILED");
         } catch (Exception orderException) {
             log.warn("event=order_status_update_failed paymentId={} error={}", payment.getId(), orderException.getMessage());
         }

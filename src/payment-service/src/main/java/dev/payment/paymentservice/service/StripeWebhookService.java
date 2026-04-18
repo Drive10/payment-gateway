@@ -1,6 +1,7 @@
 package dev.payment.paymentservice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.payment.paymentservice.domain.Order;
 import dev.payment.paymentservice.domain.Payment;
 import dev.payment.paymentservice.domain.PaymentRefund;
 import dev.payment.paymentservice.domain.ProcessedWebhookEvent;
@@ -8,6 +9,7 @@ import dev.payment.paymentservice.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.domain.enums.RefundStatus;
 import dev.payment.paymentservice.dto.request.StripeWebhookRequest;
 import dev.payment.paymentservice.exception.ApiException;
+import dev.payment.paymentservice.integration.client.OrderServiceClient;
 import dev.payment.paymentservice.repository.PaymentRefundRepository;
 import dev.payment.paymentservice.repository.PaymentRepository;
 import dev.payment.paymentservice.repository.ProcessedWebhookEventRepository;
@@ -36,7 +38,7 @@ public class StripeWebhookService {
     private final PaymentRefundRepository paymentRefundRepository;
     private final ProcessedWebhookEventRepository processedWebhookEventRepository;
     private final AuditService auditService;
-    private final OrderService orderService;
+    private final OrderServiceClient orderServiceClient;
     private final PaymentEventPublisher paymentEventPublisher;
     private final PaymentTransactionService transactionService;
     private final PaymentStateMachine paymentStateMachine;
@@ -49,7 +51,7 @@ public class StripeWebhookService {
             PaymentRefundRepository paymentRefundRepository,
             ProcessedWebhookEventRepository processedWebhookEventRepository,
             AuditService auditService,
-            OrderService orderService,
+            OrderServiceClient orderServiceClient,
             PaymentEventPublisher paymentEventPublisher,
             PaymentTransactionService transactionService,
             PaymentStateMachine paymentStateMachine,
@@ -61,7 +63,7 @@ public class StripeWebhookService {
         this.paymentRefundRepository = paymentRefundRepository;
         this.processedWebhookEventRepository = processedWebhookEventRepository;
         this.auditService = auditService;
-        this.orderService = orderService;
+        this.orderServiceClient = orderServiceClient;
         this.paymentEventPublisher = paymentEventPublisher;
         this.transactionService = transactionService;
         this.paymentStateMachine = paymentStateMachine;
@@ -125,7 +127,7 @@ public class StripeWebhookService {
         paymentRepository.save(payment);
 
         transactionService.createCaptureSuccess(payment, pi);
-        orderService.markPaid(payment.getOrderId(), "ORD-UNKNOWN");
+        orderServiceClient.updateOrderStatus("ORD-UNKNOWN", "PAID");
         auditService.record("STRIPE_WEBHOOK_CAPTURED", "system", "PAYMENT", payment.getId().toString(), "Stripe webhook captured payment");
         paymentEventPublisher.publish("payment.webhook.captured", payment, Map.of("providerPaymentId", pi));
 
@@ -151,7 +153,7 @@ public class StripeWebhookService {
         payment.setNotes(failureReason);
         paymentRepository.save(payment);
 
-        orderService.markFailed(payment.getOrderId(), "ORD-UNKNOWN");
+        orderServiceClient.updateOrderStatus("ORD-UNKNOWN", "FAILED");
         auditService.record("STRIPE_WEBHOOK_FAILED", "system", "PAYMENT", payment.getId().toString(), failureReason);
         paymentEventPublisher.publish("payment.webhook.failed", payment, Map.of("reason", failureReason));
 

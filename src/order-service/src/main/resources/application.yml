@@ -58,6 +58,7 @@ application:
   kafka:
     topic:
       order-events: order.events
+      order-events-dlt: order.events.dlt
       payment-events: payment.events
       notification-events: notification.events
 
@@ -69,6 +70,37 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+
+resilience4j:
+  retry:
+    instances:
+      paymentService:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+  circuitbreaker:
+    instances:
+      paymentService:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-rate-threshold: 80
+        slow-call-duration-threshold: 5s
+  timelimiter:
+    instances:
+      paymentService:
+        timeout-duration: 10s
+        cancel-running-future: true
+  bulkhead:
+    instances:
+      paymentService:
+        max-concurrent-calls: 10
+        max-wait-duration: 5s
 
 logging:
   level:

@@ -10,13 +10,13 @@ import dev.payment.paymentservice.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.dto.request.CreateFeeConfigRequest;
 import dev.payment.paymentservice.dto.response.AuditLogResponse;
 import dev.payment.paymentservice.dto.response.FeeConfigResponse;
-import dev.payment.paymentservice.dto.response.OrderResponse;
 import dev.payment.paymentservice.dto.response.PaymentResponse;
 import dev.payment.paymentservice.service.AuditService;
 import dev.payment.paymentservice.service.AuthService;
 import dev.payment.paymentservice.service.DisputeService;
 import dev.payment.paymentservice.service.FeeConfigService;
-import dev.payment.paymentservice.service.OrderService;
+import dev.payment.paymentservice.integration.client.OrderServiceClient;
+import dev.payment.orderservice.dto.OrderResponse;
 import dev.payment.paymentservice.service.PaymentQueryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -43,7 +43,7 @@ import java.util.UUID;
 public class AdminController {
 
     private final PaymentQueryService queryService;
-    private final OrderService orderService;
+    private final OrderServiceClient orderServiceClient;
     private final AuditService auditService;
     private final AuthService authService;
     private final FeeConfigService feeConfigService;
@@ -51,14 +51,14 @@ public class AdminController {
 
     public AdminController(
             PaymentQueryService queryService,
-            OrderService orderService,
+            OrderServiceClient orderServiceClient,
             AuditService auditService,
             AuthService authService,
             FeeConfigService feeConfigService,
             DisputeService disputeService
     ) {
         this.queryService = queryService;
-        this.orderService = orderService;
+        this.orderServiceClient = orderServiceClient;
         this.auditService = auditService;
         this.authService = authService;
         this.feeConfigService = feeConfigService;
@@ -92,8 +92,9 @@ public class AdminController {
             Authentication authentication
     ) {
         User actor = authService.getCurrentUser(authentication.getName());
+        UUID userId = UUID.nameUUIDFromBytes(actor.getEmail().toLowerCase().getBytes(java.nio.charset.StandardCharsets.UTF_8));
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
-        var orders = orderService.getOrders(actor, status, pageable, true);
+        Page<OrderResponse> orders = orderServiceClient.getOrders(userId, status, pageable, true);
         return ApiResponse.success(new PageResponse<>(
                 orders.getContent(),
                 orders.getNumber(),

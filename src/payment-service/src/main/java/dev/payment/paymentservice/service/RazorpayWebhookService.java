@@ -1,6 +1,7 @@
 package dev.payment.paymentservice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.payment.paymentservice.domain.Order;
 import dev.payment.paymentservice.domain.Payment;
 import dev.payment.paymentservice.domain.PaymentRefund;
 import dev.payment.paymentservice.domain.ProcessedWebhookEvent;
@@ -8,6 +9,7 @@ import dev.payment.paymentservice.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.domain.enums.RefundStatus;
 import dev.payment.paymentservice.dto.request.RazorpayWebhookRequest;
 import dev.payment.paymentservice.exception.ApiException;
+import dev.payment.paymentservice.integration.client.OrderServiceClient;
 import dev.payment.paymentservice.repository.PaymentRefundRepository;
 import dev.payment.paymentservice.repository.PaymentRepository;
 import dev.payment.paymentservice.repository.ProcessedWebhookEventRepository;
@@ -32,7 +34,7 @@ public class RazorpayWebhookService {
     private final PaymentRefundRepository paymentRefundRepository;
     private final ProcessedWebhookEventRepository processedWebhookEventRepository;
     private final AuditService auditService;
-    private final OrderService orderService;
+    private final OrderServiceClient orderServiceClient;
     private final PaymentEventPublisher paymentEventPublisher;
     private final PaymentTransactionService transactionService;
     private final PaymentStateMachine paymentStateMachine;
@@ -44,7 +46,7 @@ public class RazorpayWebhookService {
             PaymentRefundRepository paymentRefundRepository,
             ProcessedWebhookEventRepository processedWebhookEventRepository,
             AuditService auditService,
-            OrderService orderService,
+            OrderServiceClient orderServiceClient,
             PaymentEventPublisher paymentEventPublisher,
             PaymentTransactionService transactionService,
             PaymentStateMachine paymentStateMachine,
@@ -55,7 +57,7 @@ public class RazorpayWebhookService {
         this.paymentRefundRepository = paymentRefundRepository;
         this.processedWebhookEventRepository = processedWebhookEventRepository;
         this.auditService = auditService;
-        this.orderService = orderService;
+        this.orderServiceClient = orderServiceClient;
         this.paymentEventPublisher = paymentEventPublisher;
         this.transactionService = transactionService;
         this.paymentStateMachine = paymentStateMachine;
@@ -118,7 +120,7 @@ public class RazorpayWebhookService {
         payment.setProviderPaymentId(entity.id());
         paymentRepository.save(payment);
         transactionService.createCaptureSuccess(payment, entity.id());
-        orderService.markPaid(payment.getOrderId(), entity.orderId());
+        orderServiceClient.updateOrderStatus(entity.orderId(), "PAID");
         auditService.record("RAZORPAY_WEBHOOK_CAPTURED", "system", "PAYMENT", payment.getId().toString(), "Webhook marked payment captured");
         paymentEventPublisher.publish("payment.webhook.captured", payment, Map.of("providerPaymentId", entity.id()));
     }
@@ -144,7 +146,7 @@ public class RazorpayWebhookService {
         payment.setNotes(failureReason);
         paymentRepository.save(payment);
         
-        orderService.markFailed(payment.getOrderId(), entity.orderId());
+        orderServiceClient.updateOrderStatus(entity.orderId(), "FAILED");
         
         auditService.record("RAZORPAY_WEBHOOK_FAILED", "system", "PAYMENT", payment.getId().toString(), failureReason);
         paymentEventPublisher.publish("payment.webhook.failed", payment, Map.of("reason", failureReason));
@@ -181,7 +183,7 @@ public class RazorpayWebhookService {
         paymentRepository.save(payment);
         transactionService.createRefundCompleted(payment, "Webhook processed refund", entity.id(), refundAmount);
         if (payment.getStatus() == PaymentStatus.REFUNDED) {
-            orderService.markRefunded(payment.getOrderId(), "ORD-UNKNOWN");
+            orderServiceClient.updateOrderStatus("ORD-UNKNOWN", "REFUNDED");
         }
         auditService.record("RAZORPAY_WEBHOOK_REFUND", "system", "PAYMENT", payment.getId().toString(), "Webhook processed refund");
         paymentEventPublisher.publish("payment.webhook.refund_processed", payment, Map.of(
