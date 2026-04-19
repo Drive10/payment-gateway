@@ -200,7 +200,7 @@ public class PaymentController {
         return ApiResponse.success(analyticsService.getPaymentTrends(merchantId, days));
     }
 
-    @PostMapping("/initiate")
+@PostMapping("/initiate")
     public ApiResponse<InitiatePaymentResponse> initiatePayment(
             @Valid @RequestBody InitiatePaymentRequest request,
             @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
@@ -209,17 +209,20 @@ public class PaymentController {
         User actor = authService.getCurrentUser(userEmail);
         
         UUID orderId = request.orderId();
-        if (orderId == null) {
-            orderId = UUID.fromString("00000000-0000-0000-0000-000000000001");
-        }
         
-        UUID merchantId = actor.getId() != null ? actor.getId() : UUID.fromString("MERCHANT_001");
+        UUID merchantId;
         if (request.merchantId() != null && !request.merchantId().isEmpty()) {
             try {
                 merchantId = UUID.fromString(request.merchantId());
             } catch (Exception e) {
-                merchantId = UUID.fromString("MERCHANT_001");
+                merchantId = actor.getId() != null ? actor.getId() : UUID.fromString("00000000-0000-0000-0000-000000000002");
             }
+        } else {
+            merchantId = actor.getId() != null ? actor.getId() : UUID.fromString("00000000-0000-0000-0000-000000000002");
+        }
+        
+        if (orderId == null) {
+            orderId = UUID.randomUUID();
         }
         
         CreatePaymentRequest createRequest = new CreatePaymentRequest(
