@@ -10,4 +10,6 @@ USER spring:spring
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC" LOG_PATH=/app/logs
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/service.jar"]
+COPY wait-for.sh /wait-for.sh
+RUN chmod +x /wait-for.sh
+ENTRYPOINT ["/wait-for.sh", "redis:6379", "--", "sh", "-c", "java $JAVA_OPTS -jar /app/service.jar"]

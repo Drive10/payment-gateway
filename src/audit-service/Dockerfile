@@ -54,6 +54,8 @@ WORKDIR /app
 COPY --from=builder /build/services/audit-service/target/*.jar app.jar
 RUN chown -R spring:spring /app
 USER spring:spring
-EXPOSE 8089
+EXPOSE 8090
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+COPY wait-for.sh /wait-for.sh
+RUN chmod +x /wait-for.sh
+ENTRYPOINT ["/wait-for.sh", "postgres:5432", "--", "sh", "-c", "java $JAVA_OPTS -jar app.jar"]

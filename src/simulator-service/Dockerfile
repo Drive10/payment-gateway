@@ -10,4 +10,6 @@ USER spring:spring
 EXPOSE 8086
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD wget --quiet --tries=1 --spider http://localhost:8086/actuator/health || exit 1
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC" LOG_PATH=/app/logs
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+COPY wait-for.sh /wait-for.sh
+RUN chmod +x /wait-for.sh
+ENTRYPOINT ["/wait-for.sh", "postgres:5432", "--", "sh", "-c", "java $JAVA_OPTS -jar app.jar"]

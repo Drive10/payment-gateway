@@ -45,11 +45,11 @@ services:
   redis:
     profiles: [infra, services]
     image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD_required}
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD_required}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 2s
       timeout: 2s
       retries: 10
@@ -136,23 +136,22 @@ services:
     environment:
       POSTGRES_USER: ${DB_USERNAME:-payflow}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-payflow}
+      POSTGRES_DB: payflow
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-postgres.sh:/docker-entrypoint-initdb.d/init.sh:ro
-    read_only: true
     tmpfs:
       - /var/run/postgresql
       - /var/cache/postgresql
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U payflow"]
-      interval: 2s
-      timeout: 2s
-      retries: 15
-      start_period: 5s
+      test: ["CMD", "pg_isready", "-U", "${DB_USERNAME:-payflow}", "-d", "payflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - payflow-network
 
@@ -174,9 +173,9 @@ services:
     environment:
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD_required}
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_required}
-      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET:?GATEWAY_INTERNAL_SECRET_required}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
     depends_on:
       redis:
@@ -193,20 +192,24 @@ services:
     container_name: payflow-auth-service
     ports:
       - "8081:8081"
-    read_only: true
     tmpfs:
       - /tmp
       - /var/cache
     security_opt:
       - no-new-privileges:true
     environment:
+      - LOG_PATH=/dev/null
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_auth
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-redis}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
-      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD_required}
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_required}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - LOG_PATH=/dev/null
+    volumes:
+      - /tmp/payflow-logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -222,18 +225,19 @@ services:
     container_name: payflow-order-service
     ports:
       - "8082:8082"
-    read_only: true
     tmpfs:
       - /tmp
       - /var/cache
     security_opt:
       - no-new-privileges:true
     environment:
+      - LOG_PATH=/dev/null
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_order
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_required}
-      - LOG_PATH=/app/logs
+      - JWT_SECRET=${JWT_SECRET}
+      - LOG_PATH=/dev/null
     depends_on:
       postgres:
         condition: service_healthy
@@ -251,26 +255,27 @@ services:
     container_name: payflow-payment-service
     ports:
       - "8083:8083"
-    read_only: true
     tmpfs:
       - /tmp
       - /var/cache
     security_opt:
       - no-new-privileges:true
     environment:
+      - LOG_PATH=/dev/null
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_payment
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-redis}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
-      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD_required}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_required}
       - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET:?GATEWAY_INTERNAL_SECRET_required}
-      - INTERNAL_SERVICE_SIGNING_SECRET=${INTERNAL_SERVICE_SIGNING_SECRET:?INTERNAL_SERVICE_SIGNING_SECRET_required}
+      - INTERNAL_SERVICE_SIGNING_SECRET=${INTERNAL_SERVICE_SIGNING_SECRET}
       - GATEWAY_TRUST_ENABLED=${GATEWAY_TRUST_ENABLED:-true}
-      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET:?RAZORPAY_WEBHOOK_SECRET_required}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET_required}
-      - STRIPE_SIGNING_SECRET=${STRIPE_SIGNING_SECRET:?STRIPE_SIGNING_SECRET_required}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_SIGNING_SECRET=${STRIPE_SIGNING_SECRET}
       - PAYPAL_WEBHOOK_ID=${PAYPAL_WEBHOOK_ID:-}
     depends_on:
       postgres:
@@ -291,21 +296,21 @@ services:
     container_name: payflow-notification-service
     ports:
       - "8084:8084"
-    read_only: true
     tmpfs:
       - /tmp
       - /var/cache
     security_opt:
       - no-new-privileges:true
     environment:
+      - LOG_PATH=/dev/null
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_notification
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-redis}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
-      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD_required}
-      - WEBHOOK_SIGNATURE_SECRET=${WEBHOOK_SIGNATURE_SECRET:?WEBHOOK_SIGNATURE_SECRET_required}
-
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - WEBHOOK_SIGNATURE_SECRET=${WEBHOOK_SIGNATURE_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
@@ -323,12 +328,13 @@ services:
     container_name: payflow-simulator-service
     ports:
       - "8086:8086"
-    read_only: true
     tmpfs:
       - /tmp
       - /var/cache
     security_opt:
       - no-new-privileges:true
+    environment:
+      - LOG_PATH=/dev/null
     networks:
       - payflow-network
 
@@ -339,7 +345,6 @@ services:
       context: ./frontend/payment-page
       dockerfile: Dockerfile
     container_name: payflow-frontend
-    read_only: true
     tmpfs:
       - /tmp
       - /var/cache/nginx
