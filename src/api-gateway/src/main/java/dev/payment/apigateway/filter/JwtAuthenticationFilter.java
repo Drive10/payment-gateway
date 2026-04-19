@@ -69,6 +69,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
             ServerHttpRequest.Builder requestBuilder = exchange.getRequest().mutate();
             principal.asHeaders().forEach((name, value) -> requestBuilder.header(name, value.toString()));
+            requestBuilder.header("X-Authenticated-User", principal.username());
             return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
         } catch (Exception exception) {
             return writeError(exchange, HttpStatus.UNAUTHORIZED, "INVALID_AUTH_TOKEN", "Token is invalid or expired");
