@@ -90,7 +90,7 @@ services:
     restart: unless-stopped
 
   prometheus:
-    deployment:
+    deploy:
       replicas: 1
 
   grafana:

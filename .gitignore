@@ -23,6 +23,9 @@ __MACOSX/
 # Environment (NEVER COMMIT .env files with real secrets)
 .env
 .env.local
+.env.development
+.env.staging
+.env.production
 .env.*.local
 
 # Logs
