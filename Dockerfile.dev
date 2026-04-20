@@ -1,7 +1,7 @@
 # PayFlow Development Container
 # Usage: docker build -f Dockerfile.dev -t payflow-dev . && docker run -it payflow-dev
 
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:25-jdk
 
 ARG USER=developer
 ARG UID=1000
