@@ -163,9 +163,6 @@
                         <phase>package</phase>
                     </execution>
                 </executions>
-                <configuration>
-                    <classifier>exec</classifier>
-                </configuration>
             </plugin>
         </plugins>
     </build>
