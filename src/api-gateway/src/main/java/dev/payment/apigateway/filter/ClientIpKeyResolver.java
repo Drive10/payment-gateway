@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
 import java.net.InetSocketAddress;
 
 @Component("clientIpKeyResolver")
-public class ClientIpKeyResolver implements KeyResolver {
+public class  ClientIpKeyResolver implements KeyResolver {
 
     @Override
     public Mono<String> resolve(org.springframework.web.server.ServerWebExchange exchange) {

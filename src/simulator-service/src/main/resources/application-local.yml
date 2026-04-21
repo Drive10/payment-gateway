@@ -1,9 +1,22 @@
+# Local development configuration - overrides application.yml
+
 server:
   port: 8086
 
 spring:
   kafka:
     bootstrap-servers: localhost:9092
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+# Disable centralized config for local dev
+payflow:
+  redis:
+    enabled: false
+  kafka:
+    enabled: false
 
 application:
   webhook:

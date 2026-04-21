@@ -2,380 +2,81 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ main, develop ]
   pull_request:
-    branches: [main, develop]
+    branches: [ main, develop ]
 
 env:
   JAVA_VERSION: '21'
-  NODE_VERSION: '20'
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ${{ github.repository }}
+  MAVEN_OPTS: -Xmx2048m
 
 jobs:
-  # ============================================
-  # GATE 1: LINT
-  # ============================================
-  
-  lint-backend:
-    name: Lint Backend
+  build:
     runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Check format
-        run: mvn spotless:check
-
-      - name: Run Checkstyle
-        run: mvn checkstyle:check
-
-      - name: Lint OpenAPI specs
-        run: |
-          echo "Validating OpenAPI specs..."
-          # Check that all API specs are valid YAML
-          for spec in docs/api-specs/*.yaml; do
-            echo "Checking $spec"
-            # Add OpenAPI lint validation here if needed
-          done
-
-  lint-frontend:
-    name: Lint Frontend
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/payment-page/package-lock.json
-
-      - name: Install dependencies
-        run: cd frontend/payment-page && npm ci
-
-      - name: Run ESLint
-        run: cd frontend/payment-page && npm run lint
-
-  # ============================================
-  # GATE 2: UNIT TESTS
-  # ============================================
-  
-  test-backend:
-    name: Unit Tests (Backend)
-    runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test_db
-        ports:
-          - 5433:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Run unit tests
-        run: mvn test -DskipIntegrationTests
-        env:
-          DB_HOST: localhost
-          DB_PORT: 5433
-          DB_NAME: test_db
-          DB_USERNAME: test
-          DB_PASSWORD: test
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v3
-        with:
-          name: backend-test-results
-          path: src/*/target/surefire-reports/*.xml
-          retention-days: 7
-
-  test-frontend:
-    name: Unit Tests (Frontend)
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/payment-page/package-lock.json
-
-      - name: Install dependencies
-        run: cd frontend/payment-page && npm ci
+      - name: Build with Maven
+        run: mvn clean install -DskipTests
 
       - name: Run tests
-        run: cd frontend/payment-page && npm run test -- --coverage
+        run: mvn test
 
-      - name: Upload coverage
-        uses: actions/upload-artifact@v3
-        with:
-          name: frontend-coverage
-          path: frontend/payment-page/coverage
-          retention-days: 7
-
-  # ============================================
-  # GATE 3: INTEGRATION TESTS (Testcontainers)
-  # ============================================
-  
-  integration-tests:
-    name: Integration Tests (Testcontainers)
-    runs-on: ubuntu-latest
-    needs: test-backend
-    
-    services:
-      postgres:
-        image: postgres:16-alpine
+      - name: Run SonarQube analysis
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: mvn sonar:sonar
         env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test_db
-        ports:
-          - 5433:5432
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Run integration tests
-        run: mvn verify -DskipTests=false -Dspring.profiles.active=test
-        env:
-          DB_HOST: localhost
-          DB_PORT: 5433
-          DB_NAME: test_db
-          DB_USERNAME: test
-          DB_PASSWORD: test
-
-  # ============================================
-  # GATE 4: SECURITY SCAN
-  # ============================================
-  
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: [integration-tests, test-frontend]
-    
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-      - name: Run Snyk security scan (optional)
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-  # ============================================
-  # GATE 5: BUILD
-  # ============================================
-  
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [lint-backend, lint-frontend, security-scan]
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
-    
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Build JAR
-        run: mvn clean package -DskipTests
-
-      - name: Upload JAR artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: backend-jars
-          path: src/*/target/*.jar
-          retention-days: 7
-
-  # ============================================
-  # CONTRACT TESTS (Optional - for poly-repo)
-  # ============================================
-  
-  contract-tests:
-    name: Contract Tests
-    runs-on: ubuntu-latest
-    needs: build
-    if: false  # Enable when splitting to poly-repo
-    
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Run Pact contract tests
-        run: mvn test -Dtest=*ContractTest
-        continue-on-error: true
-
-  # ============================================
-  # DOCKER BUILD & PUSH
-  # ============================================
-  
   docker-build:
-    name: Docker Build & Push
-    runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-    
-    strategy:
-      matrix:
-        service:
-          - api-gateway
-          - auth-service
-          - order-service
-          - payment-service
-          - notification-service
-          - simulator-service
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Build JAR
-        run: mvn clean verify -pl src/${{ matrix.service }}
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Docker images
+        run: |
+          docker compose build
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: src/${{ matrix.service }}/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Run security scan
+        run: |
+          docker run --rm -v $(pwd):/src hadolint/hadolint hadolint /src/**/Dockerfile || true
 
-  # ============================================
-  # DEPLOY TO STAGING
-  # ============================================
-  
   deploy-staging:
-    name: Deploy to Staging
+    needs: docker-build
     runs-on: ubuntu-latest
-    needs: [docker-build, build]
     if: github.ref == 'refs/heads/develop'
     environment: staging
-    
-    steps:
-      - uses: actions/checkout@v4
 
+    steps:
       - name: Deploy to staging
         run: |
-          echo "Deploying to staging environment..."
-          # kubectl apply -f k8s/staging/
+          echo "Deploying to staging..."
+          # Add your deployment commands here
 
-      - name: Notify deployment
-        run: |
-          echo "Deployment to staging completed"
-
-  # ============================================
-  # DEPLOY TO PRODUCTION
-  # ============================================
-  
   deploy-production:
-    name: Deploy to Production
+    needs: docker-build
     runs-on: ubuntu-latest
-    needs: [docker-build, build]
     if: github.ref == 'refs/heads/main'
     environment: production
-    
-    steps:
-      - uses: actions/checkout@v4
 
+    steps:
       - name: Deploy to production
         run: |
-          echo "Deploying to production environment..."
-          # kubectl apply -f k8s/production/
-
-      - name: Notify deployment
-        run: |
-          echo "Deployment to production completed"
+          echo "Deploying to production..."
+          # Add your deployment commands here

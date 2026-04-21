@@ -1,0 +1,28 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: template-service
+
+# Enable centralized configuration (disable if service doesn't need DB/Redis/Kafka)
+payflow:
+  database:
+    enabled: ${PAYFLOW_DATABASE_ENABLED:false}
+  redis:
+    enabled: ${PAYFLOW_REDIS_ENABLED:false}
+  kafka:
+    enabled: ${PAYFLOW_KAFKA_ENABLED:false}
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+
+# Logging
+logging:
+  level:
+    root: INFO
+    dev.payment: DEBUG

@@ -1,72 +1,61 @@
+# Local development configuration - overrides application.yml
+
+server:
+  port: 8080
+
 spring:
-  config:
-    activate:
-      on-profile: local
   main:
     web-application-type: reactive
   cloud:
     compatibility-verifier:
       enabled: false
+    gateway:
+      routes:
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - RewritePath=/api/v1/auth/(?<segment>.*), /auth/${segment}
+        - id: order-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/orders/**
+          filters:
+            - StripPrefix=2
+        - id: payment-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/payments/**,/api/v1/admin/**
+          filters:
+            - StripPrefix=2
+        - id: notification-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - StripPrefix=2
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: localhost
+      port: 6379
       password: ${REDIS_PASSWORD:dev-redis-password-123}
+
+# Disable centralized config for local dev
+payflow:
+  database:
+    enabled: false
+  redis:
+    enabled: false
 
 application:
   gateway:
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-gateway-secret-for-local-testing}
+    internal-secret: dev-gateway-secret
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET:dev-only-jwt-secret-minimum-32-chars-required}
-
-  cloud.gateway.routes:
-    - id: auth-service
-      uri: ${AUTH_SERVICE_URL:http://localhost:8081}
-      predicates:
-        - Path=/api/v1/auth/**
-      filters:
-        - RewritePath=/api/v1/auth/(?<segment>.*), /auth/${segment}
-    - id: order-service
-      uri: ${ORDER_SERVICE_URL:http://localhost:8082}
-      predicates:
-        - Path=/api/v1/orders/**
-      filters:
-        - StripPrefix=2
-    - id: payment-service
-      uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
-      predicates:
-        - Path=/api/v1/payments/**,/api/v1/admin/**
-      filters:
-        - StripPrefix=2
-    - id: notification-service
-      uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
-      predicates:
-        - Path=/api/v1/notifications/**
-      filters:
-        - StripPrefix=2
-    - id: analytics-service
-      uri: ${ANALYTICS_SERVICE_URL:http://localhost:8089}
-      predicates:
-        - Path=/api/v1/analytics/**
-      filters:
-        - StripPrefix=2
-    - id: simulator-service
-      uri: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
-      predicates:
-        - Path=/api/v1/simulator/**
-      filters:
-        - StripPrefix=2
-    - id: audit-service
-      uri: ${AUDIT_SERVICE_URL:http://localhost:8090}
-      predicates:
-        - Path=/api/v1/audit/**
-      filters:
-        - StripPrefix=2
-
-server:
-  port: 8080
+    secret-key: ${JWT_SECRET:dev-jwt-secret-key-for-local-testing-must-be-at-least-32-characters}
+    secret-key-base64: ZGV2LWp1dC1zZWNyZXQta2V5LWZvci1sb2NhbC10ZXN0aW5nLW11c3QtYmUtYXQtbGVhc3QtMzItY2hhcmFjdGVycw==
 
 logging:
   level:

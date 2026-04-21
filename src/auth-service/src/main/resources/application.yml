@@ -1,41 +1,19 @@
 server:
-  port: 8081
+  port: ${SERVER_PORT:8081}
 
 spring:
   application:
     name: auth-service
-  datasource:
-    url: jdbc:postgresql://postgres:5432/payflow_auth
-    username: ${DB_USERNAME:payflow}
-    password: ${DB_PASSWORD:payflow}
-    hikari:
-      maximum-pool-size: 15
-      minimum-idle: 3
-      idle-timeout: 300000
-      max-lifetime: 1200000
-      connection-timeout: 25000
-      pool-name: AuthHikariPool
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    open-in-view: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: false
-        jdbc:
-          batch_size: 20
-          time_zone: UTC
-        type:
-          deprecated_uuid_char_type: true
   flyway:
     enabled: false
-  data:
-    redis:
-      host: ${REDIS_HOST:redis}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+
+# PayFlow Centralized Configuration
+payflow:
+  database:
+    enabled: true
+    name: payflow_auth
+  redis:
+    enabled: true
 
 application:
   jwt:
@@ -62,19 +40,6 @@ resilience4j:
         limit-refresh-period: 60s
         timeout-duration: 5s
         register-health-indicator: true
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: when_authorized
-  metrics:
-    export:
-      prometheus:
-        enabled: true
 
 logging:
   level:

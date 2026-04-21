@@ -1,49 +1,22 @@
 server:
-  port: 8082
+  port: ${SERVER_PORT:8082}
   shutdown: graceful
 
 spring:
   application:
     name: order-service
-  datasource:
-    url: jdbc:postgresql://postgres:5432/payflow_order
-    username: ${DB_USERNAME:payflow}
-    password: ${DB_PASSWORD:payflow}
-    driver-class-name: org.postgresql.Driver
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      idle-timeout: 300000
-      max-lifetime: 1200000
-      connection-timeout: 25000
-      pool-name: OrderHikariPool
-  jpa:
-    hibernate:
-      ddl-auto: update
-    open-in-view: false
-    show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        jdbc:
-          batch_size: 20
-        order_inserts: true
-        order_updates: true
-  flyway:
-    enabled: false
+
+# PayFlow Centralized Configuration
+payflow:
+  database:
+    enabled: true
+    name: payflow_order
   kafka:
-    bootstrap-servers: kafka:29092
-    properties:
-      spring.json.trusted.packages: "*"
-    consumer:
-      group-id: order-service
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    enabled: true
+  service:
+    urls:
+      payment: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+      notification: ${NOTIFICATION_SERVICE_URL:http://notification-service:8084}
 
 application:
   security:
@@ -51,56 +24,12 @@ application:
       secret-key: ${JWT_SECRET:ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
       expiration-seconds: 3600
       refresh-expiration-seconds: 2592000
-  payment-service:
-    url: http://payment-service:8083
-  notification-service:
-    url: http://notification-service:8084
   kafka:
     topic:
       order-events: order.events
       order-events-dlt: order.events.dlt
       payment-events: payment.events
       notification-events: notification.events
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: when_authorized
-
-resilience4j:
-  retry:
-    instances:
-      paymentService:
-        max-attempts: 3
-        wait-duration: 500ms
-        retry-exceptions:
-          - java.io.IOException
-          - java.util.concurrent.TimeoutException
-  circuitbreaker:
-    instances:
-      paymentService:
-        sliding-window-type: COUNT_BASED
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 30s
-        permitted-number-of-calls-in-half-open-state: 3
-        slow-call-rate-threshold: 80
-        slow-call-duration-threshold: 5s
-  timelimiter:
-    instances:
-      paymentService:
-        timeout-duration: 10s
-        cancel-running-future: true
-  bulkhead:
-    instances:
-      paymentService:
-        max-concurrent-calls: 10
-        max-wait-duration: 5s
 
 logging:
   level:

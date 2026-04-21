@@ -1,51 +1,23 @@
 server:
-  port: 8084
-  shutdown: graceful
+  port: ${SERVER_PORT:8084}
 
 spring:
   application:
     name: notification-service
-  datasource:
-    url: jdbc:postgresql://postgres:5432/payflow_notification
-    username: ${DB_USERNAME:payflow}
-    password: ${DB_PASSWORD:payflow}
-    driver-class-name: org.postgresql.Driver
-  data:
-    redis:
-      host: ${REDIS_HOST:redis}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-  jpa:
-    hibernate:
-      ddl-auto: update
-    open-in-view: false
-    show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        jdbc:
-          batch_size: 20
-        order_inserts: true
-        order_updates: true
-  flyway:
-    enabled: false
+
+# PayFlow Centralized Configuration
+payflow:
+  database:
+    enabled: true
+    name: payflow_notification
+  redis:
+    enabled: true
   kafka:
-    bootstrap-servers: kafka:29092
-    properties:
-      spring.json.trusted.packages: "*"
-    consumer:
-      group-id: notification-service
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    enabled: true
 
 application:
   payment-service:
-    url: http://payment-service:8083
+    url: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
   kafka:
     topic:
       notification-events: notification.events
@@ -63,15 +35,6 @@ application:
     from-name: Payment Gateway
   sms:
     provider: SIMULATOR
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: when_authorized
 
 logging:
   level:

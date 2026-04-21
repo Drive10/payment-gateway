@@ -1,46 +1,52 @@
+# Local development configuration - overrides application.yml
+
+server:
+  port: 8083
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow_payment
     username: ${DB_USERNAME:payflow}
     password: ${DB_PASSWORD:payflow}
-    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+  flyway:
+    enabled: false
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: localhost
+      port: 6379
       password: ${REDIS_PASSWORD:dev-redis-password-123}
   kafka:
     bootstrap-servers: localhost:9092
+    consumer:
+      group-id: payment-service
+
+# Disable centralized config for local dev (not compatible with current setup)
+payflow:
+  database:
+    enabled: false
+  redis:
+    enabled: false
+  kafka:
+    enabled: false
 
 application:
   gateway-trust:
     enabled: false
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:dev-only-gateway-secret-for-local-testing}
+    internal-secret: dev-gateway-secret-for-local-testing-minimum-32-chars
   internal-auth:
-    signing-secret: ${INTERNAL_SERVICE_SIGNING_SECRET:dev-internal-signing-secret}
+    signing-secret: dev-internal-signing-secret-for-local-testing-minimum-32
   security:
     jwt:
-      secret-key: ${JWT_SECRET:dev-only-jwt-secret-minimum-32-chars-required}
+      secret-key: dev-jwt-secret-key-for-local-testing-must-be-at-least-32-chars
   payment:
     default-provider: RAZORPAY_SIMULATOR
   simulator:
     base-url: http://localhost:8086
   webhook:
     service-url: http://localhost:8084
-    razorpay:
-      secret: ${RAZORPAY_WEBHOOK_SECRET:dev-webhook-secret-for-testing}
-    stripe:
-      secret: ${STRIPE_WEBHOOK_SECRET:dev-stripe-webhook-secret}
-      signing-secret: ${STRIPE_SIGNING_SECRET:dev-stripe-signing-secret}
-    paypal:
-      webhook-id: ${PAYPAL_WEBHOOK_ID:dev-paypal-webhook-id}
-  order:
-    service-url: http://localhost:8082
-  auth:
-    service-url: http://localhost:8081
-
-server:
-  port: 8083
 
 logging:
   level:

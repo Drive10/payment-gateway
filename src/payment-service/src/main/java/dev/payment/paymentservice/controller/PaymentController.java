@@ -71,8 +71,6 @@ public class PaymentController {
         User actor = authService.getCurrentUser(authentication.getName());
         return ApiResponse.success(paymentLinkService.getMerchantPaymentLinks(merchantId));
     }
-
-    @GetMapping("/link/{referenceId}")
     public ApiResponse<PaymentLinkResponse> getPaymentLink(
             @PathVariable("referenceId") String referenceId,
             Authentication authentication) {
