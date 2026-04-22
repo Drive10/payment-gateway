@@ -18,7 +18,6 @@ public class GatewayJwtService {
     private final SecretKey secretKey;
 
     public GatewayJwtService(@Value("${security.jwt.secret-key}") String secretKey) {
-        System.out.println("DEBUG GatewayJwtService secret: " + secretKey);
         byte[] keyBytes;
         try {
             keyBytes = Base64.getDecoder().decode(secretKey);
@@ -30,7 +29,6 @@ public class GatewayJwtService {
 
     @SuppressWarnings("unchecked")
     public GatewayPrincipal validateAccessToken(String token) {
-        System.out.println("DEBUG validateAccessToken called with token starting: " + token.substring(0, Math.min(50, token.length())));
         Claims claims = Jwts.parser()
                 .verifyWith(secretKey)
                 .build()

@@ -48,9 +48,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
-        System.out.println("DEBUG JwtAuthenticationFilter processing: " + path);
         if (isPublic(path)) {
-            System.out.println("DEBUG JwtAuthenticationFilter: public path, skipping auth");
             return chain.filter(exchange);
         }
 

@@ -66,7 +66,6 @@ public class ServiceWaiter implements EnvironmentPostProcessor {
         while (attempt < MAX_ATTEMPTS) {
             try (Socket socket = new Socket()) {
                 socket.connect(new InetSocketAddress(host, port), 5000);
-                System.out.println("✓ " + serviceName + " is ready at " + host + ":" + port);
                 return;
             } catch (Exception e) {
                 attempt++;
@@ -74,7 +73,6 @@ public class ServiceWaiter implements EnvironmentPostProcessor {
                     System.err.println("✗ Failed to connect to " + serviceName + " after " + MAX_ATTEMPTS + " attempts");
                     throw new IllegalStateException(serviceName + " is not available", e);
                 }
-                System.out.println("⏳ Waiting for " + serviceName + " (" + attempt + "/" + MAX_ATTEMPTS + ")...");
                 try {
                     Thread.sleep(SLEEP_DURATION.toMillis());
                 } catch (InterruptedException ie) {
