@@ -1,6 +1,9 @@
 name: payflow
+
 services:
-  # Infrastructure
+  # Full stack in Docker - all services run in containers
+  # Run with: docker compose -f docker-compose.full.yml up -d
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
@@ -10,12 +13,17 @@ services:
       - "2181:2181"
     networks:
       - payflow-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     depends_on:
       zookeeper:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -25,8 +33,14 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - payflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -35,6 +49,11 @@ services:
       - "6379:6379"
     networks:
       - payflow-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "payflow", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres:
     image: postgres:16-alpine
@@ -48,8 +67,12 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - payflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # API Gateway
   api-gateway:
     build:
       context: ./src/api-gateway
@@ -58,8 +81,6 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_CLOUD_GATEWAY_ROUTES: '[{"id":"auth-service","uri":"http://auth-service:8081","predicates":["Path=/api/v1/auth/**"],"filters":["RewritePath=/api/v1(?<segment>.*),$\{segment}"]},{"id":"order-service","uri":"http://order-service:8082","predicates":["Path=/api/v1/orders/**"],"filters":["RewritePath=/api/v1(?<segment>.*),$\{segment}"]},{"id":"payment-service","uri":"http://payment-service:8083","predicates":["Path=/api/v1/payments/**"],"filters":["RewritePath=/api/v1(?<segment>.*),$\{segment}"]}]'
-      PAYFLOW_REDIS_ENABLED: "true"
       PAYFLOW_REDIS_HOST: redis
       PAYFLOW_REDIS_PORT: "6379"
       APPLICATION_JWT_SECRET: payflow-dev-jwt-secret-key-256bits-minimum-for-security
@@ -67,9 +88,9 @@ services:
     networks:
       - payflow-network
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
-  # Auth Service
   auth-service:
     build:
       context: ./src/auth-service
@@ -91,13 +112,14 @@ services:
       APPLICATION_JWT_SECRET: payflow-dev-jwt-secret-key-256bits-minimum-for-security
       APPLICATION_JWT_EXPIRATION: "86400000"
       APPLICATION_JWT_REFRESH_EXPIRATION: "604800000"
-    depends_on:
-      - postgres
-      - redis
     networks:
       - payflow-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
-  # Order Service
   order-service:
     build:
       context: ./src/order-service
@@ -114,14 +136,17 @@ services:
       PAYFLOW_DATABASE_ENABLED: "true"
       PAYFLOW_DATABASE_NAME: payflow_order
       PAYFLOW_KAFKA_ENABLED: "true"
+      PAYMENT_SERVICE_URL: http://payment-service:8083
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
       APPLICATION_SECURITY_JWT_SECRET_KEY: payflow-dev-jwt-secret-key-256bits-minimum-for-security
-    depends_on:
-      - postgres
-      - kafka
     networks:
       - payflow-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 
-  # Payment Service
   payment-service:
     build:
       context: ./src/payment-service
@@ -142,18 +167,22 @@ services:
       PAYFLOW_DATABASE_NAME: payflow_payment
       PAYFLOW_REDIS_ENABLED: "true"
       PAYFLOW_KAFKA_ENABLED: "true"
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
+      AUTH_SERVICE_URL: http://auth-service:8081
       APPLICATION_GATEWAY_TRUST_ENABLED: "true"
       APPLICATION_GATEWAY_TRUST_INTERNAL_SECRET: dev-gateway-secret
       APPLICATION_INTERNAL_AUTH_SIGNING_SECRET: dev-internal-secret
       APPLICATION_SECURITY_JWT_SECRET_KEY: payflow-dev-jwt-secret-key-256bits-minimum-for-security
-    depends_on:
-      - postgres
-      - redis
-      - kafka
     networks:
       - payflow-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 
-  # Notification Service
   notification-service:
     build:
       context: ./src/notification-service
@@ -173,13 +202,15 @@ services:
       PAYFLOW_DATABASE_ENABLED: "true"
       PAYFLOW_DATABASE_NAME: payflow_notification
       PAYFLOW_REDIS_ENABLED: "true"
-    depends_on:
-      - postgres
-      - kafka
+      PAYMENT_SERVICE_URL: http://payment-service:8083
     networks:
       - payflow-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 
-  # Simulator Service
   simulator-service:
     build:
       context: ./src/simulator-service
@@ -191,9 +222,13 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     networks:
       - payflow-network
+    depends_on:
+      kafka:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+    driver: local
 
 networks:
   payflow-network:

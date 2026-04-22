@@ -5,25 +5,26 @@ server:
 spring:
   application:
     name: order-service
+  config:
+    import: optional:file:./application-${SPRING_PROFILES_ACTIVE:default}.yml
 
-# PayFlow Centralized Configuration
 payflow:
   database:
-    enabled: true
+    enabled: ${PAYFLOW_DATABASE_ENABLED:true}
     name: payflow_order
   kafka:
-    enabled: true
+    enabled: ${PAYFLOW_KAFKA_ENABLED:true}
   service:
     urls:
-      payment: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
-      notification: ${NOTIFICATION_SERVICE_URL:http://notification-service:8084}
+      payment: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+      notification: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
 
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET:ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLWNoYW5nZS1pbi1wcm9kdWN0aW9uLTIwMjYtcGF5Zmxvdw==}
-      expiration-seconds: 3600
-      refresh-expiration-seconds: 2592000
+      secret-key: ${JWT_SECRET:payflow-dev-jwt-secret-key-256bits-minimum-for-security}
+      expiration-seconds: ${JWT_EXPIRATION:3600}
+      refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION:2592000}
   kafka:
     topic:
       order-events: order.events
@@ -34,4 +35,4 @@ application:
 logging:
   level:
     root: INFO
-    org.hibernate.SQL: DEBUG
+    dev.payment.orderservice: DEBUG
