@@ -9,10 +9,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.time.Duration;
 
-/**
- * Utility to wait for dependent services to be ready before starting Spring Boot application.
- * This prevents race conditions where services start before databases are fully ready.
- */
 @Component
 public class ServiceWaiter implements EnvironmentPostProcessor {
 
@@ -21,25 +17,17 @@ public class ServiceWaiter implements EnvironmentPostProcessor {
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        // Wait for database to be ready
         waitForDatabase(environment);
-        
-        // Wait for Redis to be ready
         waitForRedis(environment);
-        
-        // Wait for Kafka to be ready
         waitForKafka(environment);
     }
 
     private void waitForDatabase(ConfigurableEnvironment environment) {
         String url = environment.getProperty("SPRING_DATASOURCE_URL");
         if (url != null && url.contains("postgres")) {
-            // Extract host and port from JDBC URL
-            // Format: jdbc:postgresql://host:port/database
             String[] parts = url.split("[:/]");
             String host = parts.length > 3 ? parts[3] : "postgres";
             int port = parts.length > 4 ? Integer.parseInt(parts[4]) : 5432;
-            
             waitForHost(host, port, "PostgreSQL");
         }
     }
@@ -48,7 +36,6 @@ public class ServiceWaiter implements EnvironmentPostProcessor {
         String host = environment.getProperty("SPRING_DATA_REDIS_HOST", "redis");
         String portStr = environment.getProperty("SPRING_DATA_REDIS_PORT", "6379");
         int port = Integer.parseInt(portStr);
-        
         waitForHost(host, port, "Redis");
     }
 
@@ -57,7 +44,6 @@ public class ServiceWaiter implements EnvironmentPostProcessor {
         String[] parts = bootstrapServers.split(":");
         String host = parts.length > 0 ? parts[0] : "kafka";
         int port = parts.length > 1 ? Integer.parseInt(parts[1]) : 9092;
-        
         waitForHost(host, port, "Kafka");
     }
 
@@ -70,7 +56,6 @@ public class ServiceWaiter implements EnvironmentPostProcessor {
             } catch (Exception e) {
                 attempt++;
                 if (attempt >= MAX_ATTEMPTS) {
-                    System.err.println("✗ Failed to connect to " + serviceName + " after " + MAX_ATTEMPTS + " attempts");
                     throw new IllegalStateException(serviceName + " is not available", e);
                 }
                 try {

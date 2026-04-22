@@ -8,10 +8,6 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Validates that required environment variables are set before application starts.
- * Prevents services from starting with missing critical configuration.
- */
 @Component
 public class RequiredEnvironmentValidator implements EnvironmentPostProcessor {
 
