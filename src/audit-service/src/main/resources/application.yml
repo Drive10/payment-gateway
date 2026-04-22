@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: audit-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
 payflow:
   database:
@@ -11,5 +13,6 @@ payflow:
 
 application:
   kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     topic:
       audit-events: audit.events

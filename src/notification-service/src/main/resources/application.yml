@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: notification-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
 payflow:
   database:
@@ -11,8 +13,9 @@ payflow:
 
 application:
   payment-service:
-    url: ${PAYMENT_SERVICE_URL}
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
   kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     topic:
       notification-events: notification.events
       webhook-updates: webhook.updates

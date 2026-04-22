@@ -6,29 +6,36 @@ spring:
     name: api-gateway
   main:
     web-application-type: reactive
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
   cloud:
     gateway:
       routes:
         - id: auth-service
-          uri: http://auth-service:8081
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/api/v1/auth/**
           filters:
             - StripPrefix=1
         - id: order-service
-          uri: http://order-service:8082
+          uri: ${ORDER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/v1/orders/**
           filters:
             - StripPrefix=1
         - id: payment-service
-          uri: http://payment-service:8083
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/v1/payments/**
           filters:
             - StripPrefix=1
         - id: notification-service
-          uri: http://notification-service:8084
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/api/v1/notifications/**
           filters:
@@ -36,7 +43,7 @@ spring:
 
 payflow:
   redis:
-    enabled: true
+    enabled: ${REDIS_ENABLED:true}
 
 security:
   jwt:
@@ -45,7 +52,7 @@ security:
 application:
   jwt:
     secret: ${JWT_SECRET}
-    expiration: 86400000
+    expiration: ${JWT_EXPIRATION:86400000}
 
 logging:
   level:

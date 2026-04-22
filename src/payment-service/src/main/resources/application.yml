@@ -8,10 +8,12 @@ server:
 spring:
   application:
     name: payment-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:5432/${DB_NAME:payflow}
-    username: ${DB_USERNAME:payflow}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:payflow}
+    username: ${POSTGRES_USER:payflow}
+    password: ${POSTGRES_PASSWORD:payflow}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -21,14 +23,19 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=300s
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
 
 payflow:
   service:
     urls:
-      simulator: ${SIMULATOR_SERVICE_URL}
-      notification: ${NOTIFICATION_SERVICE_URL}
-      order: ${ORDER_SERVICE_URL}
-      auth: ${AUTH_SERVICE_URL}
+      simulator: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+      notification: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+      order: ${ORDER_SERVICE_URL:http://localhost:8082}
+      auth: ${AUTH_SERVICE_URL:http://localhost:8081}
 
 application:
   gateway-trust:
@@ -39,8 +46,8 @@ application:
   security:
     jwt:
       secret-key: ${JWT_SECRET}
-      expiration-seconds: 3600
-      refresh-expiration-seconds: 2592000
+      expiration-seconds: ${JWT_EXPIRATION:86400000}
+      refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION:604800000}
   payment:
     default-provider: RAZORPAY_SIMULATOR
     checkout-base-url: ${CHECKOUT_BASE_URL:http://frontend:5173}
@@ -57,6 +64,7 @@ application:
     paypal:
       webhook-id: ${PAYPAL_WEBHOOK_ID}
   kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     topic:
       payment-events: payment.events
       payment-events-dlt: payment.events.dlt

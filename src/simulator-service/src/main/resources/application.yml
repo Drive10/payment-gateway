@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: simulator-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
 simulator:
   enabled: true
