@@ -1,4 +1,4 @@
-server:
+ server:
   port: ${SERVER_PORT:8083}
   shutdown: graceful
   tomcat:
@@ -9,8 +9,6 @@ server:
 spring:
   application:
     name: payment-service
-  config:
-    import: optional:file:./application-${SPRING_PROFILES_ACTIVE:default}.yml
   lifecycle:
     timeout-per-shutdown-phase: 30s
   jpa:
