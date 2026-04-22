@@ -8,10 +8,10 @@ server:
 spring:
   application:
     name: payment-service
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
+    profiles:
+      active: ${SPRING_PROFILES_ACTIVE:local}
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:payflow}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:payflow_order}
     username: ${POSTGRES_USER:payflow}
     password: ${POSTGRES_PASSWORD:payflow}
     driver-class-name: org.postgresql.Driver
@@ -23,11 +23,11 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=300s
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD}
+   data:
+     redis:
+       host: ${REDIS_HOST:localhost}
+       port: ${REDIS_PORT:6379}
+       password: ${REDIS_PASSWORD:payflow}
 
 payflow:
   service:
@@ -40,9 +40,9 @@ payflow:
 application:
   gateway-trust:
     enabled: ${GATEWAY_TRUST_ENABLED:true}
-    internal-secret: ${GATEWAY_INTERNAL_SECRET}
+    internal-secret: ${GATEWAY_INTERNAL_SECRET:payflow-internal-secret-key-for-gateway-trust}
   internal-auth:
-    signing-secret: ${INTERNAL_SERVICE_SIGNING_SECRET}
+    signing-secret: ${INTERNAL_SERVICE_SIGNING_SECRET:payflow-internal-service-signing-secret}
   security:
     jwt:
       secret-key: ${JWT_SECRET}

@@ -25,13 +25,14 @@ payflow:
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET}
+      secret-key: ${JWT_SECRET:payflow-dev-jwt-secret-key-256bits-minimum-for-security}
       expiration-seconds: ${JWT_EXPIRATION:86400000}
       refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION:604800000}
+
+spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    topic:
-      order-events: order.events
-      order-events-dlt: order.events.dlt
-      payment-events: payment.events
-      notification-events: notification.events
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:order-service}
+    template:
+      default-topic: payment.events

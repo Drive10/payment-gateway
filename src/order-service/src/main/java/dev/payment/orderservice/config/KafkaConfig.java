@@ -16,7 +16,7 @@ import java.util.Map;
 @Configuration
 public class KafkaConfig {
 
-    @Value("${spring.kafka.bootstrap-servers}")
+    @Value("${application.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
     @Value("${application.kafka.topic.order-events-dlt:order.events.dlt}")
