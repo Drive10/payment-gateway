@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: api-gateway
+  main:
+    web-application-type: reactive
   cloud:
     gateway:
       routes:
@@ -35,6 +37,10 @@ spring:
 payflow:
   redis:
     enabled: true
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET}
 
 application:
   jwt:
