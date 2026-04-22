@@ -1,0 +1,46 @@
+spring:
+  profiles:
+    active: docker
+  main:
+    web-application-type: reactive
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:payflow}
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - StripPrefix=1
+        - id: order-service
+          uri: ${ORDER_SERVICE_URL:http://order-service:8082}
+          predicates:
+            - Path=/api/v1/orders/**
+          filters:
+            - StripPrefix=1
+        - id: payment-service
+          uri: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+          predicates:
+            - Path=/api/v1/payments/**
+          filters:
+            - StripPrefix=1
+        - id: notification-service
+          uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8084}
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - StripPrefix=1
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET:payflow-dev-jwt-secret-key-256bits-minimum-for-security}
+
+application:
+  jwt:
+    secret: ${JWT_SECRET:payflow-dev-jwt-secret-key-256bits-minimum-for-security}
+    expiration: ${JWT_EXPIRATION:86400000}

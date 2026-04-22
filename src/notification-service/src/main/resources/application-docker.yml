@@ -1,0 +1,19 @@
+spring:
+  profiles:
+    active: docker
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    topic:
+      notification-events: notification.events
+      webhook-updates: webhook.updates
+
+application:
+  payment-service:
+    url: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+  webhook:
+    signature:
+      enabled: true
+      tolerance-seconds: 300
+    retry:
+      interval-ms: 30000
+      max-attempts: 5

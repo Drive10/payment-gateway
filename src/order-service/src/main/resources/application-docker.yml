@@ -1,0 +1,26 @@
+spring:
+  profiles:
+    active: docker
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:payflow}
+    username: ${POSTGRES_USER:payflow}
+    password: ${POSTGRES_PASSWORD:payflow}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET:payflow-dev-jwt-secret-key-256bits-minimum-for-security}
+      expiration-seconds: ${JWT_EXPIRATION:86400000}
+      refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION:604800000}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    topic:
+      order-events: order.events
+      order-events-dlt: order.events.dlt
+      payment-events: payment.events
+      notification-events: notification.events

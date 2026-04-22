@@ -1,0 +1,29 @@
+spring:
+  profiles:
+    active: docker
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:payflow}
+    username: ${POSTGRES_USER:payflow}
+    password: ${POSTGRES_PASSWORD:payflow}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:payflow}
+
+application:
+  jwt:
+    secret: ${JWT_SECRET:payflow-dev-jwt-secret-key-256bits-minimum-for-security}
+    expiration: ${JWT_EXPIRATION:86400000}
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+payflow:
+  service:
+    urls:
+      order: ${ORDER_SERVICE_URL:http://order-service:8082}
+      payment: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
