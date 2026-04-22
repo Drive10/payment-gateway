@@ -58,3 +58,24 @@ mongodb_data/
 *~
 coverage/.env.dev
 *.tsbuildinfo
+
+# Logs
+logs/
+*/logs/
+*.log
+*.log.*
+
+# Build outputs
+target/
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
