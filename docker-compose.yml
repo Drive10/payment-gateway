@@ -1,29 +1,21 @@
 name: payflow
 services:
-  # Infrastructure - Shared
+  # Infrastructure
   zookeeper:
-    profiles: [infra, services]
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 3s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
     networks:
       - payflow-network
 
   kafka:
-    profiles: [infra, services]
     image: confluentinc/cp-kafka:7.5.0
     depends_on:
       zookeeper:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "9092:9092"
     environment:
@@ -33,337 +25,175 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 15s
     networks:
       - payflow-network
 
   redis:
-    profiles: [infra, services]
     image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+    command: redis-server --requirepass payflow
     ports:
       - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 3s
     networks:
       - payflow-network
 
-  zipkin:
-    profiles: [infra, services]
-    image: openzipkin/zipkin:3.4
-    ports:
-      - "9411:9411"
-    networks:
-      - payflow-network
-
-  # Prometheus for metrics
-  prometheus:
-    profiles: [infra, services]
-    image: prom/prometheus:v2.50.1
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./config/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-    networks:
-      - payflow-network
-
-  # Loki for logs
-  loki:
-    profiles: [infra, services]
-    image: grafana/loki:2.9.5
-    container_name: payflow-loki
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./config/monitoring/loki/config.yml:/etc/loki/local-config.yaml:ro
-      - loki_data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
-    networks:
-      - payflow-network
-
-  # Promtail for log shipping to Loki
-  promtail:
-    profiles: [infra, services]
-    image: grafana/promtail:2.9.5
-    container_name: payflow-promtail
-    volumes:
-      - ./config/monitoring/promtail/config.yml:/etc/promtail/config.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    command: -config.file=/etc/promtail/config.yml
-    depends_on:
-      - loki
-    networks:
-      - payflow-network
-
-  # Grafana for metrics & logs visualization
-  grafana:
-    profiles: [infra, services]
-    image: grafana/grafana:11.0.0
-    container_name: payflow-grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_FEATURE_TOGGLES_ENABLE=lokiLogging
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./config/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-    depends_on:
-      - prometheus
-      - loki
-    networks:
-      - payflow-network
-
-  # PostgreSQL - Single instance with multiple databases
   postgres:
-    profiles: [infra, services]
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${DB_USERNAME:-payflow}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-payflow}
+      POSTGRES_USER: payflow
+      POSTGRES_PASSWORD: payflow
       POSTGRES_DB: payflow
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    tmpfs:
-      - /var/run/postgresql
-      - /var/cache/postgresql
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${DB_USERNAME:-payflow}", "-d", "payflow"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
     networks:
       - payflow-network
 
-  # API Gateway (No DB)
+  # API Gateway
   api-gateway:
-    profiles: [services]
     build:
       context: ./src/api-gateway
       dockerfile: Dockerfile
-    container_name: payflow-api-gateway
     ports:
       - "8080:8080"
-    tmpfs:
-      - /tmp
-      - /var/cache
-      - /var/log
-    security_opt:
-      - no-new-privileges:true
     environment:
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - JWT_SECRET=${JWT_SECRET}
-      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
-    depends_on:
-      redis:
-        condition: service_healthy
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_GATEWAY_ROUTES: '[{"id":"auth-service","uri":"http://auth-service:8081","predicates":["Path=/api/v1/auth/**"],"filters":["RewritePath=/api/v1(?<segment>.*),$\{segment}"]},{"id":"order-service","uri":"http://order-service:8082","predicates":["Path=/api/v1/orders/**"],"filters":["RewritePath=/api/v1(?<segment>.*),$\{segment}"]},{"id":"payment-service","uri":"http://payment-service:8083","predicates":["Path=/api/v1/payments/**"],"filters":["RewritePath=/api/v1(?<segment>.*),$\{segment}"]}]'
+      PAYFLOW_REDIS_ENABLED: "true"
+      PAYFLOW_REDIS_HOST: redis
+      PAYFLOW_REDIS_PORT: "6379"
+      APPLICATION_JWT_SECRET: payflow-dev-jwt-secret-key-256bits-minimum-for-security
+      APPLICATION_JWT_EXPIRATION: "86400000"
     networks:
       - payflow-network
+    depends_on:
+      - redis
 
   # Auth Service
   auth-service:
-    profiles: [services]
     build:
       context: ./src/auth-service
       dockerfile: Dockerfile
-    container_name: payflow-auth-service
     ports:
       - "8081:8081"
-    tmpfs:
-      - /tmp
-      - /var/cache
-    security_opt:
-      - no-new-privileges:true
     environment:
-      - LOG_PATH=/dev/null
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_auth
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
-      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-redis}
-      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
-      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
-      - JWT_SECRET=${JWT_SECRET}
-      - LOG_PATH=/dev/null
-    volumes:
-      - /tmp/payflow-logs:/app/logs
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payflow
+      SPRING_DATASOURCE_USERNAME: payflow
+      SPRING_DATASOURCE_PASSWORD: payflow
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATA_REDIS_PASSWORD: payflow
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      PAYFLOW_DATABASE_ENABLED: "true"
+      PAYFLOW_DATABASE_NAME: payflow_auth
+      PAYFLOW_REDIS_ENABLED: "true"
+      APPLICATION_JWT_SECRET: payflow-dev-jwt-secret-key-256bits-minimum-for-security
+      APPLICATION_JWT_EXPIRATION: "86400000"
+      APPLICATION_JWT_REFRESH_EXPIRATION: "604800000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
+      - redis
     networks:
       - payflow-network
 
   # Order Service
   order-service:
-    profiles: [services]
     build:
       context: ./src/order-service
       dockerfile: Dockerfile
-    container_name: payflow-order-service
     ports:
       - "8082:8082"
-    tmpfs:
-      - /tmp
-      - /var/cache
-    security_opt:
-      - no-new-privileges:true
     environment:
-      - LOG_PATH=/dev/null
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_order
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
-      - JWT_SECRET=${JWT_SECRET}
-      - LOG_PATH=/dev/null
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payflow
+      SPRING_DATASOURCE_USERNAME: payflow
+      SPRING_DATASOURCE_PASSWORD: payflow
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      PAYFLOW_DATABASE_ENABLED: "true"
+      PAYFLOW_DATABASE_NAME: payflow_order
+      PAYFLOW_KAFKA_ENABLED: "true"
+      APPLICATION_SECURITY_JWT_SECRET_KEY: payflow-dev-jwt-secret-key-256bits-minimum-for-security
     depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      - postgres
+      - kafka
     networks:
       - payflow-network
 
   # Payment Service
   payment-service:
-    profiles: [services]
     build:
       context: ./src/payment-service
       dockerfile: Dockerfile
-    container_name: payflow-payment-service
     ports:
       - "8083:8083"
-    tmpfs:
-      - /tmp
-      - /var/cache
-    security_opt:
-      - no-new-privileges:true
     environment:
-      - LOG_PATH=/dev/null
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_payment
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
-      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-redis}
-      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
-      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET_required}
-      - GATEWAY_INTERNAL_SECRET=${GATEWAY_INTERNAL_SECRET:?GATEWAY_INTERNAL_SECRET_required}
-      - INTERNAL_SERVICE_SIGNING_SECRET=${INTERNAL_SERVICE_SIGNING_SECRET}
-      - GATEWAY_TRUST_ENABLED=${GATEWAY_TRUST_ENABLED:-true}
-      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      - STRIPE_SIGNING_SECRET=${STRIPE_SIGNING_SECRET}
-      - PAYPAL_WEBHOOK_ID=${PAYPAL_WEBHOOK_ID:-}
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payflow
+      SPRING_DATASOURCE_USERNAME: payflow
+      SPRING_DATASOURCE_PASSWORD: payflow
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATA_REDIS_PASSWORD: payflow
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      PAYFLOW_DATABASE_ENABLED: "true"
+      PAYFLOW_DATABASE_NAME: payflow_payment
+      PAYFLOW_REDIS_ENABLED: "true"
+      PAYFLOW_KAFKA_ENABLED: "true"
+      APPLICATION_GATEWAY_TRUST_ENABLED: "true"
+      APPLICATION_GATEWAY_TRUST_INTERNAL_SECRET: dev-gateway-secret
+      APPLICATION_INTERNAL_AUTH_SIGNING_SECRET: dev-internal-secret
+      APPLICATION_SECURITY_JWT_SECRET_KEY: payflow-dev-jwt-secret-key-256bits-minimum-for-security
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      - postgres
+      - redis
+      - kafka
     networks:
       - payflow-network
 
   # Notification Service
   notification-service:
-    profiles: [services]
     build:
       context: ./src/notification-service
       dockerfile: Dockerfile
-    container_name: payflow-notification-service
     ports:
       - "8084:8084"
-    tmpfs:
-      - /tmp
-      - /var/cache
-    security_opt:
-      - no-new-privileges:true
     environment:
-      - LOG_PATH=/dev/null
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/payflow_notification
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-payflow}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-payflow}
-      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-redis}
-      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
-      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
-      - WEBHOOK_SIGNATURE_SECRET=${WEBHOOK_SIGNATURE_SECRET}
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payflow
+      SPRING_DATASOURCE_USERNAME: payflow
+      SPRING_DATASOURCE_PASSWORD: payflow
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATA_REDIS_PASSWORD: payflow
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      PAYFLOW_DATABASE_ENABLED: "true"
+      PAYFLOW_DATABASE_NAME: payflow_notification
+      PAYFLOW_REDIS_ENABLED: "true"
     depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      - postgres
+      - kafka
     networks:
       - payflow-network
 
   # Simulator Service
   simulator-service:
-    profiles: [services]
     build:
       context: ./src/simulator-service
       dockerfile: Dockerfile
-    container_name: payflow-simulator-service
     ports:
       - "8086:8086"
-    tmpfs:
-      - /tmp
-      - /var/cache
-    security_opt:
-      - no-new-privileges:true
     environment:
-      - LOG_PATH=/dev/null
-    networks:
-      - payflow-network
-
-  # Frontend
-  frontend:
-    profiles: [services]
-    build:
-      context: ./frontend/payment-page
-      dockerfile: Dockerfile
-    container_name: payflow-frontend
-    tmpfs:
-      - /tmp
-      - /var/cache/nginx
-    security_opt:
-      - no-new-privileges:true
-    environment:
-      - VITE_API_BASE_URL=http://api-gateway:8080
-    depends_on:
-      - api-gateway
-    ports:
-      - "5173:80"
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     networks:
       - payflow-network
 
 volumes:
   postgres_data:
-  prometheus_data:
-  loki_data:
-  grafana_data:
 
 networks:
   payflow-network:
