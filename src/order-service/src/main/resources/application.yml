@@ -1,6 +1,5 @@
 server:
   port: ${SERVER_PORT:8082}
-  shutdown: graceful
 
 spring:
   application:
@@ -8,29 +7,17 @@ spring:
 
 payflow:
   database:
-    enabled: ${PAYFLOW_DATABASE_ENABLED:true}
     name: payflow_order
-  kafka:
-    enabled: ${PAYFLOW_KAFKA_ENABLED:true}
-  service:
-    urls:
-      payment: ${PAYMENT_SERVICE_URL:http://localhost:8083}
-      notification: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
 
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET:payflow-dev-jwt-secret-key-256bits-minimum-for-security}
-      expiration-seconds: ${JWT_EXPIRATION:3600}
-      refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION:2592000}
+      secret-key: ${JWT_SECRET}
+      expiration-seconds: 3600
+      refresh-expiration-seconds: 2592000
   kafka:
     topic:
       order-events: order.events
       order-events-dlt: order.events.dlt
       payment-events: payment.events
       notification-events: notification.events
-
-logging:
-  level:
-    root: INFO
-    dev.payment.orderservice: DEBUG

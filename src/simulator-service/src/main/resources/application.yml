@@ -1,6 +1,5 @@
 server:
-  port: 8086
-  shutdown: graceful
+  port: ${SERVER_PORT:8086}
 
 spring:
   application:
@@ -23,17 +22,3 @@ simulator:
     enabled: true
     retry-attempts: 3
     retry-delay-ms: 1000
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: when_authorized
-
-logging:
-  level:
-    root: INFO
-    dev.payment.simulatorservice: DEBUG

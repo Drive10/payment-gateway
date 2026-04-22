@@ -1,45 +1,13 @@
 server:
-  port: 8089
-  shutdown: graceful
+  port: ${SERVER_PORT:8089}
 
 spring:
   application:
     name: analytics-service
-  datasource:
-    url: jdbc:postgresql://postgres:5432/payflow_analytics
-    username: ${DB_USERNAME:payflow}
-    password: ${DB_PASSWORD:payflow}
-    driver-class-name: org.postgresql.Driver
-  data:
-    redis:
-      host: ${REDIS_HOST:redis}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-  jpa:
-    hibernate:
-      ddl-auto: update
-    open-in-view: false
-    show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        jdbc:
-          batch_size: 20
-        order_inserts: true
-        order_updates: true
-  kafka:
-    bootstrap-servers: kafka:29092
-    properties:
-      spring.json.trusted.packages: "*"
-    consumer:
-      group-id: analytics-service
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+payflow:
+  database:
+    name: payflow_analytics
 
 application:
   kafka:
@@ -49,16 +17,3 @@ application:
   analytics:
     batch-size: 100
     window-size: PT1H
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: when_authorized
-
-logging:
-  level:
-    root: INFO

@@ -5,19 +5,13 @@ spring:
   application:
     name: notification-service
 
-# PayFlow Centralized Configuration
 payflow:
   database:
-    enabled: true
     name: payflow_notification
-  redis:
-    enabled: true
-  kafka:
-    enabled: true
 
 application:
   payment-service:
-    url: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+    url: ${PAYMENT_SERVICE_URL}
   kafka:
     topic:
       notification-events: notification.events
@@ -25,17 +19,13 @@ application:
   webhook:
     signature:
       enabled: true
-      secret: ${WEBHOOK_SIGNATURE_SECRET:change-me-in-production}
+      secret: ${WEBHOOK_SIGNATURE_SECRET}
       tolerance-seconds: 300
     retry:
       interval-ms: 30000
       max-attempts: 5
   email:
-    from-address: noreply@payment-gateway.local
-    from-name: Payment Gateway
+    from-address: ${EMAIL_FROM_ADDRESS:noreply@payflow.local}
+    from-name: PayFlow
   sms:
     provider: SIMULATOR
-
-logging:
-  level:
-    root: INFO

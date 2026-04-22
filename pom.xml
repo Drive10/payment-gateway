@@ -13,6 +13,8 @@
     <modules>
         <module>common</module>
         <module>libs/common-config</module>
+        <module>src/analytics-service</module>
+        <module>src/audit-service</module>
         <module>src/order-service</module>
         <module>src/auth-service</module>
         <module>src/api-gateway</module>
