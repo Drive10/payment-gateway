@@ -25,12 +25,14 @@ This starts: PostgreSQL, Redis, Kafka, Zipkin, Prometheus, Loki, Grafana
 
 Run each service via Maven:
 ```bash
-mvn spring-boot:run -pl services/api-gateway
-mvn spring-boot:run -pl services/auth-service
-mvn spring-boot:run -pl services/order-service
-mvn spring-boot:run -pl services/payment-service
-mvn spring-boot:run -pl services/notification-service
-mvn spring-boot:run -pl services/simulator-service
+mvn spring-boot:run -pl src/api-gateway
+mvn spring-boot:run -pl src/auth-service
+mvn spring-boot:run -pl src/order-service
+mvn spring-boot:run -pl src/payment-service
+mvn spring-boot:run -pl src/notification-service
+mvn spring-boot:run -pl src/simulator-service
+mvn spring-boot:run -pl src/analytics-service
+mvn spring-boot:run -pl src/audit-service
 ```
 
 Or create IntelliJ Run Configurations for each service.

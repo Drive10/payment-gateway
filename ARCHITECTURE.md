@@ -9,16 +9,18 @@ PayFlow is currently a **monorepo** containing all microservices:
 ```
 payflow/
 ├── libs/common/              # Shared library (DTOs, exceptions, utils)
-├── services/
+├── src/
 │   ├── api-gateway/          # Central API gateway (8080)
-│   ├── auth-service/         # Authentication & authorization (8081)
+│   ├── auth-service/        # Authentication & authorization (8081)
 │   ├── order-service/        # Orders, merchants, API keys (8082)
-│   ├── payment-service/      # Payment orchestration (8083)
+│   ├── payment-service/     # Payment orchestration (8083)
 │   ├── notification-service/ # Notifications, webhooks (8084)
-│   └── simulator-service/    # Payment simulation (8086)
+│   ├── simulator-service/    # Payment simulation (8086)
+│   ├── analytics-service/   # Analytics & reporting (8089)
+│   └── audit-service/       # Audit logging (8090)
 ├── web/
-│   └── payment-page/        # Customer checkout (React 18)
-└── docker-compose.yml       # Infrastructure services
+│   └── payment-page/       # Customer checkout (React 18)
+└── docker-compose.yml      # Infrastructure services
 ```
 
 ## Services
@@ -31,6 +33,8 @@ payflow/
 | **payment-service** | 8083 | Spring Boot 3 | PostgreSQL |
 | **notification-service** | 8084 | Spring Boot 3 | PostgreSQL |
 | **simulator-service** | 8086 | Spring Boot 3 | PostgreSQL |
+| **analytics-service** | 8089 | Spring Boot 3 | PostgreSQL |
+| **audit-service** | 8090 | Spring Boot 3 | MongoDB |
 
 ## Infrastructure
 

@@ -44,6 +44,8 @@ graph TB
         Payment[Payment Service<br/>:8083]
         Notification[Notification Service<br/>:8084]
         Simulator[Simulator Service<br/>:8086]
+        Analytics[Analytics Service<br/>:8089]
+        Audit[Audit Service<br/>:8090]
     end
 
     subgraph Data
@@ -275,17 +277,18 @@ PAYPAL_CLIENT_SECRET=<paypal-secret>
 ```
 payflow/
 ├── libs/common/                    # Shared DTOs, events, exceptions
-├── services/
-│   ├── api-gateway/               # Routing, auth, rate limiting
-│   ├── auth-service/              # JWT, RBAC, session management
-│   ├── order-service/             # Order lifecycle
-│   ├── payment-service/            # Payment orchestration ⭐
-│   ├── notification-service/       # Email, SMS, webhooks
-│   └── simulator-service/          # Mock payment providers
+├── src/
+│   ├── api-gateway/                 # Routing, auth, rate limiting (8080)
+│   ├── auth-service/               # JWT, RBAC, session management (8081)
+│   ├── order-service/              # Order lifecycle (8082)
+│   ├── payment-service/             # Payment orchestration (8083) ⭐
+│   ├── notification-service/        # Email, SMS, webhooks (8084)
+│   ├── simulator-service/           # Mock payment providers (8086)
+│   ├── analytics-service/           # Analytics & reporting (8089)
+│   └── audit-service/                # Audit logging (8090)
 ├── web/
-│   └── payment-page/              # React checkout UI
-├── infra/                         # Docker, Kubernetes configs
-├── docs/                          # API docs, architecture
+│   └── payment-page/                # Customer checkout (React 18)
+├── docs/                            # API docs, architecture
 └── docker-compose.yml
 ```
 

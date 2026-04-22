@@ -28,6 +28,8 @@
 | **payment-service** | 8083 | /actuator/health |
 | **notification-service** | 8084 | /actuator/health |
 | **simulator-service** | 8086 | /actuator/health |
+| **analytics-service** | 8089 | /actuator/health |
+| **audit-service** | 8090 | /actuator/health |
 | **frontend** | 5173 | N/A |
 
 ---
