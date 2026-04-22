@@ -1,49 +1,62 @@
-.PHONY: help local docker local-stop docker-stop clean build test lint format
+.PHONY: help build test clean up down logs infra
 
 help:
-	@echo "PayFlow - Development Commands"
+	@echo "PayFlow Development Commands"
+	@echo "========================="
+	@echo "  make infra      - Start infrastructure (postgres, redis, kafka)"
+	@echo "  make up        - Start all services"
+	@echo "  make down      - Stop infrastructure"
+	@echo "  make logs      - View logs"
+	@echo "  make build    - Build all JARs"
+	@echo "  make test     - Run tests"
+	@echo "  make clean   - Clean build artifacts"
 	@echo ""
-	@echo "  LOCAL MODE (Infra in Docker, services local)"
-	@echo "    make local        - Start infrastructure + services locally"
-	@echo "    make local-stop   - Stop local services"
-	@echo ""
-	@echo "  DOCKER MODE (Full stack in Docker)"
-	@echo "    make docker       - Start full stack in Docker"
-	@echo "    make docker-stop - Stop Docker stack"
-	@echo ""
-	@echo "  CLEANUP"
-	@echo "    make clean      - Stop all and clean volumes"
-	@echo ""
-	@echo "  BUILD & TEST"
-	@echo "    make build     - Build all services"
-	@echo "    make test     - Run tests"
-	@echo "    make lint    - Run linters"
+	@echo "Service Commands:"
+	@echo "  make auth       - Run auth-service"
+	@echo "  make order     - Run order-service"
+	@echo "  make payment   - Run payment-service"
+	@echo "  make frontend  - Run frontend"
 
-local:
-	./scripts/dev.sh start
+infra:
+	docker compose up -d
 
-local-stop:
-	./scripts/dev.sh stop
+up: infra
+	mvn spring-boot:run -pl src/api-gateway,src/auth-service,src/order-service,src/payment-service,src/notification-service,src/simulator-service
 
-docker:
-	./scripts/docker.sh start
+down:
+	docker compose down
 
-docker-stop:
-	./scripts/docker.sh stop
-
-clean:
-	./scripts/clean.sh all
+logs:
+	docker compose logs -f
 
 build:
 	mvn clean package -DskipTests
 
 test:
-	mvn test
+	mvn test -pl src/payment-service
+	cd frontend/payment-page && npm test
 
-lint:
-	mvn spotless:check
-	cd frontend/payment-page && npm run lint || true
+clean:
+	mvn clean
+	cd frontend/payment-page && rm -rf dist node_modules/.vite
 
-format:
-	mvn spotless:apply
-	cd frontend/payment-page && npm run format || true
+auth:
+	mvn spring-boot:run -pl src/auth-service
+
+order:
+	mvn spring-boot:run -pl src/order-service
+
+payment:
+	mvn spring-boot:run -pl src/payment-service
+
+notification:
+	mvn spring-boot:run -pl src/notification-service
+
+simulator:
+	mvn spring-boot:run -pl src/simulator-service
+
+gateway:
+	mvn spring-boot:run -pl src/api-gateway
+
+frontend:
+	cd frontend/payment-page && npm run dev
