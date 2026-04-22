@@ -16,7 +16,7 @@ import dev.payment.paymentservice.service.AuthService;
 import dev.payment.paymentservice.service.DisputeService;
 import dev.payment.paymentservice.service.FeeConfigService;
 import dev.payment.paymentservice.integration.client.OrderServiceClient;
-import dev.payment.orderservice.dto.OrderResponse;
+import dev.payment.common.dto.OrderResponse;
 import dev.payment.paymentservice.service.PaymentQueryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

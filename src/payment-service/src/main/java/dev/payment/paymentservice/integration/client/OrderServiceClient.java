@@ -3,8 +3,8 @@ package dev.payment.paymentservice.integration.client;
 import dev.payment.paymentservice.config.ServiceConfig;
 import dev.payment.paymentservice.domain.Order;
 import dev.payment.paymentservice.domain.enums.OrderStatus;
-import dev.payment.orderservice.dto.CreateOrderRequest;
-import dev.payment.orderservice.dto.OrderResponse;
+import dev.payment.common.dto.CreateOrderRequest;
+import dev.payment.common.dto.OrderResponse;
 import dev.payment.paymentservice.exception.ApiException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -136,23 +136,23 @@ public class OrderServiceClient {
     }
 
     private OrderResponse mapToOrderResponse(Map<String, Object> data) {
-        dev.payment.orderservice.entity.OrderStatus orderStatus = null;
+        OrderResponse response = new OrderResponse();
+        response.setId(UUID.fromString((String) data.get("id")));
+        response.setUserId(data.get("userId") != null ? UUID.fromString((String) data.get("userId")) : null);
+        response.setOrderReference((String) data.get("orderReference"));
+        response.setExternalReference((String) data.get("externalReference"));
+        response.setMerchantId((String) data.get("merchantId"));
+        response.setAmount(new BigDecimal(data.get("amount").toString()));
+        response.setCurrency((String) data.get("currency"));
+        response.setDescription((String) data.get("description"));
+        response.setCreatedAt(Instant.parse((String) data.get("createdAt")));
+        response.setCustomerEmail((String) data.get("customerEmail"));
+        
         if (data.get("status") != null) {
-            orderStatus = dev.payment.orderservice.entity.OrderStatus.valueOf((String) data.get("status"));
+            response.setStatus((String) data.get("status"));
         }
-        return new OrderResponse(
-                UUID.fromString((String) data.get("id")),
-                data.get("userId") != null ? UUID.fromString((String) data.get("userId")) : null,
-                (String) data.get("orderReference"),
-                (String) data.get("externalReference"),
-                (String) data.get("merchantId"),
-                new BigDecimal(data.get("amount").toString()),
-                (String) data.get("currency"),
-                orderStatus,
-                (String) data.get("description"),
-                Instant.parse((String) data.get("createdAt")),
-                (String) data.get("customerEmail")
-        );
+        
+        return response;
     }
 
     @Retry(name = "orderService")
