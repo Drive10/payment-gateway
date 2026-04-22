@@ -13,8 +13,6 @@ spring:
     hibernate:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
-  flyway:
-    enabled: false
 
 server:
   port: 8081

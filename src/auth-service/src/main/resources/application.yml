@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: auth-service
-  flyway:
-    enabled: false
 
 # PayFlow Centralized Configuration
 payflow:

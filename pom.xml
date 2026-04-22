@@ -31,7 +31,6 @@
         <springdoc.version>2.5.0</springdoc.version>
         <jjwt.version>0.12.5</jjwt.version>
         <resilience4j.version>2.2.0</resilience4j.version>
-        <flyway.version>10.17.0</flyway.version>
         <opentelemetry.version>1.32.0</opentelemetry.version>
         <opentelemetry-exporter-jaeger.version>1.32.0</opentelemetry-exporter-jaeger.version>
         <sonar.host.url>http://localhost:9000</sonar.host.url>
@@ -91,16 +90,6 @@
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
                 <version>42.7.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.flywaydb</groupId>
-                <artifactId>flyway-core</artifactId>
-                <version>${flyway.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.flywaydb</groupId>
-                <artifactId>flyway-database-postgresql</artifactId>
-                <version>${flyway.version}</version>
             </dependency>
             <!-- OpenTelemetry Dependencies -->
             <dependency>

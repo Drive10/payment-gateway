@@ -1,0 +1,27 @@
+# Local Development Profile
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payflow
+    username: payflow
+    password: payflow
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: payflow
+
+payflow:
+  redis:
+    enabled: true
+
+application:
+  jwt:
+    secret: cGF5Zmxvdy1kZXYtanR0LXNlY3JldC1rZXktMjU2Yml0cy1taW5pbXVtLWZvci1zZWN1cml0eQ==
+    expiration: 86400000
+    refresh-expiration: 604800000
+
+logging:
+  level:
+    root: INFO
+    dev.payment.authservice: DEBUG

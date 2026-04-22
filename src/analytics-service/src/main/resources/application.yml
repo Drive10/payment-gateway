@@ -28,8 +28,6 @@ spring:
           batch_size: 20
         order_inserts: true
         order_updates: true
-  flyway:
-    enabled: false
   kafka:
     bootstrap-servers: kafka:29092
     properties:

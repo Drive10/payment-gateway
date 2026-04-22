@@ -57,7 +57,6 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-payflow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payflow}
-      POSTGRES_DB: ${POSTGRES_DB:-payflow}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -69,6 +68,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  postgres-init:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-payflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payflow}
+    volumes:
+      - ./infra/postgres-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    networks:
+      - payflow-network
 
 volumes:
   postgres_data:
