@@ -161,7 +161,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>dev.payment.combinedservice.CombinedServiceApplication</mainClass>
+                    <mainClass>dev.payment.paymentservice.PaymentServiceApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>
