@@ -57,6 +57,8 @@ public class SecurityConfig {
                         .requestMatchers("/payments/initiate").permitAll()
                         .requestMatchers("/payments/tokenize").permitAll()
                         .requestMatchers("/payments/**").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
