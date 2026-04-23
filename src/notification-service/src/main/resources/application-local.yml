@@ -1,0 +1,12 @@
+# Notification Service - Local Development Configuration
+server:
+  port: ${SERVER_PORT:8084}
+
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+application:
+  webhook:
+    max-retries: 1
+    timeout-ms: 2000

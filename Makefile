@@ -73,19 +73,19 @@ gateway:
 	mvn spring-boot:run -pl src/api-gateway
 
 payment:
-	mvn spring-boot:run -pl src/payment-service
+	mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local
 
 notification:
-	mvn spring-boot:run -pl src/notification-service
+	mvn spring-boot:run -pl src/notification-service -Dspring-boot.run.profiles=local
 
 simulator:
-	mvn spring-boot:run -pl src/simulator-service
+	mvn spring-boot:run -pl src/simulator-service -Dspring-boot.run.profiles=local
 
 analytics:
-	mvn spring-boot:run -pl src/analytics-service
+	mvn spring-boot:run -pl src/analytics-service -Dspring-boot.run.profiles=local
 
 audit:
-	mvn spring-boot:run -pl src/audit-service
+	mvn spring-boot:run -pl src/audit-service -Dspring-boot.run.profiles=local
 
 frontend:
 	cd frontend/payment-page && npm run dev
@@ -95,6 +95,28 @@ all-services:
 		-pl src/api-gateway,src/payment-service,src/notification-service,src/simulator-service,src/audit-service,src/analytics-service
 
 dev: infra-up all-services frontend
+
+# Selective development targets
+dev-payment: infra-up
+	mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local
+
+dev-frontend:
+	cd frontend/payment-page && npm run dev
+
+dev-lite: 
+	$(MAKE) infra-up
+	$(MAKE) dev-payment & 
+	$(MAKE) dev-frontend
+	wait
+
+dev-gateway: infra-up
+	mvn spring-boot:run -pl src/api-gateway -Dspring-boot.run.profiles=local
+
+dev-notification: infra-up
+	mvn spring-boot:run -pl src/notification-service -Dspring-boot.run.profiles=local
+
+dev-simulator: infra-up
+	mvn spring-boot:run -pl src/simulator-service -Dspring-boot.run.profiles=local
 
 # =============================================================================
 # Logs

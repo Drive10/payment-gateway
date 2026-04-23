@@ -1,0 +1,46 @@
+# Payment Service - Local Development Configuration
+server:
+  port: ${SERVER_PORT:8083}
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  redis:
+    timeout: 5000ms
+  kafka:
+    consumer:
+      properties:
+        spring.json.trusted.packages: "dev.payment.*"
+
+application:
+  gateway-trust:
+    enabled: false
+  idempotency:
+    redis-ttl-hours: 1
+  expiration:
+    enabled: true
+    timeout: PT1M
+    upi-timeout: PT30S
+  webhook:
+    max-retries: 1
+    timeout-ms: 2000
+  kafka:
+    topic:
+      payment-events: payment.events.local
+      payment-events-dlt: payment.events.dlt.local
+      payment-status-updated: payment.status.updated.local
+      webhook-updates: webhook.updates.local
+  simulator:
+    base-url: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      paymentProvider:
+        sliding-window-size: 5
+        minimum-number-of-calls: 3
+        permitted-number-of-calls-in-half-open-state: 2
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 30

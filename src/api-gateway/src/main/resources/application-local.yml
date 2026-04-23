@@ -1,0 +1,37 @@
+# API Gateway - Local Development Configuration
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    timeout: 5000ms
+  kafka:
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+application:
+  jwt:
+    secret-key: ${JWT_SECRET:dev-jwt-secret-key-for-testing-only}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+    refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:2592000}
+  simulator:
+    base-url: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+  webhook:
+    service-url: ${WEBHOOK_SERVICE_URL:http://localhost:8084}
+    max-retries: ${WEBHOOK_MAX_RETRIES:1}
+    timeout-ms: ${WEBHOOK_TIMEOUT_MS:2000}
+    razorpay:
+      secret: ${RAZORPAY_WEBHOOK_SECRET:dev_razorpay_secret}
+    stripe:
+      secret: ${STRIPE_WEBHOOK_SECRET:dev_stripe_secret}
+    paypal:
+      webhook-id: ${PAYPAL_WEBHOOK_ID:dev_paypal_webhook_id}
+
+resilience4j:
+  ratelimiter:
+    instances:
+      default:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 5s
