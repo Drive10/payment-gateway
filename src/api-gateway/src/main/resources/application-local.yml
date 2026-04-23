@@ -3,6 +3,12 @@ server:
   port: ${SERVER_PORT:8080}
 
 spring:
+  webflux:
+    cors:
+      allowed-origins: "http://localhost:5173,http://127.0.0.1:5173"
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}

@@ -15,6 +15,9 @@ spring:
         spring.json.trusted.packages: "dev.payment.*"
 
 application:
+  bootstrap:
+    admin-email: admin@payflow.dev
+    admin-password: admin123
   gateway-trust:
     enabled: false
   idempotency:

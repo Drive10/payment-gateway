@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,6 +55,8 @@ public class AuthService {
         user.setPasswordHash("");
         user.setActive(true);
         user.setEnabled(true);
+        user.setCreatedAt(Instant.now());
+        user.setUpdatedAt(Instant.now());
         return user;
     }
 

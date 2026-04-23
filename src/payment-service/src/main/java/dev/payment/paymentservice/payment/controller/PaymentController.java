@@ -89,7 +89,8 @@ public class PaymentController {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "MISSING_IDEMPOTENCY_KEY", "Idempotency-Key header is required");
         }
-        User actor = authService.getCurrentUser(authentication.getName());
+        String username = authentication != null ? authentication.getName() : "anonymous";
+        User actor = authService.getCurrentUser(username);
         return ApiResponse.success(paymentService.createPayment(request, idempotencyKey, actor));
     }
 
@@ -98,7 +99,8 @@ public class PaymentController {
             @PathVariable("paymentId") UUID paymentId,
             @Valid @RequestBody CapturePaymentRequest request,
             Authentication authentication) {
-        User actor = authService.getCurrentUser(authentication.getName());
+        String username = authentication != null ? authentication.getName() : "anonymous";
+        User actor = authService.getCurrentUser(username);
         return ApiResponse.success(paymentService.capturePayment(paymentId, request, actor));
     }
 
@@ -111,7 +113,8 @@ public class PaymentController {
         if (otp == null || otp.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "MISSING_OTP", "OTP is required");
         }
-        User actor = authService.getCurrentUser(authentication.getName());
+        String username = authentication != null ? authentication.getName() : "anonymous";
+        User actor = authService.getCurrentUser(username);
         return ApiResponse.success(paymentService.verifyOtp(paymentId, otp, actor));
     }
 

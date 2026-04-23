@@ -1,0 +1,32 @@
+server:
+  port: ${SERVER_PORT:8086}
+
+spring:
+  application:
+    name: simulator-service
+  profiles:
+    active: docker
+
+simulator:
+  enabled: true
+  async-webhooks: true
+  latency:
+    min-ms: 300
+    max-ms: 800
+  failure-rate: 0.1
+  modes:
+    success: "4111111111111111"
+    declined: "4000000000000002"
+    insufficient-funds: "4000000000009995"
+    expired: "4000000000000001"
+    processing-error: "5000000000000000"
+  webhook:
+    enabled: true
+    retry-attempts: 3
+    retry-delay-ms: 1000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

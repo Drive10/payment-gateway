@@ -1,0 +1,123 @@
+server:
+  port: ${SERVER_PORT:8083}
+
+spring:
+  application:
+    name: payment-service
+  profiles:
+    active: docker
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:payflow}
+    username: ${POSTGRES_USER:payflow}
+    password: ${POSTGRES_PASSWORD:payflow}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:payflow}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    consumer:
+      group-id: payment-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "dev.payment.*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+application:
+  bootstrap:
+    admin-email: ${ADMIN_EMAIL:admin@payflow.dev}
+    admin-password: ${ADMIN_PASSWORD:admin123}
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET:payflow-dev-jwt-secret-key-256bits-minimum-for-security}
+      expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+      refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:2592000}
+  simulator:
+    base-url: ${SIMULATOR_SERVICE_URL:http://simulator-service:8086}
+  idempotency:
+    redis-ttl-hours: ${IDEMPOTENCY_REDIS_TTL_HOURS:24}
+  expiration:
+    enabled: ${PAYMENT_EXPIRATION_ENABLED:true}
+    timeout: ${PAYMENT_EXPIRATION_TIMEOUT:PT15M}
+    upi-timeout: ${PAYMENT_UPI_EXPIRATION_TIMEOUT:PT5M}
+  webhook:
+    service-url: ${WEBHOOK_SERVICE_URL:http://notification-service:8084}
+    max-retries: ${WEBHOOK_MAX_RETRIES:3}
+    timeout-ms: ${WEBHOOK_TIMEOUT_MS:5000}
+    razorpay:
+      secret: ${RAZORPAY_WEBHOOK_SECRET:dev_razorpay_secret}
+    stripe:
+      secret: ${STRIPE_WEBHOOK_SECRET:dev_stripe_secret}
+    paypal:
+      webhook-id: ${PAYPAL_WEBHOOK_ID:dev_paypal_webhook_id}
+  kafka:
+    topic:
+      payment-events: ${KAFKA_TOPIC_PAYMENT_EVENTS:payment.events}
+      payment-events-dlt: ${KAFKA_TOPIC_PAYMENT_EVENTS_DLT:payment.events.dlt}
+      payment-status-updated: ${KAFKA_TOPIC_PAYMENT_STATUS_UPDATED:payment.status.updated}
+      webhook-updates: ${KAFKA_TOPIC_WEBHOOK_UPDATES:webhook.updates}
+  jwt:
+    secret: ${JWT_SECRET:payflow-dev-jwt-secret-key-256bits-minimum-for-security}
+    expiration: ${JWT_EXPIRATION:86400000}
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+payflow:
+  service:
+    urls:
+      order: ${ORDER_SERVICE_URL:http://payment-service:8083}
+      payment: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+      auth: ${AUTH_SERVICE_URL:http://payment-service:8083}
+
+resilience4j:
+  ratelimiter:
+    instances:
+      login:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 10s
+      register:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 30s
+      refresh:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 5s
+      payment-create:
+        limit-for-period: 50
+        limit-refresh-period: 60s
+        timeout-duration: 10s
+      payment-refund:
+        limit-for-period: 30
+        limit-refresh-period: 60s
+        timeout-duration: 10s
+  circuitbreaker:
+    instances:
+      paymentProvider:
+        register-health-indicator: true
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-duration-threshold: 60s
+        slow-call-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        failure-rate-threshold: 50
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
