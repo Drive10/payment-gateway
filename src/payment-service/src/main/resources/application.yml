@@ -1,17 +1,13 @@
 server:
-  port: ${SERVER_PORT:8083}
-  tomcat:
-    max-threads: 200
-    accept-count: 100
-    connection-timeout: 20000
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
-    name: payment-service
-    profiles:
-      active: ${SPRING_PROFILES_ACTIVE:local}
+    name: combined-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:payflow_order}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:payflow}
     username: ${POSTGRES_USER:payflow}
     password: ${POSTGRES_PASSWORD:payflow}
     driver-class-name: org.postgresql.Driver
@@ -19,124 +15,68 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
-  cache:
-    type: caffeine
-    caffeine:
-      spec: maximumSize=1000,expireAfterWrite=300s
-   data:
-     redis:
-       host: ${REDIS_HOST:localhost}
-       port: ${REDIS_PORT:6379}
-       password: ${REDIS_PASSWORD:payflow}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: payflow
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: combined-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+application:
+  jwt:
+    secret: ${JWT_SECRET:Q00qVqgM+A1zSb7FBfSGx6vzK9sUZhpxP5aBzWlLvp0=}
+    expiration: ${JWT_EXPIRATION:86400000}
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
 payflow:
   service:
     urls:
-      simulator: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
-      notification: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
-      order: ${ORDER_SERVICE_URL:http://localhost:8082}
-      auth: ${AUTH_SERVICE_URL:http://localhost:8081}
-
-application:
-  gateway-trust:
-    enabled: ${GATEWAY_TRUST_ENABLED:true}
-    internal-secret: ${GATEWAY_INTERNAL_SECRET:payflow-internal-secret-key-for-gateway-trust}
-  internal-auth:
-    signing-secret: ${INTERNAL_SERVICE_SIGNING_SECRET:payflow-internal-service-signing-secret}
-  security:
-    jwt:
-      secret-key: ${JWT_SECRET}
-      expiration-seconds: ${JWT_EXPIRATION:86400000}
-      refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION:604800000}
-  payment:
-    default-provider: RAZORPAY_SIMULATOR
-    checkout-base-url: ${CHECKOUT_BASE_URL:http://frontend:5173}
-    vpa: payflow@upi
-    merchant-name: PayFlow Merchant
-  webhook:
-    max-retries: 3
-    timeout-ms: 5000
-    stripe:
-      secret: ${STRIPE_WEBHOOK_SECRET}
-      signing-secret: ${STRIPE_SIGNING_SECRET}
-    razorpay:
-      secret: ${RAZORPAY_WEBHOOK_SECRET}
-    paypal:
-      webhook-id: ${PAYPAL_WEBHOOK_ID}
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    topic:
-      payment-events: payment.events
-      payment-events-dlt: payment.events.dlt
-      payment-status-updated: payment.status.updated
-      webhook-updates: webhook.updates
-    consumer:
-      retry-attempts: 3
-      retry-backoff-ms: 1000
-  outbox:
-    relay-delay-ms: 2000
-  idempotency:
-    redis-ttl-hours: 24
-  reconciliation:
-    enabled: true
-    batch-size: 50
-  expiration:
-    enabled: true
-    timeout: PT15M
-    upi-timeout: PT5M
-    lookback: PT6H
+      # Internal service URLs (now internal calls, but keeping for external compatibility)
+      order: ${ORDER_SERVICE_URL:http://localhost:8080}
+      payment: ${PAYMENT_SERVICE_URL:http://localhost:8080}
+      auth: ${AUTH_SERVICE_URL:http://localhost:8080}
 
 resilience4j:
-  retry:
+  ratelimiter:
     instances:
-      razorpay:
-        max-attempts: 3
-        wait-duration: 500ms
-      stripe:
-        max-attempts: 3
-        wait-duration: 500ms
-      paypal:
-        max-attempts: 3
-        wait-duration: 500ms
-      orderService:
-        max-attempts: 3
-        wait-duration: 300ms
-      notificationService:
-        max-attempts: 2
-        wait-duration: 200ms
+      login:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 10s
+      register:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 30s
+      refresh:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 5s
+      # Additional limiters for payment service
+      payment-create:
+        limit-for-period: 50
+        limit-refresh-period: 60s
+        timeout-duration: 10s
+      payment-refund:
+        limit-for-period: 30
+        limit-refresh-period: 60s
+        timeout-duration: 10s
   circuitbreaker:
     instances:
-      razorpay:
-        sliding-window-type: COUNT_BASED
+      paymentProvider:
+        register-health-indicator: true
         sliding-window-size: 10
         minimum-number-of-calls: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 60s
-      stripe:
-        sliding-window-type: COUNT_BASED
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 60s
-      paypal:
-        sliding-window-type: COUNT_BASED
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 60s
-      orderService:
-        sliding-window-size: 10
-        failure-rate-threshold: 50
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-duration-threshold: 60s
+        slow-call-rate-threshold: 50
         wait-duration-in-open-state: 30s
-      notificationService:
-        sliding-window-size: 10
         failure-rate-threshold: 50
-        wait-duration-in-open-state: 30s
-  timelimiter:
-    instances:
-      razorpay:
-        timeout-duration: 10s
-      stripe:
-        timeout-duration: 10s
-      paypal:
-        timeout-duration: 10s
