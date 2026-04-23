@@ -145,10 +145,8 @@ public class PaymentOutboxRelay {
             log.info("event=outbox_relayed outboxId={} eventType={} topic={} correlationId={}",
                     event.getId(), event.getEventType(), event.getTopicName(), correlationId);
         } catch (java.util.concurrent.TimeoutException e) {
-            Thread.currentThread().interrupt();
             handleFailure(event, "Kafka send timeout after 30s");
         } catch (java.util.concurrent.ExecutionException e) {
-            Thread.currentThread().interrupt();
             handleFailure(event, e.getCause() != null ? e.getCause().getMessage() : "Kafka execution error");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

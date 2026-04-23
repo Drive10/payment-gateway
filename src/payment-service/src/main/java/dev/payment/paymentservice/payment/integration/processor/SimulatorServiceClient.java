@@ -34,7 +34,7 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
     @Retry(name = "simulator")
     @CircuitBreaker(name = "simulator", fallbackMethod = "createIntentFallback")
     public PaymentProcessorIntentResponse createIntent(Payment payment, String orderReference, TransactionMode mode) {
-        String simulationMode = resolveSimulationMode(mode);
+        String simulationMode = resolveSimulationMode(mode, payment.getNotes());
         SimulatorIntentRequest request = new SimulatorIntentRequest(
                 orderReference,
                 payment.getIdempotencyKey(),
@@ -65,7 +65,18 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
                 .block();
     }
 
-    private String resolveSimulationMode(TransactionMode mode) {
+    private String resolveSimulationMode(TransactionMode mode, String notes) {
+        if (notes != null && !notes.isBlank()) {
+            for (String token : notes.split("\\|")) {
+                String normalized = token.trim().toUpperCase();
+                if (normalized.startsWith("SIM_MODE=")) {
+                    String hint = normalized.substring("SIM_MODE=".length()).trim();
+                    if (!hint.isBlank()) {
+                        return hint;
+                    }
+                }
+            }
+        }
         return mode == TransactionMode.TEST ? "TEST" : "SUCCESS";
     }
 
@@ -80,7 +91,7 @@ public class SimulatorServiceClient implements PaymentProcessorClient {
     @Retry(name = "simulator")
     @CircuitBreaker(name = "simulator", fallbackMethod = "captureFallback")
     public PaymentProcessorCaptureResponse capture(Payment payment, CapturePaymentRequest request, TransactionMode mode) {
-        String simulationMode = resolveSimulationMode(mode);
+        String simulationMode = resolveSimulationMode(mode, payment.getNotes());
         SimulatorCaptureRequest captureRequest = new SimulatorCaptureRequest(
                 payment.getIdempotencyKey(),
                 simulationMode

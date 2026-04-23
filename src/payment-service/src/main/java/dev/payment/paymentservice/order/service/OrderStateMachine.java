@@ -45,9 +45,10 @@ public class OrderStateMachine {
 
         EnumSet<OrderStatus> allowedTargets = ALLOWED_TRANSITIONS.getOrDefault(current, EnumSet.noneOf(OrderStatus.class));
         if (!allowedTargets.contains(targetStatus)) {
-            throw new OrderException(HttpStatus.CONFLICT,
+            throw new OrderException(
+                    "Cannot transition order from " + current + " to " + targetStatus + ". Allowed: " + allowedTargets,
                     "INVALID_ORDER_STATE_TRANSITION",
-                    "Cannot transition order from " + current + " to " + targetStatus + ". Allowed: " + allowedTargets);
+                    409);
         }
 
         OrderStatus previousStatus = current;

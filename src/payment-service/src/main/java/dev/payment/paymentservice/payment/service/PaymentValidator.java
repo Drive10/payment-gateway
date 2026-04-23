@@ -1,10 +1,9 @@
 package dev.payment.paymentservice.payment.service;
 
 import dev.payment.paymentservice.payment.domain.Payment;
-import dev.payment.paymentservice.payment.domain.enums.TransactionMode;
+import dev.payment.paymentservice.payment.domain.enums.PaymentMethod;
 import dev.payment.paymentservice.payment.dto.request.CreatePaymentRequest;
 import dev.payment.paymentservice.payment.exception.ApiException;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -31,6 +30,20 @@ public class PaymentValidator {
         if (request.provider() != null && !isValidProvider(request.provider())) {
             errors.add("Invalid payment provider");
         }
+
+        if (request.method() == PaymentMethod.UPI
+                && request.provider() != null
+                && !request.provider().toUpperCase().contains("RAZORPAY")) {
+            errors.add("UPI flow currently supports RAZORPAY provider only");
+        }
+
+        // Basic fraud/risk heuristics for test mode simulation.
+        if (request.notes() != null) {
+            String notes = request.notes().toLowerCase();
+            if (notes.contains("stolen") || notes.contains("fraud") || notes.contains("blacklisted")) {
+                errors.add("Payment blocked by basic fraud policy");
+            }
+        }
         
         return errors;
     }
@@ -55,7 +68,10 @@ public class PaymentValidator {
     private boolean isValidProvider(String provider) {
         return provider == null || 
                provider.equals("RAZORPAY") || 
+               provider.equals("PAYPAL") ||
                provider.equals("STRIPE") ||
-               provider.equals("RAZORPAY_SIMULATOR");
+               provider.equals("RAZORPAY_SIMULATOR") ||
+               provider.equals("PAYPAL_SIMULATOR") ||
+               provider.equals("STRIPE_SIMULATOR");
     }
 }

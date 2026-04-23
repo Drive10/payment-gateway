@@ -1,28 +1,33 @@
 package dev.payment.paymentservice.order.exception;
 
-import org.springframework.http.HttpStatus;
-
 public class OrderException extends RuntimeException {
-    private final HttpStatus status;
-    private final String code;
 
-    public OrderException(String message) {
+    private final String errorCode;
+    private final int httpStatus;
+
+    public OrderException(String message, String errorCode, int httpStatus) {
         super(message);
-        this.status = HttpStatus.BAD_REQUEST;
-        this.code = "ORDER_ERROR";
+        this.errorCode = errorCode;
+        this.httpStatus = httpStatus;
     }
 
-    public OrderException(HttpStatus status, String code, String message) {
-        super(message);
-        this.status = status;
-        this.code = code;
+    public String getErrorCode() {
+        return errorCode;
     }
 
-    public HttpStatus getStatus() {
-        return status;
+    public int getHttpStatus() {
+        return httpStatus;
     }
 
-    public String getCode() {
-        return code;
+    public static OrderException notFound(String message) {
+        return new OrderException(message, "ORDER_NOT_FOUND", 404);
+    }
+
+    public static OrderException invalidState(String message) {
+        return new OrderException(message, "INVALID_ORDER_STATE", 400);
+    }
+
+    public static OrderException forbidden(String message) {
+        return new OrderException(message, "ORDER_FORBIDDEN", 403);
     }
 }

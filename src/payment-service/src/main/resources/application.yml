@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: combined-service
+    name: payment-service
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
   datasource:
@@ -23,15 +23,46 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
-      group-id: combined-service
+      group-id: payment-service
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "dev.payment.*"
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+      refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:2592000}
+  simulator:
+    base-url: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
+  idempotency:
+    redis-ttl-hours: ${IDEMPOTENCY_REDIS_TTL_HOURS:24}
+  expiration:
+    enabled: ${PAYMENT_EXPIRATION_ENABLED:true}
+    timeout: ${PAYMENT_EXPIRATION_TIMEOUT:PT15M}
+    upi-timeout: ${PAYMENT_UPI_EXPIRATION_TIMEOUT:PT5M}
+  webhook:
+    service-url: ${WEBHOOK_SERVICE_URL:http://localhost:8084}
+    max-retries: ${WEBHOOK_MAX_RETRIES:3}
+    timeout-ms: ${WEBHOOK_TIMEOUT_MS:5000}
+    razorpay:
+      secret: ${RAZORPAY_WEBHOOK_SECRET:dev_razorpay_secret}
+    stripe:
+      secret: ${STRIPE_WEBHOOK_SECRET:dev_stripe_secret}
+    paypal:
+      webhook-id: ${PAYPAL_WEBHOOK_ID:dev_paypal_webhook_id}
+  kafka:
+    topic:
+      payment-events: ${KAFKA_TOPIC_PAYMENT_EVENTS:payment.events}
+      payment-events-dlt: ${KAFKA_TOPIC_PAYMENT_EVENTS_DLT:payment.events.dlt}
+      payment-status-updated: ${KAFKA_TOPIC_PAYMENT_STATUS_UPDATED:payment.status.updated}
+      webhook-updates: ${KAFKA_TOPIC_WEBHOOK_UPDATES:webhook.updates}
   jwt:
     secret: ${JWT_SECRET:Q00qVqgM+A1zSb7FBfSGx6vzK9sUZhpxP5aBzWlLvp0=}
     expiration: ${JWT_EXPIRATION:86400000}

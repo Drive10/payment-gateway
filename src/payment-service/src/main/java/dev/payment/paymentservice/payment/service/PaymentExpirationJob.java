@@ -83,7 +83,7 @@ public class PaymentExpirationJob {
         Instant expirationThreshold = Instant.now().minus(expirationTime);
         
         List<Payment> expiredPayments = paymentRepository
-                .findByStatusInAndUpdatedAtAfterOrderByUpdatedAtAsc(
+                .findByStatusInAndUpdatedAtBeforeOrderByUpdatedAtAsc(
                         EXPIRABLE_STATUSES, 
                         expirationThreshold, 
                         PageRequest.of(0, 100)
@@ -121,7 +121,7 @@ public class PaymentExpirationJob {
         Instant upiExpirationThreshold = Instant.now().minus(upiExpirationTime);
         
         List<Payment> upiPayments = paymentRepository
-                .findByStatusInAndUpdatedAtAfterOrderByUpdatedAtAsc(
+                .findByStatusInAndUpdatedAtBeforeOrderByUpdatedAtAsc(
                         UPI_EXPIRABLE_STATUSES, 
                         upiExpirationThreshold, 
                         PageRequest.of(0, 100)

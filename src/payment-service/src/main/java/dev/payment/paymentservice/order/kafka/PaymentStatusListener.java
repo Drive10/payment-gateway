@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-@Component
+@Component("orderPaymentStatusListener")
 public class PaymentStatusListener {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentStatusListener.class);

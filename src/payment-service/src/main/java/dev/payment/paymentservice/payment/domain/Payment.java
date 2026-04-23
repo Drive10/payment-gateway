@@ -4,19 +4,16 @@ import dev.payment.paymentservice.payment.domain.enums.PaymentMethod;
 import dev.payment.paymentservice.payment.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.payment.domain.enums.TransactionMode;
 import jakarta.persistence.Column;
-import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -43,9 +40,7 @@ public class Payment {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = true, cascade = {})
-    @JoinColumn(name = "order_id", nullable = true, insertable = false, updatable = false,
-            foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @Transient
     private Order order;
 
     @Column(name = "order_id")

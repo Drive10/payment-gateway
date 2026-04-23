@@ -12,34 +12,32 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD}
+      password: ${REDIS_PASSWORD:payflow}
   cloud:
     gateway:
       routes:
         - id: auth-service
-          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/v1/auth/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
         - id: order-service
-          uri: ${ORDER_SERVICE_URL:http://localhost:8082}
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/v1/orders/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/v1/payments/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
         - id: notification-service
           uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/api/v1/notifications/**
-          filters:
-            - StripPrefix=1
 
 payflow:
   redis:
@@ -47,11 +45,11 @@ payflow:
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET}
+    secret-key: ${JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
 
 application:
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
     expiration: ${JWT_EXPIRATION:86400000}
 
 logging:

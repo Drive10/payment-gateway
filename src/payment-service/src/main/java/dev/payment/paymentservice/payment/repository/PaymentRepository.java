@@ -1,7 +1,6 @@
 package dev.payment.paymentservice.payment.repository;
 
 import dev.payment.paymentservice.payment.domain.Payment;
-import dev.payment.paymentservice.payment.domain.User;
 import dev.payment.paymentservice.payment.domain.enums.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,13 +21,13 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     Optional<Payment> findByProviderOrderId(String providerOrderId);
     Optional<Payment> findByProviderPaymentId(String providerPaymentId);
 
-    Optional<Payment> findByIdAndOrderUser(UUID id, User user);
-
-    Page<Payment> findByOrderUser(User user, Pageable pageable);
-
-    Page<Payment> findByOrderUserAndStatus(User user, PaymentStatus status, Pageable pageable);
-
     Page<Payment> findByStatus(PaymentStatus status, Pageable pageable);
+
+    List<Payment> findByStatusInAndUpdatedAtBeforeOrderByUpdatedAtAsc(
+            Collection<PaymentStatus> statuses,
+            Instant updatedAt,
+            Pageable pageable
+    );
 
     List<Payment> findByStatusInAndUpdatedAtAfterOrderByUpdatedAtAsc(
             Collection<PaymentStatus> statuses,

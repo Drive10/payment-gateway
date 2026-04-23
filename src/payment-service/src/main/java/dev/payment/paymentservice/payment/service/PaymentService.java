@@ -4,9 +4,12 @@ import dev.payment.paymentservice.payment.domain.Order;
 import dev.payment.paymentservice.payment.domain.Payment;
 import dev.payment.paymentservice.payment.domain.PaymentRefund;
 import dev.payment.paymentservice.payment.domain.User;
+import dev.payment.paymentservice.payment.domain.enums.PaymentMethod;
 import dev.payment.paymentservice.payment.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.payment.domain.enums.RefundStatus;
+import dev.payment.paymentservice.payment.domain.enums.TransactionStatus;
 import dev.payment.paymentservice.payment.domain.enums.TransactionMode;
+import dev.payment.paymentservice.payment.domain.enums.TransactionType;
 import dev.payment.paymentservice.payment.dto.FeeCalculation;
 import dev.payment.paymentservice.payment.dto.request.CapturePaymentRequest;
 import dev.payment.paymentservice.payment.dto.request.CreatePaymentRequest;
@@ -55,6 +58,8 @@ public class PaymentService {
     private final PaymentTransactionService transactionService;
     private final PaymentMapper paymentMapper;
     private final CardBinService cardBinService;
+    private final PaymentValidator paymentValidator;
+    private final UpiIntentService upiIntentService;
 
     public PaymentService(
             PaymentRepository paymentRepository,
@@ -69,7 +74,9 @@ public class PaymentService {
             LedgerService ledgerService,
             PaymentTransactionService transactionService,
             PaymentMapper paymentMapper,
-            CardBinService cardBinService) {
+            CardBinService cardBinService,
+            PaymentValidator paymentValidator,
+            UpiIntentService upiIntentService) {
         this.paymentRepository = paymentRepository;
         this.paymentRefundRepository = paymentRefundRepository;
         this.orderServiceClient = orderServiceClient;
@@ -83,10 +90,13 @@ public class PaymentService {
         this.transactionService = transactionService;
         this.paymentMapper = paymentMapper;
         this.cardBinService = cardBinService;
+        this.paymentValidator = paymentValidator;
+        this.upiIntentService = upiIntentService;
     }
 
     @Transactional
     public PaymentResponse createPayment(CreatePaymentRequest request, String idempotencyKey, User actor) {
+        paymentValidator.validateOrThrow(request);
         IdempotencyService.IdempotencyResult<PaymentResponse> idempotency =
                 idempotencyService.begin("PAYMENT_CREATE", idempotencyKey, actorIdKey(actor), Map.of(
                         "actor", actor.getEmail(),
@@ -158,11 +168,63 @@ public class PaymentService {
             payment.setSimulated(processorIntent.simulated());
             paymentStateMachine.transition(payment, PaymentStatus.CREATED);
 
-            return savePayment(payment, idempotencyKey);
+            Payment savedPayment = savePayment(payment, idempotencyKey);
+            applyPostCreationLifecycle(savedPayment);
+            return paymentRepository.save(savedPayment);
         } catch (DataIntegrityViolationException exception) {
             return paymentRepository.findByIdempotencyKey(idempotencyKey)
                     .orElseThrow(() -> exception);
         }
+    }
+
+    private void applyPostCreationLifecycle(Payment payment) {
+        if (payment.getMethod() == PaymentMethod.UPI) {
+            String upiId = extractUpiIdFromNotes(payment.getNotes());
+            UpiIntentService.UpiIntentResponse upiIntent = upiIntentService.createUpiIntent(payment, upiId);
+            payment.setCheckoutUrl(upiIntent.upiLink());
+            transactionService.createTransaction(
+                    payment,
+                    TransactionType.PAYMENT,
+                    TransactionStatus.PENDING,
+                    "UPI collect request initiated",
+                    payment.getProviderOrderId(),
+                    payment.getAmount()
+            );
+            paymentEventPublisher.publish("payment.upi.collect.created", payment, Map.of(
+                    "upiId", payment.getUpiId() != null ? payment.getUpiId() : "",
+                    "expiresAt", upiIntent.expiresAt().toString()
+            ));
+            return;
+        }
+
+        if (payment.getMethod() == PaymentMethod.CARD) {
+            // For card flows we model authorization as a separate state before capture.
+            paymentStateMachine.transition(payment, PaymentStatus.AUTHORIZED);
+            transactionService.createTransaction(
+                    payment,
+                    TransactionType.PAYMENT,
+                    TransactionStatus.SUCCESS,
+                    "Payment authorized and ready for capture",
+                    payment.getProviderOrderId(),
+                    payment.getAmount()
+            );
+            paymentEventPublisher.publish("payment.authorized", payment, Map.of());
+        }
+    }
+
+    private String extractUpiIdFromNotes(String notes) {
+        if (notes == null || notes.isBlank()) {
+            return null;
+        }
+        String prefix = "UPI_ID=";
+        for (String token : notes.split("\\|")) {
+            String trimmed = token.trim();
+            if (trimmed.startsWith(prefix)) {
+                String upiId = trimmed.substring(prefix.length()).trim();
+                return upiId.isBlank() ? null : upiId;
+            }
+        }
+        return null;
     }
 
     private Payment savePayment(Payment payment, String idempotencyKey) {

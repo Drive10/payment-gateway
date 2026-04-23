@@ -97,7 +97,7 @@ public class PaymentStatusListener {
                      payment.setProviderPaymentId(message.providerPaymentId());
                      paymentRepository.save(payment);
                  }
-                 orderServiceClient.updateOrderStatus("ORD-UNKNOWN", "PAID");
+                 updateOrderStatus(payment, "PAID");
                  auditService.record("WEBHOOK_CAPTURED", "system", "PAYMENT", payment.getId().toString(),
                          "Webhook marked payment captured: " + message.providerPaymentId());
                  paymentEventPublisher.publish("payment.webhook.captured", payment, Map.of(
@@ -106,7 +106,7 @@ public class PaymentStatusListener {
                  ));
              }
             case FAILED -> {
-                 orderServiceClient.updateOrderStatus("ORD-UNKNOWN", "FAILED");
+                 updateOrderStatus(payment, "FAILED");
                  auditService.record("WEBHOOK_FAILED", "system", "PAYMENT", payment.getId().toString(),
                          "Webhook marked payment failed");
                  paymentEventPublisher.publish("payment.webhook.failed", payment, Map.of(
@@ -121,7 +121,7 @@ public class PaymentStatusListener {
                      paymentRepository.save(payment);
                  }
                  if (newStatus == PaymentStatus.REFUNDED) {
-                     orderServiceClient.updateOrderStatus("ORD-UNKNOWN", "REFUNDED");
+                     updateOrderStatus(payment, "REFUNDED");
                  }
                 auditService.record("WEBHOOK_REFUND", "system", "PAYMENT", payment.getId().toString(),
                         "Webhook processed refund");
@@ -132,6 +132,15 @@ public class PaymentStatusListener {
 
         persistProcessedEvent(message);
         log.info("event=webhook_update_processed paymentId={} status={}", payment.getId(), newStatus);
+    }
+
+    private void updateOrderStatus(Payment payment, String status) {
+        if (payment.getOrder() != null && payment.getOrder().getOrderReference() != null) {
+            orderServiceClient.updateOrderStatus(payment.getOrder().getOrderReference(), status);
+            return;
+        }
+        log.warn("event=order_status_update_skipped paymentId={} reason=ORDER_REFERENCE_MISSING targetStatus={}",
+                payment.getId(), status);
     }
 
     private void persistProcessedEvent(WebhookUpdateMessage message) {

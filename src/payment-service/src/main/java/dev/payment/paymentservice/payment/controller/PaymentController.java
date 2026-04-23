@@ -3,6 +3,7 @@ package dev.payment.paymentservice.payment.controller;
 import dev.payment.common.api.ApiResponse;
 import dev.payment.common.dto.PageResponse;
 import dev.payment.paymentservice.payment.domain.User;
+import dev.payment.paymentservice.payment.domain.enums.PaymentMethod;
 import dev.payment.paymentservice.payment.domain.enums.PaymentStatus;
 import dev.payment.paymentservice.payment.dto.request.CapturePaymentRequest;
 import dev.payment.paymentservice.payment.dto.request.CardTokenizationRequest;
@@ -71,6 +72,8 @@ public class PaymentController {
         User actor = authService.getCurrentUser(authentication.getName());
         return ApiResponse.success(paymentLinkService.getMerchantPaymentLinks(merchantId));
     }
+
+    @GetMapping("/links/{referenceId}")
     public ApiResponse<PaymentLinkResponse> getPaymentLink(
             @PathVariable("referenceId") String referenceId,
             Authentication authentication) {
@@ -223,13 +226,15 @@ public class PaymentController {
             orderId = UUID.randomUUID();
         }
         
+        PaymentMethod paymentMethod = resolvePaymentMethod(request.paymentMethod());
+        String notes = buildCheckoutNotes(request, paymentMethod);
         CreatePaymentRequest createRequest = new CreatePaymentRequest(
                 orderId,
                 merchantId,
-                dev.payment.paymentservice.payment.domain.enums.PaymentMethod.CARD,
+                paymentMethod,
                 "RAZORPAY_SIMULATOR",
                 dev.payment.paymentservice.payment.domain.enums.TransactionMode.TEST,
-                "Initiated via checkout flow"
+                notes
         );
         
         PaymentResponse paymentResponse = paymentService.createPayment(createRequest, 
@@ -276,5 +281,31 @@ public class PaymentController {
         }
         Integer effectivePage = page != null ? page : 0;
         return Math.max(effectivePage, 0);
+    }
+
+    private PaymentMethod resolvePaymentMethod(String paymentMethod) {
+        if (paymentMethod == null || paymentMethod.isBlank()) {
+            return PaymentMethod.CARD;
+        }
+        String normalized = paymentMethod.trim().toUpperCase();
+        return switch (normalized) {
+            case "UPI" -> PaymentMethod.UPI;
+            case "NETBANKING", "NET_BANKING" -> PaymentMethod.NET_BANKING;
+            case "WALLET" -> PaymentMethod.WALLET;
+            case "CARD" -> PaymentMethod.CARD;
+            default -> throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PAYMENT_METHOD",
+                    "Unsupported payment method: " + paymentMethod);
+        };
+    }
+
+    private String buildCheckoutNotes(InitiatePaymentRequest request, PaymentMethod paymentMethod) {
+        StringBuilder notes = new StringBuilder("Initiated via checkout flow");
+        if (paymentMethod == PaymentMethod.UPI && request.upiId() != null && !request.upiId().isBlank()) {
+            notes.append("|UPI_ID=").append(request.upiId().trim());
+        }
+        if (request.email() != null && !request.email().isBlank()) {
+            notes.append("|EMAIL=").append(request.email().trim());
+        }
+        return notes.toString();
     }
 }

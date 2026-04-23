@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,6 +53,7 @@ public class OrderController {
 
     @GetMapping
     public ApiResponse<PageResponse<OrderResponse>> getOrders(
+            @RequestParam(name = "userId", required = false) UUID userId,
             @RequestParam(name = "status", required = false) OrderStatus status,
             @RequestParam(name = "limit", required = false) Integer limit,
             @RequestParam(name = "offset", required = false) Integer offset,
@@ -63,7 +65,9 @@ public class OrderController {
 
         Pageable pageable = PageRequest.of(resolvedPage, Math.max(resolvedSize, 1));
         String authenticatedUser = getAuthenticatedUsername();
-        Page<OrderResponse> orders = orderService.getUserOrders(authenticatedUser, status, pageable);
+        Page<OrderResponse> orders = userId != null
+                ? orderService.getOrders(userId.toString(), status, pageable)
+                : orderService.getUserOrders(authenticatedUser, status, pageable);
         return ApiResponse.success(new PageResponse<>(
                 orders.getContent(),
                 orders.getNumber(),
@@ -86,6 +90,22 @@ public class OrderController {
                 request.returnUrl()
         );
         return ApiResponse.success(paymentOrchestrator.initiatePayment(updatedRequest));
+    }
+
+    @PatchMapping("/{orderReference}/status")
+    public ApiResponse<OrderResponse> updateOrderStatusByReference(
+            @PathVariable("orderReference") String orderReference,
+            @RequestBody java.util.Map<String, String> body
+    ) {
+        String requestedStatus = body.get("status");
+        if (requestedStatus == null || requestedStatus.isBlank()) {
+            throw new dev.payment.paymentservice.order.exception.OrderException(
+                    "status is required",
+                    "MISSING_STATUS",
+                    org.springframework.http.HttpStatus.BAD_REQUEST.value());
+        }
+        OrderStatus status = OrderStatus.valueOf(requestedStatus.toUpperCase());
+        return ApiResponse.success(orderService.updateOrderStatusByReference(orderReference, status));
     }
 
     private String getAuthenticatedUsername() {
