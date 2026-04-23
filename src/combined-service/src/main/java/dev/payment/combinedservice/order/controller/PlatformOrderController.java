@@ -1,0 +1,38 @@
+package dev.payment.combinedservice.order.controller;
+
+import dev.payment.common.api.ApiResponse;
+import dev.payment.combinedservice.order.dto.OrderResponse;
+import dev.payment.combinedservice.order.entity.OrderStatus;
+import dev.payment.combinedservice.order.service.OrderService;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/internal/platform/order")
+public class PlatformOrderController {
+
+    private final OrderService orderService;
+
+    public PlatformOrderController(OrderService orderService) {
+        this.orderService = orderService;
+    }
+
+    @GetMapping("/orders/{orderId}")
+    public ApiResponse<OrderResponse> getOrder(@PathVariable("orderId") UUID orderId) {
+        return ApiResponse.success(orderService.getOrder(orderId));
+    }
+
+    @PutMapping("/orders/{orderId}/status")
+    public ApiResponse<OrderResponse> updateOrderStatus(
+            @PathVariable("orderId") UUID orderId,
+            @RequestParam("status") OrderStatus status
+    ) {
+        return ApiResponse.success(orderService.updateOrderStatus(orderId, status));
+    }
+}

@@ -9,8 +9,6 @@ target/
 .vscode/
 .continue/
 *.iml
-.DS_Store
-__MACOSX/
 .factorypath
 .classpath
 .project
@@ -30,8 +28,9 @@ __MACOSX/
 
 # Logs
 logs/
-*.log
 out/
+*.log
+*.log.*
 
 # Frontend
 **/node_modules/
@@ -59,23 +58,7 @@ mongodb_data/
 coverage/.env.dev
 *.tsbuildinfo
 
-# Logs
-logs/
-*/logs/
-*.log
-*.log.*
-
-# Build outputs
-target/
-*.jar
-*.war
-*.ear
-
-# IDE
-.idea/
-.vscode/
-*.iml
-
 # OS
 .DS_Store
 Thumbs.db
+__MACOSX/

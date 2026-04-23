@@ -1,0 +1,82 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: combined-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:payflow}
+    username: ${POSTGRES_USER:payflow}
+    password: ${POSTGRES_PASSWORD:payflow}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: payflow
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: combined-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+application:
+  jwt:
+    secret: ${JWT_SECRET:Q00qVqgM+A1zSb7FBfSGx6vzK9sUZhpxP5aBzWlLvp0=}
+    expiration: ${JWT_EXPIRATION:86400000}
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+payflow:
+  service:
+    urls:
+      # Internal service URLs (now internal calls, but keeping for external compatibility)
+      order: ${ORDER_SERVICE_URL:http://localhost:8080}
+      payment: ${PAYMENT_SERVICE_URL:http://localhost:8080}
+      auth: ${AUTH_SERVICE_URL:http://localhost:8080}
+
+resilience4j:
+  ratelimiter:
+    instances:
+      login:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 10s
+      register:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 30s
+      refresh:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 5s
+      # Additional limiters for payment service
+      payment-create:
+        limit-for-period: 50
+        limit-refresh-period: 60s
+        timeout-duration: 10s
+      payment-refund:
+        limit-for-period: 30
+        limit-refresh-period: 60s
+        timeout-duration: 10s
+  circuitbreaker:
+    instances:
+      paymentProvider:
+        register-health-indicator: true
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-duration-threshold: 60s
+        slow-call-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        failure-rate-threshold: 50

@@ -1,0 +1,15 @@
+package dev.payment.combinedservice.payment.domain.enums;
+
+public enum TransactionType {
+    PAYMENT,
+    PAYMENT_INITIATED,
+    PAYMENT_CAPTURED,
+    REFUND,
+    REFUND_REQUESTED,
+    REFUND_COMPLETED,
+    WEBHOOK_PROCESSED,
+    SETTLEMENT,
+    FEE,
+    PAYOUT,
+    ADJUSTMENT
+}
