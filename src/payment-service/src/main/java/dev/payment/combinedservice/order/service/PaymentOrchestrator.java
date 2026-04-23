@@ -5,7 +5,7 @@ import dev.payment.combinedservice.order.dto.InitiatePaymentResponse;
 import dev.payment.combinedservice.order.dto.OrderResponse;
 import dev.payment.combinedservice.order.entity.OrderStatus;
 import dev.payment.combinedservice.order.exception.OrderException;
-import dev.payment.combinedservice.order.config.ServiceConfig;
+import dev.payment.combinedservice.payment.config.ServiceConfig;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;

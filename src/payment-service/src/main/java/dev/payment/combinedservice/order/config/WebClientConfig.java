@@ -1,5 +1,6 @@
 package dev.payment.combinedservice.order.config;
 
+import dev.payment.combinedservice.payment.config.ServiceConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
