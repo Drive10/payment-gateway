@@ -1,15 +1,21 @@
 server:
   port: ${SERVER_PORT:8084}
 
+payflow:
+  redis:
+    enabled: false
+  database:
+    name: payflow_notification
+
 spring:
   application:
     name: notification-service
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
-
-payflow:
-  database:
-    name: payflow_notification
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
 
 application:
   payment-service:

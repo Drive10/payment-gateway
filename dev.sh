@@ -1,36 +1,55 @@
 #!/bin/bash
 set -e
 
-echo "Starting PayFlow dev environment..."
+echo "PayFlow Development Environment"
+echo "=============================="
 
-# Start infra
-echo "Starting infrastructure..."
-docker compose up -d
-sleep 5
+# Start infrastructure
+echo "Starting infrastructure (PostgreSQL, Redis, Kafka)..."
+docker compose --profile infra up -d
+sleep 8
 
-# Build backend
-echo "Building backend..."
+# Build all services
+echo "Building services..."
 mvn clean package -DskipTests -q
 
-# Start services
-echo "Starting services..."
-mvn spring-boot:run -pl src/payment-service,src/notification-service,src/simulator-service,src/api-gateway -Dspring-boot.run.fork=false &
-BACKEND_PID=$!
+# Start payment service (core)
+echo "Starting payment-service on :8083..."
+mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.fork=false &
+PAYMENT_PID=$!
+sleep 3
+
+# Start notification service
+echo "Starting notification-service on :8084..."
+mvn spring-boot:run -pl src/notification-service -Dspring-boot.run.fork=false &
+NOTIF_PID=$!
+sleep 3
+
+# Start simulator service
+echo "Starting simulator-service on :8086..."
+mvn spring-boot:run -pl src/simulator-service -Dspring-boot.run.fork=false &
+SIM_PID=$!
+sleep 3
 
 # Start frontend
-echo "Starting frontend..."
+echo "Starting frontend on :5173..."
 cd frontend/payment-page && npm run dev &
 FRONTEND_PID=$!
 
 echo ""
-echo "Services started!"
-echo "  API Gateway:  http://localhost:8080"
-echo "  Payment:    http://localhost:8083"
-echo "  Notification: http://localhost:8084"
-echo "  Simulator:  http://localhost:8086"
-echo "  Frontend:   http://localhost:5173"
+echo "All services started!"
+echo "  Payment Service:      http://localhost:8083"
+echo "  Notification:        http://localhost:8084"
+echo "  Simulator:           http://localhost:8086"
+echo "  Frontend:            http://localhost:5173"
 echo ""
 echo "Press Ctrl+C to stop all services"
 
-trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; docker compose down" EXIT
+cleanup() {
+    echo "Stopping services..."
+    kill $PAYMENT_PID $NOTIF_PID $SIM_PID $FRONTEND_PID 2>/dev/null || true
+    docker compose down
+}
+
+trap cleanup EXIT
 wait

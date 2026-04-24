@@ -1,4 +1,4 @@
-package dev.payment.notificationservice.entity;
+package dev.payment.notificationservice.domain.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

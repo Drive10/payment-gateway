@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-@Profile("!test")
+@Profile("!test & !local")
 public class PaymentStatusListener {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentStatusListener.class);

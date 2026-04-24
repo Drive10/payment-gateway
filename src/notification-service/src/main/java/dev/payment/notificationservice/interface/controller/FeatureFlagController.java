@@ -1,7 +1,7 @@
 package dev.payment.notificationservice.controller;
 
-import dev.payment.notificationservice.entity.FeatureFlag;
-import dev.payment.notificationservice.repository.FeatureFlagRepository;
+import dev.payment.notificationservice.domain.entities.FeatureFlag;
+import dev.payment.notificationservice.infrastructure.persistence.repository.FeatureFlagRepository;
 import dev.payment.notificationservice.service.FeatureFlagService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

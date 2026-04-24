@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Component
-@Profile("!test")
+@Profile("!test & !local")
 public class PaymentOutboxRelay {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentOutboxRelay.class);

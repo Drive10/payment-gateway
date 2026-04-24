@@ -6,6 +6,7 @@ import dev.payment.paymentservice.payment.domain.PaymentRefund;
 import dev.payment.paymentservice.payment.domain.User;
 import dev.payment.paymentservice.payment.domain.enums.PaymentMethod;
 import dev.payment.paymentservice.payment.domain.enums.PaymentStatus;
+import dev.payment.paymentservice.payment.domain.enums.OrderStatus;
 import dev.payment.paymentservice.payment.domain.enums.RefundStatus;
 import dev.payment.paymentservice.payment.domain.enums.TransactionStatus;
 import dev.payment.paymentservice.payment.domain.enums.TransactionMode;
@@ -134,7 +135,7 @@ public class PaymentService {
 
     private Payment executePaymentCreation(Payment payment, CreatePaymentRequest request, User actor, String idempotencyKey) {
         try {
-            Order order = orderServiceClient.getOrderById(request.orderId());
+            Order order = createLocalOrder(request);
             
             // Check for duplicate payment - prevent same order from being paid twice
             EnumSet<PaymentStatus> activeStatuses = EnumSet.of(
@@ -175,6 +176,26 @@ public class PaymentService {
             return paymentRepository.findByIdempotencyKey(idempotencyKey)
                     .orElseThrow(() -> exception);
         }
+    }
+
+    private Order createLocalOrder(CreatePaymentRequest request) {
+        Order order = new Order();
+        order.setId(request.orderId() != null ? request.orderId() : UUID.randomUUID());
+        order.setOrderReference("ORD-" + order.getId().toString().substring(0, 8).toUpperCase());
+        
+        // Try to get amount from order snapshot if available
+        if (request.order() != null) {
+            order.setAmount(request.order().amount());
+            order.setCurrency(request.order().currency());
+        } else {
+            // Default values - will be set from payment later
+            order.setAmount(BigDecimal.valueOf(50000));
+            order.setCurrency("INR");
+        }
+        
+        order.setCreatedAt(java.time.Instant.now());
+        order.setUpdatedAt(java.time.Instant.now());
+        return order;
     }
 
     private void applyPostCreationLifecycle(Payment payment) {

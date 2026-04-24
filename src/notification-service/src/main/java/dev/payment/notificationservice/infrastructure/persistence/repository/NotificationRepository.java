@@ -1,8 +1,8 @@
-package dev.payment.notificationservice.repository;
+package dev.payment.notificationservice.infrastructure.persistence.repository;
 
-import dev.payment.notificationservice.entity.Notification;
-import dev.payment.notificationservice.entity.NotificationStatus;
-import dev.payment.notificationservice.entity.NotificationType;
+import dev.payment.notificationservice.domain.entities.Notification;
+import dev.payment.notificationservice.domain.entities.NotificationStatus;
+import dev.payment.notificationservice.domain.entities.NotificationType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

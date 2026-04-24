@@ -2,12 +2,12 @@ package dev.payment.notificationservice.service;
 
 import dev.payment.notificationservice.dto.EmailRequest;
 import dev.payment.notificationservice.dto.NotificationResponse;
-import dev.payment.notificationservice.entity.Notification;
-import dev.payment.notificationservice.entity.NotificationChannel;
-import dev.payment.notificationservice.entity.NotificationStatus;
-import dev.payment.notificationservice.entity.NotificationType;
+import dev.payment.notificationservice.domain.entities.Notification;
+import dev.payment.notificationservice.domain.entities.NotificationChannel;
+import dev.payment.notificationservice.domain.entities.NotificationStatus;
+import dev.payment.notificationservice.domain.entities.NotificationType;
 import dev.payment.notificationservice.mapper.NotificationMapper;
-import dev.payment.notificationservice.repository.NotificationRepository;
+import dev.payment.notificationservice.infrastructure.persistence.repository.NotificationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

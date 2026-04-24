@@ -12,10 +12,12 @@ import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 import java.util.UUID;
 
 @Component("orderPaymentStatusListener")
+@Profile("!local")
 public class PaymentStatusListener {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentStatusListener.class);

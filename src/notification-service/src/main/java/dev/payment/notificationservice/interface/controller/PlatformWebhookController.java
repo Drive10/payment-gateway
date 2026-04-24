@@ -3,7 +3,7 @@ import jakarta.validation.Valid;
 
 import dev.payment.common.api.ApiResponse;
 import dev.payment.notificationservice.dto.ForwardWebhookRequest;
-import dev.payment.notificationservice.entity.WebhookEvent;
+import dev.payment.notificationservice.domain.entities.WebhookEvent;
 import dev.payment.notificationservice.service.WebhookService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,7 @@ public class PlatformWebhookController {
         event.setEventType(request.eventType());
         event.setPayload(request.payload() != null ? request.payload().toString() : "{}");
         event.setProvider("INTERNAL");
-        event.setStatus(dev.payment.notificationservice.entity.WebhookStatus.PROCESSING);
+        event.setStatus(dev.payment.notificationservice.domain.entities.WebhookStatus.PROCESSING);
 
         webhookService.forwardToPaymentService(event);
 

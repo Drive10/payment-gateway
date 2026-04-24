@@ -35,7 +35,7 @@ public class PaymentOrchestrator {
         OrderResponse order = orderService.getOrder(request.orderId());
         UUID merchantId = resolveMerchantId(order);
 
-        CreatePaymentRequest createPaymentRequest = new CreatePaymentRequest(
+        CreatePaymentRequest createPaymentRequest = CreatePaymentRequest.createLegacy(
                 request.orderId(),
                 merchantId,
                 PaymentMethod.CARD,

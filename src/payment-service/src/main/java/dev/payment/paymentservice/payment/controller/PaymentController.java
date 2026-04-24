@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/payments")
+@RequestMapping({"/payments", "/api/v1/payments"})
 @Tag(name = "Payments")
 public class PaymentController {
 
@@ -231,7 +231,7 @@ public class PaymentController {
         
         PaymentMethod paymentMethod = resolvePaymentMethod(request.paymentMethod());
         String notes = buildCheckoutNotes(request, paymentMethod);
-        CreatePaymentRequest createRequest = new CreatePaymentRequest(
+        CreatePaymentRequest createRequest = CreatePaymentRequest.createLegacy(
                 orderId,
                 merchantId,
                 paymentMethod,

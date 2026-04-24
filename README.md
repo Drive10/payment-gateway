@@ -4,7 +4,7 @@ Production-grade payment gateway reference implementation with realistic payment
 
 PayFlow models the internal architecture patterns used in systems like Stripe, Razorpay, and PayPal at project scale:
 - API Gateway for edge security, rate limits, and request shaping
-- Domain-owned services (payment, notification, simulator, analytics, audit)
+- Domain-owned services (payment, merchant-backend, notification, simulator, analytics, audit)
 - Kafka-driven async workflows with outbox relay and dead-letter handling
 - Strong payment semantics: intent, authorization, capture, settlement, webhook reconciliation
 - UPI collect flow with async completion and expiry
@@ -32,25 +32,31 @@ Most payment demos stop at "create and capture". PayFlow goes further:
 ## Architecture
 
 ```text
-                                   +--------------------+
-                                   |   React Checkout   |
-                                   |  frontend/payment  |
-                                   +---------+----------+
-                                             |
-                                             v
+                                    +--------------------+
+                                    |   React Checkout   |
+                                    |  frontend/payment  |
+                                    +---------+----------+
+                                              |
+                                              v
 +--------------------------------------------------------------------------------+
 |                                API Gateway (8080)                              |
 | authn/authz | rate limiting | correlation-id | routing | fallback              |
-+------------------+-------------------+-------------------+---------------------+
-                   |                   |                   |
-                   v                   v                   v
-         +----------------+   +----------------+   +---------------------------+
-         | Payment Service|   | Notification   |   | Simulator Service         |
-         | (auth+order+   |   | Service        |   | External provider mock    |
-         | payment module)|   | webhooks/event |   | success/failure/timeout   |
-         +--------+-------+   +--------+-------+   +------------+--------------+
-                  |                    |                         |
-                  +----------+---------+-------------------------+
++------------------+-------------------------------+--------------------------------+
+                   |                               |
+                   | /api/v1/merchant/*           | /api/v1/payments/*
+                   | (JWT required)               | (API Key required)
+                   v                               v
+          +-------------------+              +---------------------------+
+          | Merchant Backend |              | Payment Service            |
+          | (8081)          |              | (8083)                   |
+          |                 |              |                         |
+          | • validate JWT  |              | • payment lifecycle      |
+          | • order create|              | • idempotency            |
+          | • call payment|              | • Kafka/outbox           |
+          | (API key auth)              | • simulator integration|
+          +-----------+--------+     +------------+------------+
+                      |             |
+                      +------+------+
                              |
                              v
                       +--------------+
@@ -60,26 +66,37 @@ Most payment demos stop at "create and capture". PayFlow goes further:
                       | audit.*      |
                       +------+-------+
                              |
-               +-------------+---------------+
-               |                             |
-               v                             v
-      +------------------+           +------------------+
-      | Analytics Service|           | Audit Service    |
-      | risk/settlement  |           | compliance trail |
-      +------------------+           +------------------+
+           +---------------+---------------+
+           |                             |
+           v                             v
+   +------------------+           +------------------+
+   | Analytics Service|           | Audit Service    |
+   | risk/settlement  |           | compliance trail |
+   +------------------+           +------------------+
 
 Shared Infrastructure: PostgreSQL | Redis | Kafka | Docker Compose
 ```
 
 ### Service Boundaries
-- `api-gateway`: edge concerns only (routing, auth filters, rate limiting, security headers)
-- `payment-service`: payment intent, authorization/capture, refunds, idempotency, ledger, webhook processing
+- `api-gateway`: edge concerns only (routing, JWT auth, rate limiting, security headers)
+- `merchant-backend`: trusted adapter between frontend and payment service (JWT auth)
+- `payment-service`: payment intent, authorization/capture, refunds, idempotency, ledger, webhook processing (API Key auth)
 - `notification-service`: outbound webhook and notification delivery
 - `simulator-service`: deterministic mock provider behavior for local and CI testing
 - `analytics-service`: risk and settlement analytics
 - `audit-service`: immutable compliance event log
 
-Note: `payment-service` still contains `auth` and `order` modules in-process for local simplicity. Boundaries are preserved in package-level modules and can be extracted to dedicated deployables.
+### Trust Boundaries (Post-Refactor)
+
+| Component | Zone | Authentication Method |
+|----------|------|---------------------|
+| Frontend | UNTRUSTED | None (calls only via gateway) |
+| API Gateway | BOUNDARY | JWT validation for merchant routes |
+| Merchant Backend | TRUSTED | JWT from frontend |
+| Payment Service | TRUSTED | API Key (Bearer sk_test_*) |
+| Simulator | ISOLATED | None (internal) |
+
+**Critical Rule**: Frontend MUST NEVER call payment APIs directly. All payment requests flow through merchant-backend.
 
 ## Payment Lifecycle
 
@@ -90,21 +107,27 @@ sequenceDiagram
     autonumber
     participant C as Client
     participant G as API Gateway
+    participant M as Merchant Backend
     participant P as Payment Service
     participant S as Simulator
     participant K as Kafka
 
-    C->>G: POST /payments (Idempotency-Key)
-    G->>P: Create payment intent
+    C->>G: POST /merchant/create-payment
+    G->>M: JWT validation
+    M->>M: Create order snapshot
+    M->>P: POST /payments (API Key)
     P->>P: Validate + idempotency begin
     P->>S: create intent
     S-->>P: providerOrderId + checkoutUrl
     P->>P: CREATED -> AUTHORIZED
     P->>K: payment.created / payment.authorized (outbox relay)
-    P-->>G: payment intent response
+    P-->>M: payment intent response
+    M-->>G: merchant response
+    G-->>C: checkout intent
 
-    C->>G: POST /payments/{id}/capture
-    G->>P: Capture authorized payment
+    C->>G: POST /payments/{id}/capture (via merchant)
+    G->>M: JWT validation
+    M->>P: Forward to payment service
     P->>S: capture provider order
     alt success
       S-->>P: providerPaymentId + signature
@@ -125,14 +148,18 @@ sequenceDiagram
     autonumber
     participant C as Client
     participant G as API Gateway
+    participant M as Merchant Backend
     participant P as Payment Service
     participant S as Simulator/Provider
     participant K as Kafka
 
-    C->>G: POST /payments/initiate (paymentMethod=UPI)
-    G->>P: Create UPI payment intent
+    C->>G: POST /merchant/create-payment (paymentMethod=UPI)
+    G->>M: JWT validation
+    M->>P: Create UPI payment
     P->>P: CREATED -> AWAITING_UPI_PAYMENT
-    P-->>C: upi:// deep link + expiry
+    P-->>M: upi:// deep link + expiry
+    M-->>G: merchant response
+    G-->>C: upi:// link
 
     Note over C,S: User approves collect in UPI app
 
@@ -175,50 +202,67 @@ make dev
 
 ### URLs
 - Gateway: `http://localhost:8080`
+- Merchant Backend: `http://localhost:8081`
 - Payment API: `http://localhost:8083`
 - Frontend: `http://localhost:5173`
 
 ## API Flows
 
-### 1. Create Card Payment Intent
+### 1. Frontend initiates payment (via merchant-backend)
+
+**Frontend sends** (ONLY productId - no financial data):
 ```bash
-curl -X POST http://localhost:8083/api/v1/payments \
+curl -X POST http://localhost:8080/api/v1/merchant/create-payment \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <merchant_jwt>" \
+  -d '{"productId": "prod_123"}'
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "order": {"id": "order_abc", "amount": 50000, "currency": "INR"},
+    "payment": {"id": "pay_xyz", "status": "CREATED", "checkoutUrl": "..."},
+    "checkoutUrl": "https://checkout.payflow.dev/pay/pay_xyz"
+  }
+}
+```
+
+### 2. Merchant Backend calls Payment Service (API Key auth)
+
+```bash
+curl -X POST http://localhost:8080/api/v1/payments \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk_test_merchant123" \
   -H "Idempotency-Key: pay_$(uuidgen)" \
   -d '{
-    "orderId": "00000000-0000-0000-0000-000000000001",
-    "merchantId": "00000000-0000-0000-0000-000000000002",
-    "method": "CARD",
-    "provider": "RAZORPAY_SIMULATOR",
-    "transactionMode": "TEST",
-    "notes": "checkout|SIM_MODE=SUCCESS"
+    "order": {
+      "id": "order_abc123",
+      "amount": 50000,
+      "currency": "INR"
+    },
+    "method": "CARD"
   }'
 ```
 
-### 2. Capture
+### 3. Capture
+
 ```bash
-curl -X POST http://localhost:8083/api/v1/payments/{paymentId}/capture \
+curl -X POST http://localhost:8080/api/v1/payments/{paymentId}/capture \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk_test_merchant123" \
   -d '{}'
 ```
 
-### 3. UPI Collect
-```bash
-curl -X POST http://localhost:8083/api/v1/payments/initiate \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: upi_$(uuidgen)" \
-  -d '{
-    "amount": 100.00,
-    "currency": "INR",
-    "paymentMethod": "UPI",
-    "upiId": "testuser@upi",
-    "merchantId": "00000000-0000-0000-0000-000000000002"
-  }'
-```
+### 4. UPI Collect
 
-### 4. Status Poll
 ```bash
-curl http://localhost:8083/api/v1/payments/{paymentId}/status
+curl -X POST http://localhost:8080/api/v1/merchant/create-payment \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <merchant_jwt>" \
+  -d '{"productId": "prod_upi", "paymentMethod": "UPI", "upiId": "testuser@upi"}'
 ```
 
 ## Repository Layout
@@ -227,14 +271,14 @@ curl http://localhost:8083/api/v1/payments/{paymentId}/status
 payflow/
 ├── src/
 │   ├── api-gateway/
+│   ├── merchant-backend/         # NEW: Trusted adapter service
 │   ├── payment-service/
 │   ├── notification-service/
 │   ├── simulator-service/
 │   ├── analytics-service/
 │   └── audit-service/
 ├── frontend/payment-page/
-├── common/
-├── libs/common-config/
+├── common/                     # Shared DTOs
 ├── config/
 │   ├── k8s/
 │   ├── helm/
@@ -269,9 +313,20 @@ make test-e2e
 - Outbox pattern guarantees event publishing after DB commit
 - Async webhooks are deduplicated via processed-event store
 - UPI and card are modeled as distinct lifecycle tracks
+- API Key authentication replaces JWT for payment service
+- Order snapshots replace internal order creation
+- Trust boundary enforced: frontend cannot directly call payment APIs
+
+## Security Posture
+- **Frontend is UNTRUSTED**: Only sends productId, no financial data
+- **Merchant Backend is TRUSTED**: Creates order, controls amounts
+- **Payment Service uses API Keys**: `sk_test_*` for test, `sk_live_*` for production
+- **JWT used at gateway edge**: For merchant-backend routes only
+- **No merchantId in API requests**: Resolved from API key
 
 ## Roadmap
-- Extract `auth` and `order` from payment-service into independent deployables
+- Add merchant registration with API key generation
+- Add webhook delivery to merchant-backend
 - Add schema migrations via Flyway/Liquibase (replace `ddl-auto=update`)
 - Introduce mTLS/service identity for service-to-service auth
 - Add chaos testing and replay tooling for webhook recovery

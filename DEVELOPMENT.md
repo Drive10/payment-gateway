@@ -14,6 +14,9 @@ When working on a specific service, you can start just what you need:
 # Start infrastructure only
 make infra-up
 
+# Start merchant backend with local profile
+make dev-merchant
+
 # Start payment service with local profile
 make dev-payment
 
@@ -28,12 +31,13 @@ make dev-lite
 
 | Target | Description |
 |--------|-------------|
+| `make dev-merchant` | Merchant backend service |
 | `make dev-payment` | Payment service with local dev profile |
 | `make dev-frontend` | Frontend development server |
 | `make dev-gateway` | API Gateway only |
 | `make dev-notification` | Notification service only |
 | `make dev-simulator` | Simulator service only |
-| `make dev-lite` | Infra + payment service + frontend |
+| `make dev-lite` | Infra + merchant + payment + frontend |
 | `make dev` | Full development environment |
 
 ## Local Development Profiles
@@ -50,6 +54,21 @@ To activate local profile explicitly:
 SPRING_PROFILES_ACTIVE=local mvn spring-boot:run -pl src/payment-service
 ```
 
+Merchant backend:
+```bash
+SPRING_PROFILES_ACTIVE=local mvn spring-boot:run -pl src/merchant-backend
+```
+
+## Service Ports
+
+| Service | Port | Auth |
+|---------|------|------|
+| API Gateway | 8080 | JWT for /merchant routes |
+| Merchant Backend | 8081 | JWT from frontend |
+| Payment Service | 8083 | API Key |
+| Notification | 8084 | - |
+| Simulator | 8085 | - |
+
 ## Development Tips
 
 ### Hot Reload
@@ -61,9 +80,15 @@ Remote debugging available on port 5005:
 mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
 ```
 
+Merchant backend debugging:
+```bash
+mvn spring-boot:run -pl src/merchant-backend -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006"
+```
+
 ### Testing
 Run service-specific tests:
 ```bash
+mvn test -pl src/merchant-backend
 mvn test -pl src/payment-service
 mvn test -pl src/notification-service
 ```
@@ -77,5 +102,19 @@ Key variables for local development:
 - `REDIS_PORT=6379`
 - `KAFKA_BOOTSTRAP_SERVERS=localhost:9092`
 - `JWT_SECRET` (auto-generated if missing)
+- `MERCHANT_BACKEND_URL=http://localhost:8081`
+- `PAYMENT_SERVICE_URL=http://localhost:8083`
+- `PAYMENT_SERVICE_API_KEY=sk_test_merchant123`
 
 See `.env.example` for complete list.
+
+## API Key Setup
+
+For local development, use the test API key:
+```
+Authorization: Bearer sk_test_merchant123
+```
+
+This key must be configured in both:
+1. Merchant backend's `payment-service.api-key` config
+2. Payment service's `payment-service.api-key` config

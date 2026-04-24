@@ -1,4 +1,4 @@
-package dev.payment.notificationservice.entity;
+package dev.payment.notificationservice.domain.entities;
 
 public enum NotificationChannel {
     EMAIL,

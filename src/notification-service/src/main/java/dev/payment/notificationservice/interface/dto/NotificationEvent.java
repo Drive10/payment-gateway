@@ -1,7 +1,7 @@
 package dev.payment.notificationservice.dto;
 
-import dev.payment.notificationservice.entity.NotificationChannel;
-import dev.payment.notificationservice.entity.NotificationType;
+import dev.payment.notificationservice.domain.entities.NotificationChannel;
+import dev.payment.notificationservice.domain.entities.NotificationType;
 
 import java.util.UUID;
 

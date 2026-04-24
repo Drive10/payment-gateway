@@ -2,8 +2,8 @@ package dev.payment.notificationservice.mapper;
 
 import dev.payment.notificationservice.dto.NotificationResponse;
 import dev.payment.notificationservice.dto.TemplateResponse;
-import dev.payment.notificationservice.entity.Notification;
-import dev.payment.notificationservice.entity.Template;
+import dev.payment.notificationservice.domain.entities.Notification;
+import dev.payment.notificationservice.domain.entities.Template;
 import org.springframework.stereotype.Component;
 
 @Component

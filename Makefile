@@ -10,15 +10,17 @@ help:
 	@echo "  make infra-restart - Restart infrastructure"
 	@echo ""
 	@echo "Services:"
-	@echo "  make gateway       - Run API Gateway (8080)"
-	@echo "  make payment       - Run Core Service (auth + order + payment on 8083)"
+	@echo "  make gateway        - Run API Gateway (8080)"
+	@echo "  make merchant      - Run Merchant Backend (8081)"
+	@echo "  make payment       - Run Payment Service (8083)"
 	@echo "  make notification  - Run Notification Service (8084)"
-	@echo "  make simulator     - Run Simulator Service (8086)"
-	@echo "  make frontend      - Run Frontend (5173)"
+	@echo "  make simulator    - Run Simulator Service (8086)"
+	@echo "  make frontend     - Run Frontend (5173)"
 	@echo "  make all-services  - Run all services"
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev           - Start dev environment (infra + all services)"
+	@echo "  make dev-merchant  - Run merchant backend only"
 	@echo "  make logs          - View all logs"
 	@echo "  make logs-svc      - View specific service logs (e.g., make logs-svc SVC=payment)"
 	@echo ""
@@ -72,6 +74,9 @@ infra-restart: infra-down infra-up
 gateway:
 	mvn spring-boot:run -pl src/api-gateway
 
+merchant:
+	mvn spring-boot:run -pl src/merchant-backend -Dspring-boot.run.profiles=local
+
 payment:
 	mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local
 
@@ -92,13 +97,15 @@ frontend:
 
 all-services:
 	mvn spring-boot:run \
-		-pl src/api-gateway,src/payment-service,src/notification-service,src/simulator-service,src/audit-service,src/analytics-service
+		-pl src/api-gateway,src/merchant-backend,src/payment-service,src/notification-service,src/simulator-service,src/audit-service,src/analytics-service
 
 dev: infra-up all-services frontend
 
-# Selective development targets
 dev-payment: infra-up
 	mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local
+
+dev-merchant: infra-up
+	mvn spring-boot:run -pl src/merchant-backend -Dspring-boot.run.profiles=local
 
 dev-frontend:
 	cd frontend/payment-page && npm run dev

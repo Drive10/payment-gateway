@@ -1,0 +1,20 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: merchant-backend
+
+payment-service:
+  url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+  api-key: ${PAYMENT_SERVICE_API_KEY:sk_test_merchant123}
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    expiration: ${JWT_EXPIRATION:86400000}
+
+logging:
+  level:
+    root: INFO
+    dev.payment.merchantbackend: DEBUG

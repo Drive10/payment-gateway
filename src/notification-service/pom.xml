@@ -4,16 +4,19 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <groupId>dev.payflow</groupId>
+    <artifactId>notification-service</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>Notification Service</name>
+    <description>Async notification service via Kafka events</description>
+
     <parent>
         <groupId>dev.payflow</groupId>
         <artifactId>payflow</artifactId>
         <version>1.0.0</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
-
-    <artifactId>notification-service</artifactId>
-    <name>Notification Service</name>
-    <description>Async notification service via Kafka events</description>
 
     <dependencies>
         <dependency>
@@ -62,39 +65,21 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>dev.payflow</groupId>
             <artifactId>common</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>dev.payflow</groupId>
             <artifactId>common-config</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Integration testing with Testcontainers -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -110,16 +95,10 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>3.3.0</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <configuration>
+                    <mainClass>dev.payflow.notification.NotificationServiceApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>
-
 </project>

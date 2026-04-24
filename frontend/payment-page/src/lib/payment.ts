@@ -9,7 +9,7 @@ export const TRANSACTION_MODES = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
   ? `${import.meta.env.VITE_API_BASE_URL}/api/v1` 
-  : "http://localhost:8080/api/v1";
+  : "http://localhost:8083/api/v1";
 const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm the platform is running and try again.";
@@ -116,7 +116,7 @@ async function apiRequest(path, options = {}) {
 }
 
 export async function login(email, password) {
-  const auth = await apiRequest("/auth/login", {
+  const auth = await apiRequest("/merchant/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
@@ -142,7 +142,7 @@ export async function register(email, password, firstName, lastName) {
   if (lastName) customer.lastName = lastName;
   if (password) customer.password = password;
 
-  await apiRequest("/auth/register", {
+  await apiRequest("/merchant/auth/register", {
     method: "POST",
     body: JSON.stringify(customer),
   });
@@ -161,7 +161,7 @@ export async function ensureAccessToken() {
     if (isExpired || isExpiringSoon) {
       if (storedAuth.refreshToken) {
         try {
-          const refreshed = await apiRequest("/auth/refresh", {
+          const refreshed = await apiRequest("/merchant/auth/refresh", {
             method: "POST",
             body: JSON.stringify({ refreshToken: storedAuth.refreshToken }),
           });
@@ -217,107 +217,46 @@ export async function logout() {
 }
 
 export async function startCheckout({
-  amount,
-  method,
-  cardholder,
-  transactionMode,
-  description,
+  productId,
   customerEmail,
-  customerName,
 }) {
-  const { token, customer } = await ensureAccessToken();
-  const executeCheckout = async (sessionToken, sessionCustomer) => {
-    const externalReference = `pay-${Date.now()}-${randomToken(6)}`;
-    const provider =
-      transactionMode === TRANSACTION_MODES.TEST
-        ? "RAZORPAY_SIMULATOR"
-        : "RAZORPAY_PRIMARY";
-    const correlationId = createCorrelationId("payment");
+  const { token } = await ensureAccessToken();
+  
+  const correlationId = createCorrelationId("payment");
 
-    const order = await apiRequest("/orders", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${sessionToken}`,
-        "X-Request-Id": correlationId,
-      },
-      body: JSON.stringify({
-        externalReference,
-        amount,
-        currency: "INR",
-        description: description || `Payment for order ${externalReference}`,
-        customerEmail: customerEmail || sessionCustomer?.email,
-        customerName: customerName || `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim(),
-        userId: sessionCustomer?.id,
-      }),
-    });
+  const response = await apiRequest("/merchant/create-payment", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "X-Request-Id": correlationId,
+    },
+    body: JSON.stringify({
+      productId: productId,
+      customerEmail: customerEmail,
+    }),
+  });
 
-    const merchantIdToSend = order?.merchantId ?? DEFAULT_MERCHANT_ID;
-    const payment = await apiRequest("/payments", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${sessionToken}`,
-        "Idempotency-Key": `pay-${sessionCustomer.email}-${externalReference}`,
-        "X-Request-Id": correlationId,
-      },
-        body: JSON.stringify({
-          orderId: order.id,
-          merchantId: merchantIdToSend,
-          method: method === "upi" ? "UPI" : method === "netbanking" ? "NET_BANKING" : method === "wallet" ? "WALLET" : "CARD",
-          provider,
-          transactionMode,
-          notes:
-            method === "upi"
-              ? "Customer selected UPI"
-              : method === "netbanking"
-                ? "Customer selected Net Banking"
-                : method === "wallet"
-                  ? "Customer selected Wallet"
-                  : `Cardholder: ${(cardholder.trim() || `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim()).trim()}`,
-        }),
-    });
-
-    const checkout = {
-      token: sessionToken,
-      customer: sessionCustomer,
-      order,
-      payment,
-      amount,
-      method,
-      cardholder,
-      correlationId,
-    };
-
-    persistCheckoutState(checkout);
-    return checkout;
+  const checkout = {
+    token: token,
+    order: response.order,
+    payment: response.payment,
+    checkoutUrl: response.checkoutUrl,
+    correlationId,
   };
 
-  try {
-    return await executeCheckout(token, customer);
-  } catch (error) {
-    const shouldRetryWithFreshAuth =
-      error?.status === 401 ||
-      error?.status === 403 ||
-      error?.code === "INVALID_AUTH_TOKEN" ||
-      error?.code === "MISSING_AUTH_TOKEN" ||
-      error?.code === "UNTRUSTED_GATEWAY";
-
-    if (!shouldRetryWithFreshAuth) {
-      throw error;
-    }
-
-    clearAuth();
-    const refreshedSession = await ensureAccessToken();
-    return executeCheckout(refreshedSession.token, refreshedSession.customer);
-  }
+  persistCheckoutState(checkout);
+  return checkout;
 }
 
 export async function captureCheckout(checkout, onStatusChange) {
   const maxAttempts = 10;
   const pollInterval = 3000;
   
+  const paymentId = checkout.payment?.id || checkout.id;
+  
   for (let attempt = 0; attempt <= maxAttempts; attempt++) {
     try {
-      const payment = await apiRequest(`/payments/${checkout.payment.id}/capture`, {
+      const payment = await apiRequest(`/payments/${paymentId}/capture`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${checkout.token}`,
@@ -328,25 +267,13 @@ export async function captureCheckout(checkout, onStatusChange) {
 
       if (payment.status !== "PROCESSING") {
         const createdAt = payment.createdAt ? new Date(payment.createdAt) : new Date();
-        const methodLabel = checkout.method === "upi" ? "UPI" : "Card";
 
         const transaction = {
           id: payment.id,
           orderId: payment.orderId,
-          orderReference: payment.orderReference,
-          providerOrderId: payment.providerOrderId,
-          providerPaymentId: payment.providerPaymentId,
-          transactionMode: payment.transactionMode,
-          simulated: payment.simulated,
-          amount: checkout.amount,
-          amountLabel: formatCurrency(checkout.amount),
-          method: checkout.method,
-          methodLabel,
           status: payment.status,
-          customerLabel: checkout.method === "upi" ? checkout.customer?.fullName || checkout.customer?.firstName : checkout.cardholder.trim() || `${checkout.customer?.firstName} ${checkout.customer?.lastName}`.trim(),
-          environmentLabel: payment.transactionMode === TRANSACTION_MODES.TEST ? "Sandbox lane" : "Primary processor",
+          checkoutUrl: checkout.checkoutUrl,
           createdAt: createdAt.toISOString(),
-          dateLabel: createdAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
           correlationId: checkout.correlationId,
           errorMessage: payment.errorMessage,
           errorCode: payment.errorCode,
@@ -372,12 +299,6 @@ export async function captureCheckout(checkout, onStatusChange) {
 
 export async function getPaymentStatus(paymentId, token) {
   return apiRequest(`/payments/${paymentId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function getOrderHistory(token, limit = 10, offset = 0) {
-  return apiRequest(`/orders?limit=${limit}&offset=${offset}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

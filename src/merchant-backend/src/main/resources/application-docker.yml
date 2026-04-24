@@ -1,0 +1,21 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: merchant-backend
+  profiles:
+    active: docker
+
+payment-service:
+  url: ${PAYMENT_SERVICE_URL:http://payment-service:8083}
+  api-key: ${PAYMENT_SERVICE_API_KEY:sk_test_merchant123}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0

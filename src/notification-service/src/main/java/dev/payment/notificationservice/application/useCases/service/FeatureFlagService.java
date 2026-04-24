@@ -1,7 +1,7 @@
 package dev.payment.notificationservice.service;
 
-import dev.payment.notificationservice.entity.FeatureFlag;
-import dev.payment.notificationservice.repository.FeatureFlagRepository;
+import dev.payment.notificationservice.domain.entities.FeatureFlag;
+import dev.payment.notificationservice.infrastructure.persistence.repository.FeatureFlagRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Random;

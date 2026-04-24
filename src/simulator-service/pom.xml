@@ -4,17 +4,19 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <groupId>dev.payflow</groupId>
+    <artifactId>simulator-service</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>Simulator Service</name>
+    <description>Lightweight payment simulator for testing</description>
+
     <parent>
         <groupId>dev.payflow</groupId>
         <artifactId>payflow</artifactId>
         <version>1.0.0</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
-
-    <artifactId>simulator-service</artifactId>
-    <packaging>jar</packaging>
-    <name>Simulator Service</name>
-    <description>Lightweight payment simulator for testing</description>
 
     <dependencies>
         <dependency>
@@ -38,19 +40,21 @@
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+        <dependency>
             <groupId>dev.payflow</groupId>
             <artifactId>common</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>dev.payflow</groupId>
             <artifactId>common-config</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <scope>provided</scope>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 
@@ -59,14 +63,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>3.2.5</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <configuration>
+                    <mainClass>dev.payflow.simulator.SimulatorServiceApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>

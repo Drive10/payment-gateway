@@ -2,6 +2,7 @@ package dev.payment.paymentservice.payment.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -18,22 +19,26 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import jakarta.servlet.http.HttpServletResponse;
-
 import java.util.Arrays;
 
 @Configuration
 @EnableMethodSecurity
+@Profile("!test & !local")
+// Disabled in local profile - use LocalSecurityConfig instead
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ApplicationUserDetailsService userDetailsService;
+    private final ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            ApplicationUserDetailsService userDetailsService
+            ApplicationUserDetailsService userDetailsService,
+            ApiKeyAuthenticationFilter apiKeyAuthenticationFilter
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.userDetailsService = userDetailsService;
+        this.apiKeyAuthenticationFilter = apiKeyAuthenticationFilter;
     }
 
     @Bean
@@ -53,14 +58,20 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/internal/platform/auth/**").permitAll()
                         .requestMatchers("/internal/**").permitAll()
-                        .requestMatchers("/orders/**").permitAll()
                         .requestMatchers("/payments/initiate").permitAll()
                         .requestMatchers("/payments/tokenize").permitAll()
-                        .requestMatchers("/payments/**").permitAll()
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/payments/*/status").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/payments/**").permitAll()
+                        .requestMatchers("/api/v1/payments/initiate").permitAll()
+                        .requestMatchers("/api/v1/payments/tokenize").permitAll()
+                        .requestMatchers("/api/v1/payments/link").permitAll()
+                        .requestMatchers("/api/v1/payments/links").permitAll()
+                        .requestMatchers("/orders/**").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
+                .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
@@ -69,25 +80,15 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
-                "https://dashboard.payment-gateway.com",
-                "https://checkout.payment-gateway.com",
+                "http://localhost:8080",
+                "http://localhost:8081",
                 "http://localhost:3000",
                 "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost"
+                "http://localhost:5174"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "X-Requested-With",
-                "X-Tenant-ID"
-        ));
-        configuration.setExposedHeaders(Arrays.asList(
-                "Authorization",
-                "X-Tenant-ID",
-                "X-Request-ID"
-        ));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setExposedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 

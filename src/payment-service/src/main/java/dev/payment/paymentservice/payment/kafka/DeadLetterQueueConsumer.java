@@ -10,11 +10,13 @@ import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 import java.time.Instant;
 import java.util.Map;
 
 @Component
+@Profile("!local")
 public class DeadLetterQueueConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(DeadLetterQueueConsumer.class);

@@ -1,6 +1,6 @@
 package dev.payment.notificationservice.dto;
 
-import dev.payment.notificationservice.entity.NotificationChannel;
+import dev.payment.notificationservice.domain.entities.NotificationChannel;
 import jakarta.validation.constraints.NotBlank;
 
 public record CreateTemplateRequest(

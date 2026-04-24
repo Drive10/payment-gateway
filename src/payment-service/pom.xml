@@ -4,15 +4,19 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <groupId>dev.payflow</groupId>
+    <artifactId>payment-service</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>Payment Service</name>
+    <description>Combined Auth, Order, and Payment Service</description>
+
     <parent>
         <groupId>dev.payflow</groupId>
         <artifactId>payflow</artifactId>
         <version>1.0.0</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
-
-    <artifactId>payment-service</artifactId>
-    <name>Payment Service</name>
-    <description>Combined Auth, Order, and Payment Service</description>
 
     <dependencies>
         <!-- Spring Boot Dependencies -->
@@ -67,24 +71,22 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.5.0</version>
         </dependency>
 
         <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.12.5</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.12.5</version>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.12.5</version>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Resilience4j -->
@@ -118,12 +120,12 @@
         <dependency>
             <groupId>dev.payflow</groupId>
             <artifactId>common</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- Test Dependencies -->

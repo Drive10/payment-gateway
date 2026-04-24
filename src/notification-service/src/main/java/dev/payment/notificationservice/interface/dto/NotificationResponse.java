@@ -1,7 +1,7 @@
 package dev.payment.notificationservice.dto;
 
-import dev.payment.notificationservice.entity.NotificationChannel;
-import dev.payment.notificationservice.entity.NotificationStatus;
+import dev.payment.notificationservice.domain.entities.NotificationChannel;
+import dev.payment.notificationservice.domain.entities.NotificationStatus;
 
 import java.time.LocalDateTime;
 import java.util.Map;

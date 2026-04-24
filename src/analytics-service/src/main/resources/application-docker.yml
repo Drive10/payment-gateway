@@ -1,16 +1,11 @@
 server:
-  port: ${SERVER_PORT:8089}
+  port: 8089
 
 spring:
   application:
     name: analytics-service
   profiles:
     active: docker
-  data:
-    redis:
-      host: ${REDIS_HOST:redis}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:payflow}
 
 payflow:
   database:
@@ -19,12 +14,6 @@ payflow:
 application:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
-    topic:
-      payment-events: payment.events
-      order-events: order.events
-  analytics:
-    batch-size: 100
-    window-size: PT1H
 
 management:
   endpoints:

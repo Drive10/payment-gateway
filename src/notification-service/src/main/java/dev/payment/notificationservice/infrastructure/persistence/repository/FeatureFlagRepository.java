@@ -1,6 +1,6 @@
-package dev.payment.notificationservice.repository;
+package dev.payment.notificationservice.infrastructure.persistence.repository;
 
-import dev.payment.notificationservice.entity.FeatureFlag;
+import dev.payment.notificationservice.domain.entities.FeatureFlag;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

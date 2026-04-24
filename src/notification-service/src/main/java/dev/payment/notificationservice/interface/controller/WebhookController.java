@@ -1,7 +1,7 @@
 package dev.payment.notificationservice.controller;
 
 import dev.payment.common.api.ApiResponse;
-import dev.payment.notificationservice.entity.WebhookEvent;
+import dev.payment.notificationservice.domain.entities.WebhookEvent;
 import dev.payment.notificationservice.service.WebhookService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

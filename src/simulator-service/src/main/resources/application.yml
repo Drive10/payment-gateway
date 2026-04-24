@@ -1,6 +1,10 @@
 server:
   port: ${SERVER_PORT:8086}
 
+payflow:
+  redis:
+    enabled: false
+
 spring:
   application:
     name: simulator-service

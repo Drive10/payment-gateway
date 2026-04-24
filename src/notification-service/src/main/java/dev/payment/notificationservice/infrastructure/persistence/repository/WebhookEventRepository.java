@@ -1,7 +1,7 @@
-package dev.payment.notificationservice.repository;
+package dev.payment.notificationservice.infrastructure.persistence.repository;
 
-import dev.payment.notificationservice.entity.WebhookEvent;
-import dev.payment.notificationservice.entity.WebhookStatus;
+import dev.payment.notificationservice.domain.entities.WebhookEvent;
+import dev.payment.notificationservice.domain.entities.WebhookStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
