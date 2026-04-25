@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { getStoredTransaction } from "../lib/payment";
 
 export default function Receipt() {

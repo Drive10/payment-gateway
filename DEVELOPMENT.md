@@ -1,5 +1,13 @@
 # PayFlow Development Guide
 
+## API Documentation
+ 
+We provide a centralized OpenAPI/Swagger portal that aggregates documentation for all microservices.
+ 
+- **Portal URL**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+ 
+From this portal, you can select any service from the dropdown menu to view its available endpoints, request schemas, and response types.
+ 
 ## Quick Start
 
 ### Full Development Environment
@@ -60,14 +68,15 @@ SPRING_PROFILES_ACTIVE=local mvn spring-boot:run -pl src/merchant-backend
 ```
 
 ## Service Ports
-
+ 
 | Service | Port | Auth |
 |---------|------|------|
 | API Gateway | 8080 | JWT for /merchant routes |
 | Merchant Backend | 8081 | JWT from frontend |
 | Payment Service | 8083 | API Key |
 | Notification | 8084 | - |
-| Simulator | 8085 | - |
+| Simulator | 8086 | - |
+
 
 ## Development Tips
 
@@ -94,8 +103,13 @@ mvn test -pl src/notification-service
 ```
 
 ## Environment Variables
-
-Key variables for local development:
+ 
+We use a centralized configuration approach. All secrets and environment-specific values are managed in the root `.env` file, which is then injected into services via Docker Compose or manually for local Maven runs.
+ 
+### Configuration Flow:
+`.env` (Root) $\rightarrow$ `docker-compose.yml` $\rightarrow$ `${VARIABLE}` in `application.yml` $\rightarrow$ Spring Boot
+ 
+### Key variables for local development:
 - `POSTGRES_HOST=localhost`
 - `POSTGRES_PORT=5432`
 - `REDIS_HOST=localhost`
@@ -105,8 +119,9 @@ Key variables for local development:
 - `MERCHANT_BACKEND_URL=http://localhost:8081`
 - `PAYMENT_SERVICE_URL=http://localhost:8083`
 - `PAYMENT_SERVICE_API_KEY=sk_test_merchant123`
+ 
+See `.env.example` for the complete list of variables.
 
-See `.env.example` for complete list.
 
 ## API Key Setup
 

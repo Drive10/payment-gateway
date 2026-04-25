@@ -1,16 +1,12 @@
-version: '3.8'
-
 services:
   # ==================== INFRASTRUCTURE SERVICES ====================
   postgres:
-    profiles:
-      - infra
     image: postgres:16-alpine
     container_name: payflow-postgres
     environment:
-      POSTGRES_DB: payflow
-      POSTGRES_USER: payflow
-      POSTGRES_PASSWORD: payflow
+      POSTGRES_DB: ${POSTGRES_DB:-payflow}
+      POSTGRES_USER: ${POSTGRES_USER:-payflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payflow}
     ports:
       - "5432:5432"
     volumes:
@@ -23,33 +19,10 @@ services:
       timeout: 5s
       retries: 5
 
-  mongodb:
-    profiles:
-      - infra
-    image: mongo:7
-    container_name: payflow-mongodb
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: audit
-      MONGO_INITDB_ROOT_PASSWORD: audit
-      MONGO_INITDB_DATABASE: audit_db
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    networks:
-      - payflow-network
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   redis:
-    profiles:
-      - infra
     image: redis:7-alpine
     container_name: payflow-redis
-    command: redis-server --requirepass payflow
+    command: redis-server --requirepass ${REDIS_PASSWORD:-payflow}
     ports:
       - "6379:6379"
     volumes:
@@ -63,15 +36,13 @@ services:
       retries: 5
 
   kafka:
-    profiles:
-      - infra
     image: confluentinc/cp-kafka:7.5.0
     container_name: payflow-kafka
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:29092
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
@@ -80,8 +51,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG_DIRS: /var/lib/kafka/data
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_JMX_PORT: 9091
-      KAFKA_JMX_HOSTNAME: localhost
+      CLUSTER_ID: b9H8-t06Q4SvTyaHU8Nf9w
     ports:
       - "9092:9092"
     volumes:
@@ -96,69 +66,62 @@ services:
 
   # ==================== APPLICATION SERVICES ====================
   api-gateway:
-    profiles:
-      - services
-    build:
-      context: ./src/api-gateway
-      dockerfile: Dockerfile
+    image: payflow-api-gateway:local
     container_name: payflow-api-gateway
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: payflow
-      MERCHANT_BACKEND_URL: http://merchant-backend:8081
-      PAYMENT_SERVICE_URL: http://payment-service:8083
-      NOTIFICATION_SERVICE_URL: http://notification-service:8084
-      JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SPRING_PROFILES_ACTIVE: "docker"
+      AUTH_SERVICE_URL: "http://auth-service:8082"
+      PAYMENT_SERVICE_URL: "http://payment-service:8083"
+      JWT_SECRET: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
     networks:
       - payflow-network
     depends_on:
+      kafka:
+        condition: service_healthy
+
+  auth-service:
+    image: payflow-auth-service:local
+    container_name: payflow-auth-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: "docker"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: "payflow"
+      POSTGRES_USER: "payflow"
+      POSTGRES_PASSWORD: "payflow"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "payflow"
+      JWT_SECRET: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    networks:
+      - payflow-network
+    depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
 
-  merchant-backend:
-    profiles:
-      - services
-    build:
-      context: ./src/merchant-backend
-      dockerfile: Dockerfile
-    container_name: payflow-merchant-backend
-    ports:
-      - "8081:8081"
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      PAYMENT_SERVICE_URL: http://payment-service:8083
-      PAYMENT_SERVICE_API_KEY: sk_test_merchant123
-      JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-    networks:
-      - payflow-network
-
   payment-service:
-    profiles:
-      - services
-    build:
-      context: ./src/payment-service
-      dockerfile: Dockerfile
+    image: payflow-payment-service:local
     container_name: payflow-payment-service
     ports:
       - "8083:8083"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: "docker"
       POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: payflow
-      POSTGRES_USER: payflow
-      POSTGRES_PASSWORD: payflow
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: "payflow"
+      POSTGRES_USER: "payflow"
+      POSTGRES_PASSWORD: "payflow"
       REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: payflow
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SIMULATOR_SERVICE_URL: http://simulator-service:8086
-      NOTIFICATION_SERVICE_URL: http://notification-service:8084
-      JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "payflow"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+      SIMULATOR_SERVICE_URL: "http://simulator-service:8086"
     networks:
       - payflow-network
     depends_on:
@@ -169,80 +132,17 @@ services:
       kafka:
         condition: service_healthy
 
-  notification-service:
-    profiles:
-      - services
-    build:
-      context: ./src/notification-service
-      dockerfile: Dockerfile
-    container_name: payflow-notification-service
-    ports:
-      - "8084:8084"
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      PAYMENT_SERVICE_URL: http://payment-service:8083
-      WEBHOOK_SIGNATURE_SECRET: dev_webhook_secret
-    networks:
-      - payflow-network
-    depends_on:
-      kafka:
-        condition: service_healthy
-
   simulator-service:
-    profiles:
-      - services
-    build:
-      context: ./src/simulator-service
-      dockerfile: Dockerfile
+    image: payflow-simulator-service:local
     container_name: payflow-simulator-service
     ports:
       - "8086:8086"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-    networks:
-      - payflow-network
-
-  analytics-service:
-    profiles:
-      - services
-    build:
-      context: ./src/analytics-service
-      dockerfile: Dockerfile
-    container_name: payflow-analytics-service
-    ports:
-      - "8089:8089"
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_PROFILES_ACTIVE: "docker"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
     networks:
       - payflow-network
     depends_on:
-      kafka:
-        condition: service_healthy
-
-  audit-service:
-    profiles:
-      - services
-    build:
-      context: ./src/audit-service
-      dockerfile: Dockerfile
-    container_name: payflow-audit-service
-    ports:
-      - "8090:8090"
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      MONGODB_HOST: mongodb
-      MONGODB_PORT: 27017
-      MONGODB_DATABASE: audit_db
-      MONGODB_USERNAME: audit
-      MONGODB_PASSWORD: audit
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-    networks:
-      - payflow-network
-    depends_on:
-      mongodb:
-        condition: service_healthy
       kafka:
         condition: service_healthy
 
@@ -252,6 +152,5 @@ networks:
 
 volumes:
   postgres_data:
-  mongodb_data:
   redis_data:
   kafka_data:

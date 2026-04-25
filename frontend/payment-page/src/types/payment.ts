@@ -1,83 +1,42 @@
-export interface CardDetails {
-  cardholderName: string;
-  cardNumber: string;
-  expiry: string;
-  cvv: string;
-  email: string;
-  phone?: string;
-}
+export type Currency = 'INR' | 'USD' | 'EUR';
 
-export interface UPIDetails {
-  upiId: string;
-  email: string;
-}
-
-export interface NetBankingDetails {
-  bankCode: string;
-  email: string;
-}
-
-export type PaymentMethod = 'card' | 'upi' | 'netbanking';
-
-export type PaymentStatus = 
-  | 'idle'                    // No payment initiated
-  | 'initiated'              // Payment created, awaiting user action
-  | 'pending'                // UPI: waiting for user to pay in UPI app
-  | 'processing'             // Payment being processed
-  | 'pending_otp'            // Awaiting OTP/3D secure verification
-  | 'authorizing'            // Verifying with bank/payment provider
-  | 'authorized'             // Payment authorized, awaiting capture
-  | 'success'                // Payment completed successfully
-  | 'failed'                 // Payment failed
-  | 'expired'                // Payment expired
-  | 'refunded'               // Payment was refunded
-  | 'cancelled';             // Payment cancelled by user
+export type PaymentMethod = 'CARD' | 'UPI';
 
 export interface OrderSummary {
   productName: string;
-  quantity: number;
-  subtotal: number;
-  tax: number;
-  total: number;
-  currency: string;
+  amount: number;
+  currency: Currency;
 }
 
-export interface InitiatePaymentResponse {
-  transactionId: string;
-  status: string;
-  checkoutUrl?: string;      // For UPI: deep link to UPI app
-  redirectUrl?: string;
-  message?: string;
-  errorCode?: string;
+export interface CustomerDetails {
+  name: string;
+  email: string;
 }
 
-export interface VerifyOtpResponse {
-  status: 'COMPLETED' | 'FAILED';
-  message?: string;
+export interface CreateOrderRequest {
+  amount: number;
+  currency: Currency;
+  customerEmail: string;
 }
 
-export interface PaymentState {
+export interface CreateOrderResponse {
+  orderId: string;
+  paymentSessionId: string;
+}
+
+export type PaymentStatus = 'PENDING' | 'SUCCESS' | 'FAILURE' | 'EXPIRED';
+
+export interface PaymentStatusResponse {
+  orderId: string;
   status: PaymentStatus;
-  error: string | null;
-  transactionId: string | null;
+  transactionId?: string;
+  errorMessage?: string;
 }
 
-export interface CardBrand {
-  name: 'visa' | 'mastercard' | 'amex' | 'rupay' | 'unknown';
-  logo: string;
+export interface CheckoutFormValues {
+  customerName: string;
+  customerEmail: string;
+  paymentMethod: PaymentMethod;
+  // Card details are not stored in state for PCI compliance, 
+  // but we might need some for validation or if using a tokenization lib
 }
-
-export const INDIAN_BANKS = [
-  { code: 'SBIN', name: 'State Bank of India' },
-  { code: 'HDFC', name: 'HDFC Bank' },
-  { code: 'ICICI', name: 'ICICI Bank' },
-  { code: 'AXIS', name: 'Axis Bank' },
-  { code: 'KOTAK', name: 'Kotak Mahindra Bank' },
-  { code: 'INDUSIND', name: 'IndusInd Bank' },
-  { code: 'YESBANK', name: 'Yes Bank' },
-  { code: 'IDFC', name: 'IDFC First Bank' },
-  { code: 'BANDHAN', name: 'Bandhan Bank' },
-  { code: 'RBL', name: 'RBL Bank' },
-] as const;
-
-export const UPI_BANKS = ['oksbi', 'okhdfcbank', 'okicici', 'okaxis', 'okkotak', 'okindusind', 'okyesbank', 'okidfc'] as const;

@@ -69,8 +69,11 @@ docker-compose up -d
 | Kafka | 9092 | Message broker |
 
 ## Environment Variables
-
+ 
+We use a centralized configuration approach. You can override any of the defaults below by creating a `.env` file in the root directory. Docker Compose will automatically load variables from this file.
+ 
 ### Common
+
 
 | Variable | Default | Description |
 |----------|---------|-------------|

@@ -1,3 +1,0 @@
-# Simulator Service - Local Development Configuration
-server:
-  port: ${SERVER_PORT:8086}

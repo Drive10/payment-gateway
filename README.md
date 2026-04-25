@@ -188,12 +188,22 @@ sequenceDiagram
 - Node.js 20+
 
 ### Setup
-```bash
-cp .env.example .env
-make infra-up
-make all-services
-make frontend
-```
+1. Copy environment configuration:
+   ```bash
+   cp .env.example .env
+   ```
+2. Start infrastructure:
+   ```bash
+   make infra-up
+   ```
+3. Start services:
+   ```bash
+   make all-services
+   ```
+4. Start frontend:
+   ```bash
+   make frontend
+   ```
 
 ### One Command
 ```bash
@@ -202,6 +212,7 @@ make dev
 
 ### URLs
 - Gateway: `http://localhost:8080`
+- API Documentation: `http://localhost:8080/swagger-ui.html`
 - Merchant Backend: `http://localhost:8081`
 - Payment API: `http://localhost:8083`
 - Frontend: `http://localhost:5173`
