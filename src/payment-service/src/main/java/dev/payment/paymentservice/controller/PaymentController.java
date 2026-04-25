@@ -35,7 +35,7 @@ public class PaymentController {
     }
 
     @GetMapping("/status/{orderId}")
-    public ResponseEntity<Map<String, Object>> getPaymentStatus(@PathVariable String orderId) {
+    public ResponseEntity<Map<String, Object>> getPaymentStatus(@PathVariable("orderId") String orderId) {
         try {
             PaymentStatusResponse response = paymentService.getPaymentStatus(orderId);
             return ResponseEntity.ok(Map.of(
@@ -51,8 +51,9 @@ public class PaymentController {
     }
 
     @PostMapping("/{paymentId}/capture")
-    public ResponseEntity<Map<String, Object>> capturePayment(@PathVariable String paymentId) {
+    public ResponseEntity<Map<String, Object>> capturePayment(@PathVariable("paymentId") String paymentId) {
         try {
+            paymentService.updatePaymentStatus(paymentId, PaymentStatus.AUTHORIZED);
             paymentService.updatePaymentStatus(paymentId, PaymentStatus.CAPTURED);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -66,9 +67,25 @@ public class PaymentController {
         }
     }
 
+    @PostMapping("/{paymentId}/authorize")
+    public ResponseEntity<Map<String, Object>> authorizePayment(@PathVariable("paymentId") String paymentId) {
+        try {
+            paymentService.updatePaymentStatus(paymentId, PaymentStatus.AUTHORIZATION_PENDING);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of("status", "AUTHORIZATION_PENDING")
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
     @PostMapping("/{paymentId}/verify-otp")
     public ResponseEntity<Map<String, Object>> verifyOtp(
-            @PathVariable String paymentId,
+            @PathVariable("paymentId") String paymentId,
             @RequestBody Map<String, String> request) {
         try {
             paymentService.verifyOtp(paymentId, request.get("otp"));

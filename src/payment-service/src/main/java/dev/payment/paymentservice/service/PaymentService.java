@@ -7,7 +7,6 @@ import dev.payment.paymentservice.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
@@ -19,7 +18,6 @@ import java.util.UUID;
 public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final StringRedisTemplate redisTemplate;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private static final String IDEMPOTENCY_PREFIX = "idempotency:";
     private static final Duration IDEMPOTENCY_TTL = Duration.ofMinutes(30);
@@ -54,7 +52,7 @@ public class PaymentService {
             );
         }
 
-        kafkaTemplate.send("payment-events", payment.getId().toString(), payment);
+        log.info("Payment created: {} for order: {}", payment.getId(), payment.getOrderId());
 
         return CreatePaymentResponse.builder()
             .paymentId(payment.getId().toString())
@@ -93,8 +91,7 @@ public class PaymentService {
 
         payment.setStatus(newStatus);
         paymentRepository.save(payment);
-
-        kafkaTemplate.send("payment-events", payment.getId().toString(), payment);
+        log.info("Payment {} transitioned to {}", paymentId, newStatus);
     }
 
     @Transactional
@@ -109,12 +106,11 @@ public class PaymentService {
         if ("123456".equals(otp)) {
             payment.setStatus(PaymentStatus.AUTHORIZED);
             paymentRepository.save(payment);
-            kafkaTemplate.send("payment-events", payment.getId().toString(), payment);
+            log.info("Payment {} verified successfully", paymentId);
         } else {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason("Invalid OTP");
             paymentRepository.save(payment);
-            kafkaTemplate.send("payment-events", payment.getId().toString(), payment);
             throw new RuntimeException("Invalid OTP");
         }
     }
