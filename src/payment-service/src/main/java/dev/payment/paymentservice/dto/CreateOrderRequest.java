@@ -19,6 +19,7 @@ public class CreateOrderRequest {
     private BigDecimal amount;
 
     @NotBlank(message = "Currency is required")
+    @SupportedCurrency
     private String currency;
 
     private String paymentMethod;

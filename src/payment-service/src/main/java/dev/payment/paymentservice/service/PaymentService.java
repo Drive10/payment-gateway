@@ -1,15 +1,21 @@
 package dev.payment.paymentservice.service;
 
 import dev.payment.paymentservice.dto.*;
-import dev.payment.paymentservice.entity.Payment;
+import dev.payment.paymentservice.entity.*;
 import dev.payment.paymentservice.entity.Payment.PaymentStatus;
-import dev.payment.paymentservice.repository.PaymentRepository;
+import dev.payment.paymentservice.exception.ErrorCodes;
+import dev.payment.paymentservice.exception.PaymentException;
+import dev.payment.paymentservice.repository.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -17,7 +23,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PaymentService {
     private final PaymentRepository paymentRepository;
+    private final OutboxRepository outboxRepository;
     private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
 
     private static final String IDEMPOTENCY_PREFIX = "idempotency:";
     private static final Duration IDEMPOTENCY_TTL = Duration.ofMinutes(30);
@@ -27,8 +35,12 @@ public class PaymentService {
         if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
             String cached = redisTemplate.opsForValue().get(IDEMPOTENCY_PREFIX + idempotencyKey);
             if (cached != null) {
-                log.info("Duplicate request detected for idempotency key: {}", idempotencyKey);
-                throw new RuntimeException("Duplicate request. Please retry with a new idempotency key.");
+                log.info("Duplicate request detected for idempotency key: {}. Returning cached response.", idempotencyKey);
+                try {
+                    return objectMapper.readValue(cached, CreatePaymentResponse.class);
+                } catch (JsonProcessingException e) {
+                    log.error("Error deserializing cached idempotency response: {}", e.getMessage());
+                }
             }
         }
 
@@ -44,17 +56,7 @@ public class PaymentService {
 
         payment = paymentRepository.save(payment);
 
-        if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
-            redisTemplate.opsForValue().set(
-                IDEMPOTENCY_PREFIX + idempotencyKey,
-                payment.getId().toString(),
-                IDEMPOTENCY_TTL
-            );
-        }
-
-        log.info("Payment created: {} for order: {}", payment.getId(), payment.getOrderId());
-
-        return CreatePaymentResponse.builder()
+        CreatePaymentResponse response = CreatePaymentResponse.builder()
             .paymentId(payment.getId().toString())
             .orderId(payment.getOrderId())
             .amount(payment.getAmount())
@@ -62,11 +64,44 @@ public class PaymentService {
             .status(payment.getStatus().name())
             .checkoutUrl("/pay/" + payment.getId())
             .build();
+
+        if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
+            try {
+                String jsonResponse = objectMapper.writeValueAsString(response);
+                redisTemplate.opsForValue().set(
+                    IDEMPOTENCY_PREFIX + idempotencyKey,
+                    jsonResponse,
+                    IDEMPOTENCY_TTL
+                );
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing response for idempotency: {}", e.getMessage());
+            }
+        }
+
+        saveEvent(payment.getId().toString(), "PAYMENT_CREATED", response);
+        log.info("Payment created: {} for order: {}", payment.getId(), payment.getOrderId());
+
+        return response;
+    }
+
+    private void saveEvent(String aggregateId, String eventType, Object payload) {
+        try {
+            String jsonPayload = objectMapper.writeValueAsString(payload);
+            Outbox event = Outbox.builder()
+                .aggregateId(aggregateId)
+                .eventType(eventType)
+                .payload(jsonPayload)
+                .createdAt(Instant.now())
+                .build();
+            outboxRepository.save(event);
+        } catch (JsonProcessingException e) {
+            log.error("Error serializing outbox payload: {}", e.getMessage());
+        }
     }
 
     public PaymentStatusResponse getPaymentStatus(String orderId) {
         Payment payment = paymentRepository.findByOrderId(orderId)
-            .orElseThrow(() -> new RuntimeException("Payment not found"));
+            .orElseThrow(() -> PaymentException.notFound("Payment not found: " + orderId));
 
         return PaymentStatusResponse.builder()
             .paymentId(payment.getId().toString())
@@ -81,26 +116,33 @@ public class PaymentService {
     @Transactional
     public void updatePaymentStatus(String paymentId, PaymentStatus newStatus) {
         Payment payment = paymentRepository.findById(UUID.fromString(paymentId))
-            .orElseThrow(() -> new RuntimeException("Payment not found"));
+            .orElseThrow(() -> PaymentException.notFound("Payment not found: " + paymentId));
 
         if (!payment.canTransitionTo(newStatus)) {
-            throw new RuntimeException(
+            throw PaymentException.badRequest(
                 "Invalid state transition from " + payment.getStatus() + " to " + newStatus
             );
         }
 
         payment.setStatus(newStatus);
         paymentRepository.save(payment);
+        
+        saveEvent(paymentId, "PAYMENT_STATUS_UPDATED", Map.of(
+            "paymentId", paymentId,
+            "oldStatus", payment.getStatus(),
+            "newStatus", newStatus
+        ));
+        
         log.info("Payment {} transitioned to {}", paymentId, newStatus);
     }
 
     @Transactional
     public void verifyOtp(String paymentId, String otp) {
         Payment payment = paymentRepository.findById(UUID.fromString(paymentId))
-            .orElseThrow(() -> new RuntimeException("Payment not found"));
+            .orElseThrow(() -> PaymentException.notFound("Payment not found: " + paymentId));
 
         if (payment.getStatus() != PaymentStatus.CHALLENGE_REQUIRED) {
-            throw new RuntimeException("Payment is not in CHALLENGE_REQUIRED state");
+            throw PaymentException.badRequest("Payment is not in CHALLENGE_REQUIRED state");
         }
 
         if ("123456".equals(otp)) {
@@ -111,7 +153,7 @@ public class PaymentService {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason("Invalid OTP");
             paymentRepository.save(payment);
-            throw new RuntimeException("Invalid OTP");
+            throw PaymentException.paymentFailed("Invalid OTP");
         }
     }
 }

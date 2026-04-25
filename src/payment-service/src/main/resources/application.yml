@@ -32,3 +32,16 @@ app:
     url: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
   notification:
     url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+
+payment:
+  supported-currencies:
+    - INR
+    - USD
+    - EUR
+    - GBP
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html

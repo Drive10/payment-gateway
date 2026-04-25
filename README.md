@@ -4,17 +4,18 @@ Production-grade payment gateway reference implementation with realistic payment
 
 PayFlow models the internal architecture patterns used in systems like Stripe, Razorpay, and PayPal at project scale:
 - API Gateway for edge security, rate limits, and request shaping
-- Domain-owned services (payment, merchant-backend, notification, simulator, analytics, audit)
+- Domain-owned services (auth, payment, notification, simulator, analytics, audit)
 - Kafka-driven async workflows with outbox relay and dead-letter handling
-- Strong payment semantics: intent, authorization, capture, settlement, webhook reconciliation
-- UPI collect flow with async completion and expiry
+- Strong payment semantics: intent, authorization, capture, refund, settlement
+- Multi-currency support: INR, USD, EUR, GBP
+- Full and partial refunds
 
 ## Table Of Contents
 - [Why This Project](#why-this-project)
 - [Architecture](#architecture)
 - [Payment Lifecycle](#payment-lifecycle)
 - [Quick Start](#quick-start)
-- [API Flows](#api-flows)
+- [API Reference](#api-reference)
 - [Repository Layout](#repository-layout)
 - [Observability](#observability)
 - [Testing Strategy](#testing-strategy)
@@ -24,10 +25,12 @@ PayFlow models the internal architecture patterns used in systems like Stripe, R
 ## Why This Project
 Most payment demos stop at "create and capture". PayFlow goes further:
 - Prevents duplicate charges with idempotency records backed by PostgreSQL + Redis cache
-- Uses state-machine enforcement for safe status transitions
+- Uses state-machine enforcement for safe payment status transitions
 - Publishes domain events via transactional outbox to Kafka
-- Handles retries and poison messages with dead-letter topics and operational audit logs
+- Handles retries and poison messages with dead-letter topics
 - Supports asynchronous provider-driven outcomes through webhook listeners
+- Multi-currency: INR, USD, EUR, GBP
+- Full and partial refunds with amount validation
 
 ## Architecture
 
@@ -43,17 +46,17 @@ Most payment demos stop at "create and capture". PayFlow goes further:
 | authn/authz | rate limiting | correlation-id | routing | fallback              |
 +------------------+-------------------------------+--------------------------------+
                    |                               |
-                   | /api/v1/merchant/*           | /api/v1/payments/*
-                   | (JWT required)               | (API Key required)
+                   | /api/auth/*                    | /api/payments/*
+                   | (JWT required)                | (API Key required)
                    v                               v
           +-------------------+              +---------------------------+
-          | Merchant Backend |              | Payment Service            |
-          | (8081)          |              | (8083)                   |
+          | Auth Service     |              | Payment Service            |
+          | (8082)          |              | (8083)                   |
           |                 |              |                         |
-          | • validate JWT  |              | • payment lifecycle      |
-          | • order create|              | • idempotency            |
-          | • call payment|              | • Kafka/outbox           |
-          | (API key auth)              | • simulator integration|
+          | • JWT tokens   |              | • payment lifecycle    |
+          | • merchant    |              | • idempotency            |
+          |   registration|              | • currency validation   |
+          | • API keys    |              | • refunds              |
           +-----------+--------+     +------------+------------+
                       |             |
                       +------+------+
@@ -66,37 +69,37 @@ Most payment demos stop at "create and capture". PayFlow goes further:
                       | audit.*      |
                       +------+-------+
                              |
-           +---------------+---------------+
-           |                             |
-           v                             v
-   +------------------+           +------------------+
-   | Analytics Service|           | Audit Service    |
-   | risk/settlement  |           | compliance trail |
-   +------------------+           +------------------+
+           +----------------+-------------------+
+             |                               |
+             v                               v
+    +------------------+           +------------------+
+    | Analytics Service|          | Notification     |
+    | risk/settlement|          | Service          |
+    +------------------+           +------------------+
 
 Shared Infrastructure: PostgreSQL | Redis | Kafka | Docker Compose
 ```
 
 ### Service Boundaries
 - `api-gateway`: edge concerns only (routing, JWT auth, rate limiting, security headers)
-- `merchant-backend`: trusted adapter between frontend and payment service (JWT auth)
-- `payment-service`: payment intent, authorization/capture, refunds, idempotency, ledger, webhook processing (API Key auth)
+- `auth-service`: JWT authentication, merchant registration, API key management
+- `payment-service`: payment intent, authorization/capture, refunds, idempotency, currency validation
 - `notification-service`: outbound webhook and notification delivery
 - `simulator-service`: deterministic mock provider behavior for local and CI testing
 - `analytics-service`: risk and settlement analytics
 - `audit-service`: immutable compliance event log
 
-### Trust Boundaries (Post-Refactor)
+### Trust Boundaries
 
 | Component | Zone | Authentication Method |
 |----------|------|---------------------|
-| Frontend | UNTRUSTED | None (calls only via gateway) |
-| API Gateway | BOUNDARY | JWT validation for merchant routes |
-| Merchant Backend | TRUSTED | JWT from frontend |
+| Frontend | UNTRUSTED | None (calls only via API key) |
+| API Gateway | BOUNDARY | JWT validation for auth routes |
+| Auth Service | TRUSTED | JWT + API Key management |
 | Payment Service | TRUSTED | API Key (Bearer sk_test_*) |
 | Simulator | ISOLATED | None (internal) |
 
-**Critical Rule**: Frontend MUST NEVER call payment APIs directly. All payment requests flow through merchant-backend.
+**Critical Rule**: Frontend MUST NEVER call payment APIs directly. All payment requests use API keys.
 
 ## Payment Lifecycle
 
@@ -107,32 +110,23 @@ sequenceDiagram
     autonumber
     participant C as Client
     participant G as API Gateway
-    participant M as Merchant Backend
     participant P as Payment Service
     participant S as Simulator
     participant K as Kafka
 
-    C->>G: POST /merchant/create-payment
-    G->>M: JWT validation
-    M->>M: Create order snapshot
-    M->>P: POST /payments (API Key)
-    P->>P: Validate + idempotency begin
+    C->>P: POST /api/payments/create-order
+    P->>P: Validate + idempotency check
     P->>S: create intent
     S-->>P: providerOrderId + checkoutUrl
-    P->>P: CREATED -> AUTHORIZED
-    P->>K: payment.created / payment.authorized (outbox relay)
-    P-->>M: payment intent response
-    M-->>G: merchant response
-    G-->>C: checkout intent
+    P->>P: CREATED -> AUTHORIZATION_PENDING
+    P->>K: payment.created (outbox relay)
+    P-->>C: payment intent response
 
-    C->>G: POST /payments/{id}/capture (via merchant)
-    G->>M: JWT validation
-    M->>P: Forward to payment service
+    C->>P: POST /api/payments/{id}/capture
     P->>S: capture provider order
     alt success
       S-->>P: providerPaymentId + signature
-      P->>P: AUTHORIZED -> PROCESSING -> CAPTURED
-      P->>P: Ledger entries + transaction record
+      P->>P: AUTHORIZED -> CAPTURED
       P->>K: payment.captured
     else fail or timeout
       S-->>P: error
@@ -141,43 +135,38 @@ sequenceDiagram
     end
 ```
 
-### UPI: Collect -> Pending -> Async webhook confirmation
+### Refund Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant C as Client
-    participant G as API Gateway
-    participant M as Merchant Backend
+    participant M as Merchant
     participant P as Payment Service
-    participant S as Simulator/Provider
-    participant K as Kafka
 
-    C->>G: POST /merchant/create-payment (paymentMethod=UPI)
-    G->>M: JWT validation
-    M->>P: Create UPI payment
-    P->>P: CREATED -> AWAITING_UPI_PAYMENT
-    P-->>M: upi:// deep link + expiry
-    M-->>G: merchant response
-    G-->>C: upi:// link
-
-    Note over C,S: User approves collect in UPI app
-
-    S->>P: webhook update (captured/failed)
-    P->>P: Idempotent event dedupe
-    alt captured
-      P->>P: AWAITING_UPI_PAYMENT -> CAPTURED
-      P->>K: payment.webhook.captured
-    else expired/failed
-      P->>P: AWAITING_UPI_PAYMENT -> EXPIRED/FAILED
-      P->>K: payment.webhook.failed
+    M->>P: POST /api/payments/refund
+    alt full refund
+      P->>P: refunded_amount = captured_amount
+      P->>P: CAPTURED -> REFUNDED
+    else partial refund
+      P->>P: refunded_amount += partial_amount
+      P->>P: CAPTURED -> CAPTURED (partial)
     end
+    P-->>M: refund response
 ```
 
-### Status Model
-- Card: `PENDING -> CREATED -> AUTHORIZED -> PROCESSING -> CAPTURED`
-- UPI: `PENDING -> CREATED -> AWAITING_UPI_PAYMENT -> CAPTURED|FAILED|EXPIRED`
-- Refunds: `CAPTURED -> PARTIALLY_REFUNDED -> REFUNDED`
+### Payment Status States
+
+**Card:**
+```
+CREATED → AUTHORIZATION_PENDING → CHALLENGE_REQUIRED → AUTHORIZED → CAPTURED
+                                                              ↓
+                                                         REFUNDED
+```
+
+**Refund:**
+```
+PENDING → PROCESSING → COMPLETED | FAILED
+```
 
 ## Quick Start
 
@@ -185,21 +174,23 @@ sequenceDiagram
 - Java 21+
 - Maven 3.9+
 - Docker + Docker Compose
-- Node.js 20+
 
 ### Setup
 1. Copy environment configuration:
    ```bash
    cp .env.example .env
    ```
+
 2. Start infrastructure:
    ```bash
    make infra-up
    ```
-3. Start services:
+
+3. Build and start all services:
    ```bash
    make all-services
    ```
+
 4. Start frontend:
    ```bash
    make frontend
@@ -211,85 +202,156 @@ make dev
 ```
 
 ### URLs
-- Gateway: `http://localhost:8080`
-- API Documentation: `http://localhost:8080/swagger-ui.html`
-- Merchant Backend: `http://localhost:8081`
+- API Gateway: `http://localhost:8080`
 - Payment API: `http://localhost:8083`
+- Auth API: `http://localhost:8082`
 - Frontend: `http://localhost:5173`
+- Swagger UI: `http://localhost:8083/swagger-ui.html`
 
-## API Flows
+## API Reference
 
-### 1. Frontend initiates payment (via merchant-backend)
+### Payment Service API
 
-**Frontend sends** (ONLY productId - no financial data):
+#### Create Payment
+
 ```bash
-curl -X POST http://localhost:8080/api/v1/merchant/create-payment \
+curl -X POST http://localhost:8083/api/payments/create-order \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <merchant_jwt>" \
-  -d '{"productId": "prod_123"}'
+  -H "Authorization: Bearer sk_test_merchant123" \
+  -H "Idempotency-Key: pay_123" \
+  -d '{
+    "orderId": "order_abc123",
+    "amount": 500.00,
+    "currency": "USD",
+    "paymentMethod": "CARD"
+  }'
 ```
 
-**Response**:
+**Supported Currencies:** INR, USD, EUR, GBP
+
+**Response:**
 ```json
 {
   "success": true,
   "data": {
-    "order": {"id": "order_abc", "amount": 50000, "currency": "INR"},
-    "payment": {"id": "pay_xyz", "status": "CREATED", "checkoutUrl": "..."},
-    "checkoutUrl": "https://checkout.payflow.dev/pay/pay_xyz"
+    "paymentId": "uuid-here",
+    "orderId": "order_abc123",
+    "amount": 500.00,
+    "currency": "USD",
+    "status": "CREATED",
+    "checkoutUrl": "/pay/uuid-here"
   }
 }
 ```
 
-### 2. Merchant Backend calls Payment Service (API Key auth)
+#### Get Payment Status
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/payments \
+curl -X GET http://localhost:8083/api/payments/status/order_abc123 \
+  -H "Authorization: Bearer sk_test_merchant123"
+```
+
+#### Capture Payment
+
+```bash
+curl -X POST http://localhost:8083/api/payments/{paymentId}/capture \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk_test_merchant123"
+```
+
+#### Authorize Payment
+
+```bash
+curl -X POST http://localhost:8083/api/payments/{paymentId}/authorize \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk_test_merchant123"
+```
+
+#### Verify OTP (for 3DS)
+
+```bash
+curl -X POST http://localhost:8083/api/payments/{paymentId}/verify-otp \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer sk_test_merchant123" \
-  -H "Idempotency-Key: pay_$(uuidgen)" \
+  -d '{"otp": "123456"}'
+```
+
+### Refund API
+
+#### Create Refund
+
+```bash
+curl -X POST http://localhost:8083/api/payments/refund \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk_test_merchant123" \
   -d '{
-    "order": {
-      "id": "order_abc123",
-      "amount": 50000,
-      "currency": "INR"
-    },
-    "method": "CARD"
+    "paymentId": "uuid-here",
+    "amount": 250.00,
+    "reason": "Customer request"
   }'
 ```
 
-### 3. Capture
+**Note:** If `amount` is omitted, full refund is issued. Partial refunds are supported.
 
-```bash
-curl -X POST http://localhost:8080/api/v1/payments/{paymentId}/capture \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk_test_merchant123" \
-  -d '{}'
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "refundId": "ref_abc123",
+    "paymentId": "uuid-here",
+    "orderId": "order_abc123",
+    "amount": 250.00,
+    "refundedAmount": 250.00,
+    "currency": "USD",
+    "status": "COMPLETED",
+    "reason": "Customer request",
+    "createdAt": "2024-01-15T10:30:00Z"
+  }
+}
 ```
 
-### 4. UPI Collect
+#### Get Refund Status
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/merchant/create-payment \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <merchant_jwt>" \
-  -d '{"productId": "prod_upi", "paymentMethod": "UPI", "upiId": "testuser@upi"}'
+curl -X GET http://localhost:8083/api/payments/refund/ref_abc123 \
+  -H "Authorization: Bearer sk_test_merchant123"
 ```
+
+### Error Response Format
+
+```json
+{
+  "success": false,
+  "error": "Payment not found",
+  "errorCode": "PAYMENT_NOT_FOUND"
+}
+```
+
+**Error Codes:**
+- `VALIDATION_ERROR` - Request validation failed
+- `PAYMENT_NOT_FOUND` - Payment not found
+- `INVALID_STATE_TRANSITION` - Invalid payment status transition
+- `INVALID_REQUEST` - Invalid request parameters
+- `PAYMENT_FAILED` - Payment processing failed
+- `REFUND_FAILED` - Refund processing failed
+- `IDEMPOTENCY_KEY_CONFLICT` - Duplicate idempotency key
+- `CURRENCY_NOT_SUPPORTED` - Currency not supported
+- `INTERNAL_ERROR` - Internal server error
 
 ## Repository Layout
 
-```text
+```
 payflow/
 ├── src/
 │   ├── api-gateway/
-│   ├── merchant-backend/         # NEW: Trusted adapter service
-│   ├── payment-service/
+│   ├── auth-service/              # JWT + API Key management
+│   ├── payment-service/           # Payment + Refunds
 │   ├── notification-service/
 │   ├── simulator-service/
 │   ├── analytics-service/
 │   └── audit-service/
 ├── frontend/payment-page/
-├── common/                     # Shared DTOs
 ├── config/
 │   ├── k8s/
 │   ├── helm/
@@ -301,13 +363,13 @@ payflow/
 
 ## Observability
 - Structured logs with correlation ID propagation across services
-- Micrometer metrics for idempotency cache hits/misses, outbox success/failure, webhook counters
-- Distributed tracing ready through Micrometer tracing + OTel bridge
-- Centralized log/metric stack under `config/monitoring` (Prometheus, Grafana, Loki)
+- Micrometer metrics for idempotency cache hits/misses, outbox success/failure
+- Distributed tracing ready through Micrometer + OpenTelemetry
+- Centralized log/metric stack (Prometheus, Grafana, Loki)
 
 ## Testing Strategy
-- Unit tests: state machine, UPI intent, service logic
-- Integration tests: payment API contracts and security behavior
+- Unit tests: state machine, payment service logic
+- Integration tests: API contracts and security behavior
 - Kafka flow tests: event publication and dead-letter handling
 - Frontend tests: unit + e2e checkout scenarios
 
@@ -315,30 +377,29 @@ Run:
 ```bash
 make test
 make test-frontend
-make test-e2e
 ```
 
 ## Design Decisions
 - Idempotency is mandatory for mutable payment APIs
 - Payment state transitions are centralized in a state machine
 - Outbox pattern guarantees event publishing after DB commit
-- Async webhooks are deduplicated via processed-event store
-- UPI and card are modeled as distinct lifecycle tracks
-- API Key authentication replaces JWT for payment service
-- Order snapshots replace internal order creation
-- Trust boundary enforced: frontend cannot directly call payment APIs
+- Supported currencies: INR (default), USD, EUR, GBP
+- Full and partial refunds supported
+- Standardized error codes across all services
+- API Key authentication for payment service
+- JWT for authentication service
 
 ## Security Posture
-- **Frontend is UNTRUSTED**: Only sends productId, no financial data
-- **Merchant Backend is TRUSTED**: Creates order, controls amounts
 - **Payment Service uses API Keys**: `sk_test_*` for test, `sk_live_*` for production
-- **JWT used at gateway edge**: For merchant-backend routes only
+- **JWT used at gateway edge**: For auth routes
 - **No merchantId in API requests**: Resolved from API key
+- **Frontend is UNTRUSTED**: Only calls via API key
 
 ## Roadmap
-- Add merchant registration with API key generation
-- Add webhook delivery to merchant-backend
-- Add schema migrations via Flyway/Liquibase (replace `ddl-auto=update`)
-- Introduce mTLS/service identity for service-to-service auth
-- Add chaos testing and replay tooling for webhook recovery
-- Add reconciliation dashboards and SLO alerts
+- Webhook delivery system
+- Subscriptions/recurring payments
+- Multi-currency expansion (more currencies)
+- Disputes/chargebacks
+- Split payments (marketplaces)
+- Schema migrations via Flyway
+- mTLS for service-to-service auth
