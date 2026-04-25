@@ -11,14 +11,14 @@ spring:
           uri: ${AUTH_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/auth/**,/merchant/auth/**
-          filters:
-            - StripPrefix=0
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/payments/**
-          filters:
-            - StripPrefix=1
+        - id: swagger-ui
+          uri: http://localhost:8083
+          predicates:
+            - Path=/swagger-ui/**,/v3/api-docs/**
       globalcors:
         cors-configurations:
           '[/**]':
@@ -32,6 +32,11 @@ spring:
             allowedheaders:
               - "*"
             allowcredentials: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:payflow}
 
 app:
   jwt:

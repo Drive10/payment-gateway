@@ -15,4 +15,5 @@ public class CreatePaymentResponse {
     private String currency;
     private String status;
     private String checkoutUrl;
+    private String merchantId;
 }

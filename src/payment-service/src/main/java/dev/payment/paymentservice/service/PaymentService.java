@@ -63,6 +63,7 @@ public class PaymentService {
             .currency(payment.getCurrency())
             .status(payment.getStatus().name())
             .checkoutUrl("/pay/" + payment.getId())
+            .merchantId(payment.getMerchantId())
             .build();
 
         if (idempotencyKey != null && !idempotencyKey.isEmpty()) {

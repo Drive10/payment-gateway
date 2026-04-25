@@ -108,7 +108,7 @@ public class Payment {
 
     @Column(name = "refunded_amount", precision = 19, scale = 4)
     @Builder.Default
-    private BigDecimal refundedAmount = BigDecimal.ZERO;
+    private BigDecimal refundAmount = BigDecimal.ZERO;
 
     public boolean canTransitionTo(PaymentStatus target) {
         return target.isValidTransitionFrom(this.status);
@@ -154,8 +154,8 @@ public class Payment {
         if (gatewayFee == null) {
             gatewayFee = BigDecimal.ZERO;
         }
-        if (refundedAmount == null) {
-            refundedAmount = BigDecimal.ZERO;
+        if (refundAmount == null) {
+            refundAmount = BigDecimal.ZERO;
         }
     }
 

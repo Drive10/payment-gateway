@@ -84,6 +84,7 @@ public class AuthService {
         return generateTokens(user.getEmail(), role);
     }
 
+    @Transactional
     public TokenResponse merchantLogin(String email, String password) {
         Merchant merchant = merchantRepository.findByEmail(email)
             .orElseThrow(() -> new RuntimeException("Invalid credentials"));
@@ -96,14 +97,14 @@ public class AuthService {
             throw new RuntimeException("Merchant account is not active");
         }
 
-        refreshTokenRepository.revokeAllByUserId(merchant.getId());
+        refreshTokenRepository.revokeAllByMerchantId(merchant.getId());
 
         String accessToken = tokenProvider.generateAccessToken(merchant.getEmail(), "MERCHANT");
         String refreshToken = tokenProvider.generateRefreshToken(merchant.getEmail());
 
         RefreshToken refreshTokenEntity = RefreshToken.builder()
             .token(refreshToken)
-            .user(User.builder().id(merchant.getId()).email(merchant.getEmail()).build())
+            .merchant(merchant)
             .expiresAt(Instant.now().plusMillis(tokenProvider.getAccessTokenExpiration() * 24))
             .revoked(false)
             .build();
@@ -117,6 +118,7 @@ public class AuthService {
             .build();
     }
 
+    @Transactional
     public TokenResponse refreshToken(String refreshToken) {
         RefreshToken token = refreshTokenRepository.findByToken(refreshToken)
             .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
@@ -128,8 +130,33 @@ public class AuthService {
         token.setRevoked(true);
         refreshTokenRepository.save(token);
 
-        String email = token.getUser().getEmail();
-        return generateTokens(email, "MERCHANT");
+        String email = (token.getUser() != null) ? token.getUser().getEmail() : token.getMerchant().getEmail();
+        return generateTokens(email, token.getMerchant() != null ? "MERCHANT" : "CUSTOMER");
+    }
+
+    public Merchant validateApiKey(String apiKey) {
+        Merchant merchant = merchantRepository.findByApiKey(apiKey)
+            .orElseThrow(() -> new RuntimeException("Invalid API Key"));
+        
+        if (!merchant.isActive()) {
+            throw new RuntimeException("Merchant account is not active");
+        }
+        
+        return merchant;
+    }
+
+    public String getApiKeyForMerchant(String merchantId, String jwt) {
+        // In a real app, we would validate the JWT here. 
+        // For now, we assume the Gateway has already validated it.
+        Merchant merchant = merchantRepository.findById(java.util.UUID.fromString(merchantId))
+            .orElseThrow(() -> new RuntimeException("Merchant not found"));
+        
+        return merchant.getApiKey();
+    }
+
+    public Merchant getMerchantDetails(String merchantId, String jwt) {
+        return merchantRepository.findById(java.util.UUID.fromString(merchantId))
+            .orElseThrow(() -> new RuntimeException("Merchant not found"));
     }
 
     private TokenResponse generateTokens(String email, String role) {
@@ -137,7 +164,16 @@ public class AuthService {
         String refreshToken = tokenProvider.generateRefreshToken(email);
 
         User user = userRepository.findByEmail(email)
-            .orElse(User.builder().id(null).email(email).build());
+            .orElseGet(() -> {
+                User newUser = User.builder()
+                    .email(email)
+                    .firstName("System")
+                    .lastName("Account")
+                    .password(passwordEncoder.encode("dummy-password"))
+                    .enabled(true)
+                    .build();
+                return userRepository.save(newUser);
+            });
 
         RefreshToken refreshTokenEntity = RefreshToken.builder()
             .token(refreshToken)

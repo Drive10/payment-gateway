@@ -72,7 +72,7 @@ infra-restart: infra-down infra-up
 # =============================================================================
 
 gateway:
-	mvn spring-boot:run -pl src/api-gateway
+	mvn spring-boot:run -pl src/api-gateway -Dspring-boot.run.profiles=local
 
 merchant:
 	mvn spring-boot:run -pl src/merchant-backend -Dspring-boot.run.profiles=local

@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/payflow
+    username: payflow
+    password: payflow
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: payflow
+  kafka:
+    bootstrap-servers: kafka:9092
+
+server:
+  port: 8082
