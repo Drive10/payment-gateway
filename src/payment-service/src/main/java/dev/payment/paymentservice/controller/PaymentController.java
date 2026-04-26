@@ -36,15 +36,20 @@ public class PaymentController {
 
     @PostMapping("/{paymentId}/capture")
     public ResponseEntity<ApiResponse<Map<String, Object>>> capturePayment(@PathVariable("paymentId") String paymentId) {
-        paymentService.updatePaymentStatus(paymentId, PaymentStatus.AUTHORIZED);
         paymentService.updatePaymentStatus(paymentId, PaymentStatus.CAPTURED);
         return ResponseEntity.ok(ApiResponse.success(Map.of("status", "CAPTURED")));
     }
 
-    @PostMapping("/{paymentId}/authorize")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> authorizePayment(@PathVariable("paymentId") String paymentId) {
+    @PostMapping("/{paymentId}/authorize-pending")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> authorizePaymentPending(@PathVariable("paymentId") String paymentId) {
         paymentService.updatePaymentStatus(paymentId, PaymentStatus.AUTHORIZATION_PENDING);
         return ResponseEntity.ok(ApiResponse.success(Map.of("status", "AUTHORIZATION_PENDING")));
+    }
+
+    @PostMapping("/{paymentId}/authorize")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> authorizePayment(@PathVariable("paymentId") String paymentId) {
+        paymentService.updatePaymentStatus(paymentId, PaymentStatus.AUTHORIZED);
+        return ResponseEntity.ok(ApiResponse.success(Map.of("status", "AUTHORIZED")));
     }
 
     @PostMapping("/{paymentId}/verify-otp")

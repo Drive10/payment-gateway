@@ -1,5 +1,12 @@
 # PayFlow
 
+[![CI/CD](https://github.com/payflow/payflow/actions/workflows/ci.yml/badge.svg)](https://github.com/payflow/payflow/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=payflow&metric=alert_status)](https://sonarcloud.io/dashboard?id=payflow)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=payflow&metric=coverage)](https://sonarcloud.io/dashboard?id=payflow)
+[![Java Version](https://img.shields.io/badge/Java-21-orange)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-green)](https://spring.io/projects/spring-boot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Production-grade payment gateway reference implementation with realistic payment lifecycles, idempotent APIs, event-driven processing, and operational guardrails.
 
 PayFlow models the internal architecture patterns used in systems like Stripe, Razorpay, and PayPal at project scale:
@@ -259,12 +266,20 @@ curl -X POST http://localhost:8083/api/payments/{paymentId}/capture \
   -H "Authorization: Bearer sk_test_merchant123"
 ```
 
+#### Authorize Payment (Pending)
+
+```bash
+curl -X POST http://localhost:8083/api/payments/{paymentId}/authorize-pending \
+   -H "Content-Type: application/json" \
+   -H "Authorization: Bearer sk_test_merchant123"
+```
+
 #### Authorize Payment
 
 ```bash
 curl -X POST http://localhost:8083/api/payments/{paymentId}/authorize \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk_test_merchant123"
+   -H "Content-Type: application/json" \
+   -H "Authorization: Bearer sk_test_merchant123"
 ```
 
 #### Verify OTP (for 3DS)
@@ -378,6 +393,15 @@ Run:
 make test
 make test-frontend
 ```
+
+## Security Scanning
+
+PayFlow incorporates multiple security scanning tools to ensure code and container safety:
+
+- **Pre-commit checks**: Uses TruffleHog to prevent secrets from being committed.
+- **CI/CD Pipeline**: Includes Hadolint for Dockerfile linting and Trivy for container vulnerability scanning.
+- **Dependency Scanning**: Automated updates via Dependabot and vulnerability checks in Maven and npm.
+- **Static Analysis**: SonarQube for code quality and security hotspots.
 
 ## Design Decisions
 - Idempotency is mandatory for mutable payment APIs
