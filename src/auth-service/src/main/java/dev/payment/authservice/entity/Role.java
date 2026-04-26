@@ -5,7 +5,7 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "roles")
+@Table(name = "roles", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor

@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "outbox")
+@Table(name = "outbox", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor

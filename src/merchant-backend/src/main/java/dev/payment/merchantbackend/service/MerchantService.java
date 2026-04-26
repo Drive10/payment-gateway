@@ -28,12 +28,12 @@ public class MerchantService {
         log.info("Using API key: {}", apiKey);
         
         String idempotencyKey = "idemp_" + UUID.randomUUID().toString();
-        
+
         Map<String, Object> paymentRequest = new HashMap<>();
-        paymentRequest.put("orderId", "ord_" + UUID.randomUUID().toString().substring(0, 8));
-        paymentRequest.put("amount", 1000);
-        paymentRequest.put("currency", "INR");
-        paymentRequest.put("paymentMethod", request.getPaymentMethod());
+        paymentRequest.put("orderId", request.getOrderId() != null ? request.getOrderId() : "ord_" + UUID.randomUUID().toString().substring(0, 8));
+        paymentRequest.put("amount", request.getAmount() != null ? request.getAmount() : 1000);
+        paymentRequest.put("currency", request.getCurrency() != null ? request.getCurrency() : "INR");
+        paymentRequest.put("paymentMethod", request.getPaymentMethod() != null ? request.getPaymentMethod() : "CARD");
 
         log.info("Sending payment request: {}", paymentRequest);
         

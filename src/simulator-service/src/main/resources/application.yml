@@ -17,3 +17,9 @@ spring:
 app:
   payment-service:
     url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html

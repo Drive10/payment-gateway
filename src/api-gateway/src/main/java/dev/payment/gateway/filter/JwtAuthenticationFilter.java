@@ -25,8 +25,18 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATHS = List.of(
         "/auth/login",
         "/auth/register",
+        "/auth/refresh",
         "/merchant/auth/login",
         "/merchant/auth/register",
+        "/merchant/auth/refresh",
+        "/api/v1/auth/login",
+        "/api/v1/auth/register",
+        "/api/v1/auth/refresh",
+        "/api/v1/merchant/auth/login",
+        "/api/v1/merchant/auth/register",
+        "/api/v1/merchant/auth/refresh",
+        "/api/v1/merchant/auth",
+        "/api/v1/auth",
         "/actuator"
     );
 

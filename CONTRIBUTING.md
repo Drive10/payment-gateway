@@ -192,6 +192,16 @@ npm run test:coverage
 - Reference `.env.example` for required variables
 - Report security vulnerabilities via the [Security Policy](SECURITY.md)
 
+### Security Scanning
+
+Contributors should be aware of our security scanning practices:
+
+- Pre-commit hooks run TruffleHog to prevent secrets from being committed
+- CI/CD pipeline includes Hadolint for Dockerfile linting
+- Container images are scanned with Trivy for vulnerabilities
+- Dependencies are regularly updated via Dependabot
+- Static analysis is performed with SonarQube
+
 ### Payment Security
 
 - Never log sensitive payment data (card numbers, CVV, etc.)

@@ -15,7 +15,7 @@ import java.util.Map;
 public class MerchantAuthClient {
     private final RestTemplate restTemplate;
     
-    @Value("${services.auth-service.url}")
+    @Value("${app.auth-service.url}")
     private String authServiceUrl;
 
     public Map<String, Object> validateApiKey(String apiKey) {

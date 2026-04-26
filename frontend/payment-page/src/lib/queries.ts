@@ -26,9 +26,9 @@ interface MerchantPaymentResponse {
   checkoutUrl?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
-  ? `${import.meta.env.VITE_API_BASE_URL}/api/v1` 
-  : 'http://localhost:8083/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_GATEWAY_URL 
+  ? `${import.meta.env.VITE_API_GATEWAY_URL}/api/v1` 
+  : 'http://localhost:8080/api/v1';
 
 const getAuthHeaders = () => {
   const token = useAuthStore.getState().token;
@@ -40,7 +40,7 @@ export const useCreatePayment = () => {
   
   return useMutation({
     mutationFn: async (data: FrontendPaymentRequest) => {
-      const response = await api.post('/merchant/create-payment', data, {
+      const response = await api.post('/api/v1/payments/create-order', data, {
         headers: { ...getAuthHeaders(), 'X-Request-Id': `pay-${Date.now()}` },
       });
       return response.data.data as MerchantPaymentResponse;
@@ -55,7 +55,7 @@ export const usePaymentStatus = (paymentId: string, enabled: boolean = false) =>
   return useQuery({
     queryKey: ['payment', paymentId],
     queryFn: async () => {
-      const response = await api.get(`/payments/${paymentId}`, {
+      const response = await api.get(`/api/v1/payments/${paymentId}`, {
         headers: getAuthHeaders(),
       });
       return response.data.data as Payment;
@@ -68,7 +68,7 @@ export const usePaymentStatus = (paymentId: string, enabled: boolean = false) =>
 export const useLogin = () => {
   return useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
-      const response = await api.post('/merchant/auth/login', credentials);
+      const response = await api.post('/api/v1/merchant/auth/login', credentials);
       return response.data.data;
     },
   });
@@ -77,7 +77,7 @@ export const useLogin = () => {
 export const useRegister = () => {
   return useMutation({
     mutationFn: async (data: { email: string; password: string; firstName?: string; lastName?: string }) => {
-      const response = await api.post('/merchant/auth/register', data);
+      const response = await api.post('/api/v1/merchant/auth/register', data);
       return response.data.data;
     },
   });
@@ -86,7 +86,7 @@ export const useRegister = () => {
 export const useRefreshToken = () => {
   return useMutation({
     mutationFn: async (refreshToken: string) => {
-      const response = await api.post('/merchant/auth/refresh', { refreshToken });
+      const response = await api.post('/api/v1/merchant/auth/refresh', { refreshToken });
       return response.data.data;
     },
   });
@@ -96,7 +96,7 @@ export const useMerchantBalance = (merchantId: string) => {
   return useQuery({
     queryKey: ['balance', merchantId],
     queryFn: async () => {
-      const response = await api.get(`/payments/balance/${merchantId}`, {
+      const response = await api.get(`/api/v1/payments/balance/${merchantId}`, {
         headers: getAuthHeaders(),
       });
       return response.data.data;
@@ -109,7 +109,7 @@ export const usePaymentHistory = (limit = 10, offset = 0) => {
   return useQuery({
     queryKey: ['payments', limit, offset],
     queryFn: async () => {
-      const response = await api.get(`/payments?limit=${limit}&offset=${offset}`, {
+      const response = await api.get(`/api/v1/payments?limit=${limit}&offset=${offset}`, {
         headers: getAuthHeaders(),
       });
       return response.data.data;

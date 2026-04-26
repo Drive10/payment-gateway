@@ -11,27 +11,26 @@ spring:
           uri: ${AUTH_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/auth/**,/merchant/auth/**
+        - id: auth-service-v1
+          uri: ${AUTH_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/auth/**,/api/v1/merchant/auth/**
+        - id: merchant-service
+          uri: ${MERCHANT_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/merchant/**,/merchant/**
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/payments/**
+        - id: payment-service-v1
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/payments/**
         - id: swagger-ui
           uri: http://localhost:8083
           predicates:
             - Path=/swagger-ui/**,/v3/api-docs/**
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedorigins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
-            allowedmethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - OPTIONS
-            allowedheaders:
-              - "*"
-            allowcredentials: true
   data:
     redis:
       host: ${REDIS_HOST:localhost}

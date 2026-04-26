@@ -7,7 +7,7 @@ import java.util.UUID;
 import dev.payment.authservice.entity.Merchant;
 
 @Entity
-@Table(name = "refresh_tokens")
+@Table(name = "refresh_tokens", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,7 +18,7 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 2048)
     private String token;
 
     @ManyToOne(fetch = FetchType.LAZY)

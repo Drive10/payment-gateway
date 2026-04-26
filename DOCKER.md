@@ -154,6 +154,15 @@ docker-compose up -d payment-service
 - `src/*/Dockerfile` - Docker image for each service
 - `src/*/src/main/resources/application-docker.yml` - Docker-specific config
 
+## Security Scanning
+
+PayFlow incorporates security scanning in the Docker build process:
+
+- Hadolint for Dockerfile linting (run in CI/CD)
+- Trivy for container vulnerability scanning (referenced in SECURITY.md)
+- Base image recommendations for minimal attack surface
+- Regular base image updates to patch vulnerabilities
+
 ## Health Checks
 
 All services include health checks. Use `docker-compose ps` to verify status.

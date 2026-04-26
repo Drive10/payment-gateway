@@ -48,6 +48,8 @@ This project follows these security practices:
 - Container image scanning (Trivy)
 - Maven dependency checks
 - npm audit integration
+- Dockerfile linting with Hadolint
+- Secret detection with TruffleHog (pre-commit)
 
 ### Infrastructure Security
 - TLS/SSL for all external communication

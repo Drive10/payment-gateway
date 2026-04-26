@@ -1,0 +1,37 @@
+{
+  "generatorName": "typescript-axios",
+  "inputSpec": "",
+  "outputDir": "src/api",
+  "additionalProperties": {
+    "supportsES6": true,
+    "typescriptThreePlus": true,
+    "useSingleRequestParameter": true
+  },
+  "apis": [
+    {
+      "name": "Auth API",
+      "inputSpec": "http://localhost:8082/api-docs",
+      "outputDir": "src/api/auth"
+    },
+    {
+      "name": "Payment API",
+      "inputSpec": "http://localhost:8083/api-docs",
+      "outputDir": "src/api/payment"
+    },
+    {
+      "name": "Merchant API",
+      "inputSpec": "http://localhost:8085/api-docs",
+      "outputDir": "src/api/merchant"
+    },
+    {
+      "name": "Analytics API",
+      "inputSpec": "http://localhost:8087/api-docs",
+      "outputDir": "src/api/analytics"
+    },
+    {
+      "name": "Notification API",
+      "inputSpec": "http://localhost:8084/api-docs",
+      "outputDir": "src/api/notification"
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "refunds")
+@Table(name = "refunds", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor

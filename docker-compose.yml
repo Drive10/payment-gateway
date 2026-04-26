@@ -1,5 +1,4 @@
 services:
-  # ==================== INFRASTRUCTURE SERVICES ====================
   postgres:
     image: postgres:16-alpine
     container_name: payflow-postgres
@@ -7,10 +6,23 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-payflow}
       POSTGRES_USER: ${POSTGRES_USER:-payflow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payflow}
+    command: >
+      postgres
+      -c max_connections=50
+      -c shared_buffers=64MB
+      -c effective_cache_size=128MB
+      -c maintenance_work_mem=16MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./config/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql
+      - ./config/sample-data.sql:/docker-entrypoint-initdb.d/sample-data.sql
     networks:
       - payflow-network
     healthcheck:
@@ -18,6 +30,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
 
   redis:
     image: redis:7-alpine
@@ -62,88 +80,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # ==================== APPLICATION SERVICES ====================
-  api-gateway:
-    image: payflow-api-gateway:local
-    container_name: payflow-api-gateway
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_PROFILES_ACTIVE: "docker"
-      AUTH_SERVICE_URL: "http://auth-service:8082"
-      PAYMENT_SERVICE_URL: "http://payment-service:8083"
-      JWT_SECRET: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-    networks:
-      - payflow-network
-    depends_on:
-      kafka:
-        condition: service_healthy
-
-  auth-service:
-    image: payflow-auth-service:local
-    container_name: payflow-auth-service
-    ports:
-      - "8082:8082"
-    environment:
-      SPRING_PROFILES_ACTIVE: "docker"
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: "payflow"
-      POSTGRES_USER: "payflow"
-      POSTGRES_PASSWORD: "payflow"
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      REDIS_PASSWORD: "payflow"
-      JWT_SECRET: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-    networks:
-      - payflow-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  payment-service:
-    image: payflow-payment-service:local
-    container_name: payflow-payment-service
-    ports:
-      - "8083:8083"
-    environment:
-      SPRING_PROFILES_ACTIVE: "docker"
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: "payflow"
-      POSTGRES_USER: "payflow"
-      POSTGRES_PASSWORD: "payflow"
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      REDIS_PASSWORD: "payflow"
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
-      SIMULATOR_SERVICE_URL: "http://simulator-service:8086"
-    networks:
-      - payflow-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-
-  simulator-service:
-    image: payflow-simulator-service:local
-    container_name: payflow-simulator-service
-    ports:
-      - "8086:8086"
-    environment:
-      SPRING_PROFILES_ACTIVE: "docker"
-      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
-    networks:
-      - payflow-network
-    depends_on:
-      kafka:
-        condition: service_healthy
 
 networks:
   payflow-network:

@@ -7,9 +7,9 @@ export const TRANSACTION_MODES = {
   TEST: "TEST",
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
-  ? `${import.meta.env.VITE_API_BASE_URL}/api/v1` 
-  : "/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_GATEWAY_URL 
+  ? import.meta.env.VITE_API_GATEWAY_URL 
+  : "/api";
 const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm the platform is running and try again.";
@@ -116,7 +116,7 @@ async function apiRequest(path, options = {}) {
 }
 
 export async function login(email, password) {
-  const auth = await apiRequest("/auth/login", {
+  const auth = await apiRequest("/api/v1/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
@@ -142,7 +142,7 @@ export async function register(email, password, firstName, lastName) {
   if (lastName) customer.lastName = lastName;
   if (password) customer.password = password;
 
-  await apiRequest("/auth/register", {
+  await apiRequest("/api/v1/auth/register", {
     method: "POST",
     body: JSON.stringify(customer),
   });
@@ -161,7 +161,7 @@ export async function ensureAccessToken() {
     if (isExpired || isExpiringSoon) {
       if (storedAuth.refreshToken) {
         try {
-          const refreshed = await apiRequest("/auth/refresh", {
+          const refreshed = await apiRequest("/api/v1/auth/refresh", {
             method: "POST",
             body: JSON.stringify({ refreshToken: storedAuth.refreshToken }),
           });
@@ -195,7 +195,7 @@ export async function ensureAccessToken() {
   );
 
   try {
-    await apiRequest("/auth/register", {
+await apiRequest("/api/v1/auth/register", {
       method: "POST",
       body: JSON.stringify(customer),
     });
@@ -234,25 +234,25 @@ export async function startCheckout({
         : "RAZORPAY_PRIMARY";
     const correlationId = createCorrelationId("payment");
 
-    const order = await apiRequest("/orders", {
+    const order = await apiRequest("/api/v1/payments/create-order", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${sessionToken}`,
         "X-Request-Id": correlationId,
       },
       body: JSON.stringify({
-        externalReference,
-        amount,
+        orderId: externalReference,
+        amount: amount,
         currency: "INR",
         description: description || `Payment for order ${externalReference}`,
-        customerEmail: customerEmail || sessionCustomer?.email,
-        customerName: customerName || `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim(),
+        customerEmail: customerEmail || sessionCustomer?.email || "customer@example.com",
+        customerName: customerName || (sessionCustomer ? `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim() : "Customer"),
         userId: sessionCustomer?.id,
       }),
     });
 
     const merchantIdToSend = order?.merchantId ?? DEFAULT_MERCHANT_ID;
-    const payment = await apiRequest("/payments", {
+    const payment = await apiRequest("/api/v1/payments", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${sessionToken}`,
@@ -317,7 +317,7 @@ export async function captureCheckout(checkout, onStatusChange) {
   
   for (let attempt = 0; attempt <= maxAttempts; attempt++) {
     try {
-      const payment = await apiRequest(`/payments/${checkout.payment.id}/capture`, {
+      const payment = await apiRequest(`/api/v1/payments/${checkout.payment.id}/capture`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${checkout.token}`,
@@ -371,19 +371,19 @@ export async function captureCheckout(checkout, onStatusChange) {
 }
 
 export async function getPaymentStatus(paymentId, token) {
-  return apiRequest(`/payments/${paymentId}`, {
+  return apiRequest(`/api/v1/payments/${paymentId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
 
 export async function getOrderHistory(token, limit = 10, offset = 0) {
-  return apiRequest(`/orders?limit=${limit}&offset=${offset}`, {
+  return apiRequest(`/api/v1/payments/orders?limit=${limit}&offset=${offset}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
 
 export async function getPaymentHistory(token, limit = 10, offset = 0) {
-  return apiRequest(`/payments?limit=${limit}&offset=${offset}`, {
+  return apiRequest(`/api/v1/payments?limit=${limit}&offset=${offset}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

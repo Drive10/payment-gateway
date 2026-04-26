@@ -15,8 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -112,6 +114,33 @@ public class PaymentService {
             .status(payment.getStatus().name())
             .failureReason(payment.getFailureReason())
             .build();
+    }
+
+public PaymentStatusResponse getPaymentStatusById(String paymentId) {
+        Payment payment = paymentRepository.findById(UUID.fromString(paymentId))
+            .orElseThrow(() -> PaymentException.notFound("Payment not found: " + paymentId));
+
+        return PaymentStatusResponse.builder()
+            .paymentId(payment.getId().toString())
+            .orderId(payment.getOrderId())
+            .amount(payment.getAmount())
+            .currency(payment.getCurrency())
+            .status(payment.getStatus().name())
+            .failureReason(payment.getFailureReason())
+            .build();
+    }
+
+    public List<PaymentStatusResponse> getMerchantOrders(String merchantId) {
+        return paymentRepository.findByMerchantId(merchantId).stream()
+            .map(p -> PaymentStatusResponse.builder()
+                .paymentId(p.getId().toString())
+                .orderId(p.getOrderId())
+                .amount(p.getAmount())
+                .currency(p.getCurrency())
+                .status(p.getStatus().name())
+                .failureReason(p.getFailureReason())
+                .build())
+            .collect(Collectors.toList());
     }
 
     @Transactional

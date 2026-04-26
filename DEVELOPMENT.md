@@ -78,6 +78,17 @@ SPRING_PROFILES_ACTIVE=local mvn spring-boot:run -pl src/merchant-backend
 | Simulator | 8086 | - |
 
 
+## Security Development Practices
+
+When developing for PayFlow, please follow these security practices:
+
+- Never commit secrets, API keys, or credentials - use environment variables
+- Run pre-commit checks locally: `pre-commit install` then `pre-commit run --all-files`
+- Validate all user inputs to prevent injection attacks
+- Use parameterized queries to prevent SQL injection
+- Follow OWASP Top 10 guidelines for secure coding
+- Report security concerns via the [Security Policy](SECURITY.md)
+
 ## Development Tips
 
 ### Hot Reload

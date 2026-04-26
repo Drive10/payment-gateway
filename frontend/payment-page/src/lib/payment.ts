@@ -7,9 +7,9 @@ export const TRANSACTION_MODES = {
   TEST: "TEST",
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
-  ? `${import.meta.env.VITE_API_BASE_URL}/api/v1` 
-  : "http://localhost:8083/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_GATEWAY_URL 
+  ? import.meta.env.VITE_API_GATEWAY_URL 
+  : "http://localhost:8080";
 const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm the platform is running and try again.";
@@ -116,7 +116,7 @@ async function apiRequest(path, options = {}) {
 }
 
 export async function login(email, password) {
-  const auth = await apiRequest("/merchant/auth/login", {
+  const auth = await apiRequest("/api/v1/merchant/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
@@ -142,7 +142,7 @@ export async function register(email, password, firstName, lastName) {
   if (lastName) customer.lastName = lastName;
   if (password) customer.password = password;
 
-  await apiRequest("/merchant/auth/register", {
+  await apiRequest("/api/v1/merchant/auth/register", {
     method: "POST",
     body: JSON.stringify(customer),
   });
@@ -161,7 +161,7 @@ export async function ensureAccessToken() {
     if (isExpired || isExpiringSoon) {
       if (storedAuth.refreshToken) {
         try {
-          const refreshed = await apiRequest("/merchant/auth/refresh", {
+          const refreshed = await apiRequest("/api/v1/merchant/auth/refresh", {
             method: "POST",
             body: JSON.stringify({ refreshToken: storedAuth.refreshToken }),
           });
@@ -195,7 +195,7 @@ export async function ensureAccessToken() {
   );
 
   try {
-    await apiRequest("/auth/register", {
+    await apiRequest("/api/v1/auth/register", {
       method: "POST",
       body: JSON.stringify(customer),
     });
@@ -219,19 +219,26 @@ export async function logout() {
 export async function startCheckout({
   productId,
   customerEmail,
+  amount = 100,
+  currency = "INR",
 }) {
   const { token } = await ensureAccessToken();
   
   const correlationId = createCorrelationId("payment");
+  
+  const orderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
 
-  const response = await apiRequest("/merchant/create-payment", {
+  const response = await apiRequest("/api/v1/payments/create-order", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "X-Request-Id": correlationId,
     },
     body: JSON.stringify({
-      productId: productId,
+      orderId: orderId,
+      amount: amount,
+      currency: currency,
+      description: `Payment for ${productId || "order"}`,
       customerEmail: customerEmail,
     }),
   });
@@ -256,7 +263,7 @@ export async function captureCheckout(checkout, onStatusChange) {
   
   for (let attempt = 0; attempt <= maxAttempts; attempt++) {
     try {
-      const payment = await apiRequest(`/payments/${paymentId}/capture`, {
+      const payment = await apiRequest(`/api/v1/payments/${paymentId}/capture`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${checkout.token}`,
@@ -298,13 +305,13 @@ export async function captureCheckout(checkout, onStatusChange) {
 }
 
 export async function getPaymentStatus(paymentId, token) {
-  return apiRequest(`/payments/${paymentId}`, {
+  return apiRequest(`/api/v1/payments/${paymentId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
 
 export async function getPaymentHistory(token, limit = 10, offset = 0) {
-  return apiRequest(`/payments?limit=${limit}&offset=${offset}`, {
+  return apiRequest(`/api/v1/payments?limit=${limit}&offset=${offset}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

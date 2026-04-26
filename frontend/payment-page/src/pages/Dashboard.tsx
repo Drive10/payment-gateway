@@ -21,8 +21,8 @@ export default function Dashboard() {
         getOrderHistory(auth.token, 20, 0),
         getPaymentHistory(auth.token, 20, 0)
       ]);
-      setOrders(ordersData?.content || ordersData || []);
-      setPayments(paymentsData?.content || paymentsData || []);
+      setOrders(ordersData?.data || ordersData || []);
+      setPayments(paymentsData?.data || paymentsData || []);
     } catch (err) {
       setError(err.message || "Failed to load data");
     } finally {

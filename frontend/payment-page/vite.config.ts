@@ -21,17 +21,17 @@ export default defineConfig(() => {
     server: {
       port: 5173,
       strictPort: true,
-      proxy: {
-"/api/v1": {
-           target: "http://127.0.0.1:8083",
-           changeOrigin: true,
-           secure: false,
-         },
-         "/platform": {
-           target: "http://127.0.0.1:8083",
-           changeOrigin: true,
-           secure: false,
-         },
+proxy: {
+        "/api/v1": {
+          target: "http://127.0.0.1:8080",
+          changeOrigin: true,
+          secure: false,
+        },
+        "/api": {
+          target: "http://127.0.0.1:8080",
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
     preview: {
