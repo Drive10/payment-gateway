@@ -1,25 +1,20 @@
 spring:
-  flyway:
-    enabled: false
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow
     username: payflow
     password: payflow
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: payflow
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
   kafka:
     bootstrap-servers: localhost:9092
 
-app:
+services:
+  payment-service:
+    url: http://localhost:8083
   auth-service:
     url: http://localhost:8082
-  simulator:
-    url: http://localhost:8086
-  notification:
-    url: http://localhost:8085
 
 server:
-  port: 8083
+  port: 8084

@@ -8,8 +8,6 @@ spring:
       host: redis
       port: 6379
       password: payflow
-  kafka:
-    bootstrap-servers: kafka:9092
 
 server:
   port: 8082

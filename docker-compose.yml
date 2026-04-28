@@ -29,7 +29,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    deploy:
+    deployed:
       resources:
         limits:
           memory: 256M
@@ -79,6 +79,140 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  api-gateway:
+    image: payflow-api-gateway:latest
+    container_name: payflow-api-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      APP_PORT: 8080
+      AUTH_SERVICE_URL: http://auth-service:8082
+      MERCHANT_SERVICE_URL: http://merchant-backend:8084
+      PAYMENT_SERVICE_URL: http://payment-service:8083
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: payflow
+      JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    ports:
+      - "8080:8080"
+    networks:
+      - payflow-network
+    depends_on:
+      - auth-service
+      - merchant-backend
+      - payment-service
+
+  auth-service:
+    image: payflow-auth-service:latest
+    container_name: payflow-auth-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      APP_PORT: 8082
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: payflow
+      POSTGRES_USER: payflow
+      POSTGRES_PASSWORD: payflow
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: payflow
+      JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:8080
+    ports:
+      - "8082:8082"
+    networks:
+      - payflow-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  payment-service:
+    image: payflow-payment-service:latest
+    container_name: payflow-payment-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      APP_PORT: 8083
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: payflow
+      POSTGRES_USER: payflow
+      POSTGRES_PASSWORD: payflow
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: payflow
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      AUTH_SERVICE_URL: http://auth-service:8082
+      SIMULATOR_SERVICE_URL: http://simulator-service:8086
+      NOTIFICATION_SERVICE_URL: http://notification-service:8085
+    ports:
+      - "8083:8083"
+    networks:
+      - payflow-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  simulator-service:
+    image: payflow-simulator-service:latest
+    container_name: payflow-simulator-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      APP_PORT: 8086
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      PAYMENT_SERVICE_URL: http://payment-service:8083
+    ports:
+      - "8086:8086"
+    networks:
+      - payflow-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  notification-service:
+    image: payflow-notification-service:latest
+    container_name: payflow-notification-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      APP_PORT: 8085
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      AUTH_SERVICE_URL: http://auth-service:8082
+    ports:
+      - "8085:8085"
+    networks:
+      - payflow-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  merchant-backend:
+    image: payflow-merchant-backend:latest
+    container_name: payflow-merchant-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      APP_PORT: 8084
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: payflow
+      POSTGRES_USER: payflow
+      POSTGRES_PASSWORD: payflow
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      PAYMENT_SERVICE_URL: http://payment-service:8083
+      AUTH_SERVICE_URL: http://auth-service:8082
+    ports:
+      - "8084:8084"
+    networks:
+      - payflow-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 
 networks:
   payflow-network:

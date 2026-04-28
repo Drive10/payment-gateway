@@ -3,16 +3,17 @@ spring:
     enabled: false
   main:
     allow-bean-definition-overriding: true
-
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow
     username: payflow
     password: payflow
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: payflow
+  kafka:
+    bootstrap-servers: localhost:9092
 
 server:
   port: 8082

@@ -1,0 +1,50 @@
+server:
+  port: ${APP_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: "http://localhost:5173,http://127.0.0.1:5173"
+            allowed-methods: "*"
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
+      routes:
+        - id: auth-service
+          uri: http://auth-service:8082
+          predicates:
+            - Path=/auth/**,/merchant/auth/**
+        - id: auth-service-v1
+          uri: http://auth-service:8082
+          predicates:
+            - Path=/api/v1/auth/**,/api/v1/merchant/auth/**
+        - id: merchant-service
+          uri: http://merchant-backend:8084
+          predicates:
+            - Path=/api/merchant/**,/merchant/**
+        - id: payment-service
+          uri: http://payment-service:8083
+          predicates:
+            - Path=/api/payments/**
+        - id: payment-service-v1
+          uri: http://payment-service:8083
+          predicates:
+            - Path=/api/v1/payments/**
+        - id: swagger-ui
+          uri: http://payment-service:8083
+          predicates:
+            - Path=/swagger-ui/**,/v3/api-docs/**
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: ${REDIS_PASSWORD:payflow}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
