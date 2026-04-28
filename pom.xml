@@ -28,7 +28,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>3.2.5</spring-boot.version>
         <spring-cloud.version>2023.0.1</spring-cloud.version>
-        <flyway.version>10.15.0</flyway.version>
+        <flyway.version>9.22.3</flyway.version>
     </properties>
 
 <dependencyManagement>

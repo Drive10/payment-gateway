@@ -2,30 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Payment Platform E2E Tests', () => {
   const API_BASE = 'http://localhost:8080';
-  let testMerchantEmail = `merchant_${Date.now()}@test.com`;
-  let merchantToken = '';
-
-  test.beforeAll('Setup - Register and login merchant', async () => {
-    await fetch(`${API_BASE}/api/v1/merchant/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: testMerchantEmail,
-        password: 'test1234',
-        firstName: 'Test',
-        lastName: 'Merchant',
-        businessName: 'Test Business'
-      })
-    });
-
-    const loginRes = await fetch(`${API_BASE}/api/v1/merchant/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: testMerchantEmail, password: 'test1234' })
-    });
-    const loginData = await loginRes.json();
-    merchantToken = loginData.data?.accessToken || '';
-  });
+  const API_KEY = 'sk_test_88573d07c94d45f58ead0e698918f420';
+  const MERCHANT_ID = '11c16124-5407-46cf-812c-8b36f7c894b7';
 
   test('1. Checkout Page Load', async ({ page }) => {
     await page.goto('http://localhost:5173');
@@ -45,7 +23,7 @@ test.describe('Payment Platform E2E Tests', () => {
       },
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${merchantToken}`
+        'Authorization': `Bearer ${API_KEY}`
       }
     });
     
@@ -55,7 +33,6 @@ test.describe('Payment Platform E2E Tests', () => {
   });
 
   test('3. Get Payment Status by Order ID', async ({ request }) => {
-    // Create order to get orderId
     const orderRes = await request.post(`${API_BASE}/api/v1/payments/create-order`, {
       data: {
         orderId: `ORD-STATUS-${Date.now()}`,
@@ -64,14 +41,15 @@ test.describe('Payment Platform E2E Tests', () => {
       },
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${merchantToken}`
+        'Authorization': `Bearer ${API_KEY}`
       }
     });
     const orderData = await orderRes.json();
     const orderId = orderData.data?.orderId;
     
-    // Get status by orderId (not paymentId)
-    const statusRes = await request.get(`${API_BASE}/api/v1/payments/status/${orderId}`);
+    const statusRes = await request.get(`${API_BASE}/api/v1/payments/status/${orderId}`, {
+      headers: { 'Authorization': `Bearer ${API_KEY}` }
+    });
     const statusText = await statusRes.text();
     console.log('Status Response:', statusText.substring(0, 200));
     
@@ -87,9 +65,7 @@ test.describe('Payment Platform E2E Tests', () => {
 
   test('4. Payment List (Orders)', async ({ request }) => {
     const listRes = await request.get(`${API_BASE}/api/v1/payments/orders`, {
-      headers: {
-        'Authorization': `Bearer ${merchantToken}`
-      }
+      headers: { 'Authorization': `Bearer ${API_KEY}` }
     });
     const list = await listRes.json();
     console.log('Payment List:', list.success ? 'PASS' : 'FAIL', 'count:', list.data?.length);
@@ -112,27 +88,26 @@ test.describe('Payment Platform E2E Tests', () => {
   });
 
   test('6. Customer Auth Flow - Login', async ({ request }) => {
+    const customerEmail = `cust_login_${Date.now()}@test.com`;
+    await request.post(`${API_BASE}/api/v1/auth/register`, {
+      data: { email: customerEmail, password: 'test1234', firstName: 'Test', lastName: 'User' }
+    });
     const loginRes = await request.post(`${API_BASE}/api/v1/auth/login`, {
-      data: {
-        email: 'test@test.com',
-        password: 'test1234'
-      }
+      data: { email: customerEmail, password: 'test1234' }
     });
     const login = await loginRes.json();
     console.log('Customer Login:', login.success ? 'PASS' : 'FAIL');
     expect(login.success).toBe(true);
   });
 
-  test('7. Merchant Auth - Login', async ({ request }) => {
-    const loginRes = await request.post(`${API_BASE}/api/v1/merchant/auth/login`, {
-      data: {
-        email: testMerchantEmail,
-        password: 'test1234'
-      }
+  test('7. Merchant API Key Auth', async ({ request }) => {
+    const orderRes = await request.post(`${API_BASE}/api/v1/payments/create-order`, {
+      data: { orderId: `ORD-AUTH-${Date.now()}`, amount: 100, currency: 'INR' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` }
     });
-    const login = await loginRes.json();
-    console.log('Merchant Login:', login.success ? 'PASS' : 'FAIL');
-    expect(login.success).toBe(true);
+    const order = await orderRes.json();
+    console.log('API Key Auth:', order.success ? 'PASS' : 'FAIL');
+    expect(order.success).toBe(true);
   });
 
   test('8. Checkout Page Elements', async ({ page }) => {

@@ -21,14 +21,14 @@ export default function Processing() {
   const [otpError, setOtpError] = useState("");
 
   const pollBackendForStatus = useCallback(async () => {
-    if (!checkout?.payment?.id) return;
+    if (!checkout?.payment?.paymentId) return;
 
     const maxAttempts = 30; // 30 attempts * 3s = 90 seconds max
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         const response = await fetch(
-          `${API_BASE_URL}/payments/${checkout.payment.id}/status`,
+          `${API_BASE_URL}/payments/${checkout.payment.paymentId}/status`,
           {
             headers: checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {},
           }
@@ -44,7 +44,7 @@ export default function Processing() {
           if (paymentStatus === "CREATED") {
             try {
               const captureResponse = await fetch(
-                `${API_BASE_URL}/payments/${checkout.payment.id}/capture`,
+                `${API_BASE_URL}/payments/${checkout.payment.paymentId}/capture`,
                 {
                   method: "POST",
                   headers: {
@@ -133,7 +133,7 @@ export default function Processing() {
   }, [checkout, navigate, pollBackendForStatus]);
 
   const buildTransaction = (status) => ({
-    id: checkout.payment.id,
+    id: checkout.payment.paymentId,
     orderId: checkout.order?.id,
     orderReference: checkout.order?.externalReference,
     status: status,
@@ -160,7 +160,7 @@ export default function Processing() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/payments/${checkout.payment.id}/verify-otp`,
+        `${API_BASE_URL}/payments/${checkout.payment.paymentId}/verify-otp`,
         {
           method: "POST",
           headers: {

@@ -7,10 +7,11 @@ export const TRANSACTION_MODES = {
   TEST: "TEST",
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_GATEWAY_URL 
-  ? import.meta.env.VITE_API_GATEWAY_URL 
-  : "/api";
-const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
+const API_BASE_URL = window.__ENV__?.API_BASE_URL 
+  || import.meta.env.VITE_API_GATEWAY_URL 
+  || "http://localhost:8083";
+const DEFAULT_MERCHANT_ID = window.__ENV__?.MERCHANT_ID || import.meta.env.VITE_MERCHANT_ID || "11c16124-5407-46cf-812c-8b36f7c894b7";
+const MERCHANT_API_KEY = window.__ENV__?.MERCHANT_API_KEY || import.meta.env.VITE_MERCHANT_API_KEY || "sk_test_88573d07c94d45f58ead0e698918f420";
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm the platform is running and try again.";
 const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
@@ -151,64 +152,9 @@ export async function register(email, password, firstName, lastName) {
 }
 
 export async function ensureAccessToken() {
-  const storedAuth = getStoredAuth();
-  
-  if (storedAuth?.token) {
-    const bufferTime = 5 * 60 * 1000;
-    const isExpiringSoon = storedAuth.expiresAt && (Date.now() + bufferTime > storedAuth.expiresAt);
-    const isExpired = storedAuth.expiresAt && Date.now() > storedAuth.expiresAt;
-    
-    if (isExpired || isExpiringSoon) {
-      if (storedAuth.refreshToken) {
-        try {
-          const refreshed = await apiRequest("/api/v1/auth/refresh", {
-            method: "POST",
-            body: JSON.stringify({ refreshToken: storedAuth.refreshToken }),
-          });
-          if (refreshed?.accessToken) {
-            const newAuth = {
-              ...storedAuth,
-              token: refreshed.accessToken,
-              refreshToken: refreshed.refreshToken || storedAuth.refreshToken,
-              expiresAt: Date.now() + (refreshed.expiresIn || 3600) * 1000,
-            };
-            persistAuth(newAuth);
-            return { token: newAuth.token, customer: newAuth.user };
-          }
-        } catch (e) {
-          console.debug("Token refresh failed, will re-authenticate");
-          clearAuth();
-        }
-      } else {
-        clearAuth();
-      }
-    } else {
-      return { token: storedAuth.token, customer: storedAuth.user };
-    }
-  }
-  
-  const sessionKey = randomToken(10);
-  const customer = buildCustomerIdentity(
-    `user.${sessionKey}@example.com`,
-    "Customer",
-    "User"
-  );
-
-  try {
-await apiRequest("/api/v1/auth/register", {
-      method: "POST",
-      body: JSON.stringify(customer),
-    });
-  } catch (error) {
-    if (!String(error.message).toLowerCase().includes("exists")) {
-      throw error;
-    }
-  }
-
-  const auth = await login(customer.email, customer.password);
   return {
-    token: auth.token,
-    customer: auth.user,
+    token: MERCHANT_API_KEY,
+    customer: { email: "customer@example.com", firstName: "Guest", lastName: "User" }
   };
 }
 
@@ -225,19 +171,18 @@ export async function startCheckout({
   customerEmail,
   customerName,
 }) {
-  const { token, customer } = await ensureAccessToken();
-  const executeCheckout = async (sessionToken, sessionCustomer) => {
-    const externalReference = `pay-${Date.now()}-${randomToken(6)}`;
-    const provider =
-      transactionMode === TRANSACTION_MODES.TEST
-        ? "RAZORPAY_SIMULATOR"
-        : "RAZORPAY_PRIMARY";
-    const correlationId = createCorrelationId("payment");
+  const externalReference = `pay-${Date.now()}-${randomToken(6)}`;
+  const provider =
+    transactionMode === TRANSACTION_MODES.TEST
+      ? "RAZORPAY_SIMULATOR"
+      : "RAZORPAY_PRIMARY";
+  const correlationId = createCorrelationId("payment");
 
+  const executeCheckout = async () => {
     const order = await apiRequest("/api/v1/payments/create-order", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${sessionToken}`,
+        Authorization: `Bearer ${MERCHANT_API_KEY}`,
         "X-Request-Id": correlationId,
       },
       body: JSON.stringify({
@@ -245,40 +190,39 @@ export async function startCheckout({
         amount: amount,
         currency: "INR",
         description: description || `Payment for order ${externalReference}`,
-        customerEmail: customerEmail || sessionCustomer?.email || "customer@example.com",
-        customerName: customerName || (sessionCustomer ? `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim() : "Customer"),
-        userId: sessionCustomer?.id,
+customerEmail: customerEmail || "customer@example.com",
+        customerName: customerName || "Customer",
       }),
     });
 
     const merchantIdToSend = order?.merchantId ?? DEFAULT_MERCHANT_ID;
+    const idempotencyKey = `pay-guest-${externalReference}`;
     const payment = await apiRequest("/api/v1/payments", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${sessionToken}`,
-        "Idempotency-Key": `pay-${sessionCustomer.email}-${externalReference}`,
+        Authorization: `Bearer ${MERCHANT_API_KEY}`,
+        "Idempotency-Key": idempotencyKey,
         "X-Request-Id": correlationId,
       },
-        body: JSON.stringify({
-          orderId: order.id,
-          merchantId: merchantIdToSend,
-          method: method === "upi" ? "UPI" : method === "netbanking" ? "NET_BANKING" : method === "wallet" ? "WALLET" : "CARD",
-          provider,
-          transactionMode,
-          notes:
-            method === "upi"
-              ? "Customer selected UPI"
-              : method === "netbanking"
-                ? "Customer selected Net Banking"
-                : method === "wallet"
-                  ? "Customer selected Wallet"
-                  : `Cardholder: ${(cardholder.trim() || `${sessionCustomer?.firstName} ${sessionCustomer?.lastName}`.trim()).trim()}`,
-        }),
+      body: JSON.stringify({
+        orderId: order.paymentId,
+        merchantId: merchantIdToSend,
+        method: method === "upi" ? "UPI" : method === "netbanking" ? "NET_BANKING" : method === "wallet" ? "WALLET" : "CARD",
+        provider,
+        transactionMode,
+        notes:
+          method === "upi"
+            ? "Customer selected UPI"
+            : method === "netbanking"
+              ? "Customer selected Net Banking"
+              : method === "wallet"
+                ? "Customer selected Wallet"
+                : `Cardholder: ${cardholder.trim() || "Customer"}`,
+      }),
     });
 
     const checkout = {
-      token: sessionToken,
-      customer: sessionCustomer,
+      token: MERCHANT_API_KEY,
       order,
       payment,
       amount,
@@ -292,22 +236,9 @@ export async function startCheckout({
   };
 
   try {
-    return await executeCheckout(token, customer);
+    return await executeCheckout();
   } catch (error) {
-    const shouldRetryWithFreshAuth =
-      error?.status === 401 ||
-      error?.status === 403 ||
-      error?.code === "INVALID_AUTH_TOKEN" ||
-      error?.code === "MISSING_AUTH_TOKEN" ||
-      error?.code === "UNTRUSTED_GATEWAY";
-
-    if (!shouldRetryWithFreshAuth) {
-      throw error;
-    }
-
-    clearAuth();
-    const refreshedSession = await ensureAccessToken();
-    return executeCheckout(refreshedSession.token, refreshedSession.customer);
+    throw error;
   }
 }
 
@@ -317,10 +248,10 @@ export async function captureCheckout(checkout, onStatusChange) {
   
   for (let attempt = 0; attempt <= maxAttempts; attempt++) {
     try {
-      const payment = await apiRequest(`/api/v1/payments/${checkout.payment.id}/capture`, {
+      const payment = await apiRequest(`/api/v1/payments/${checkout.payment.paymentId}/capture`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${checkout.token}`,
+          Authorization: `Bearer ${MERCHANT_API_KEY}`,
           "X-Request-Id": checkout.correlationId ?? createCorrelationId("capture"),
         },
         body: JSON.stringify({}),

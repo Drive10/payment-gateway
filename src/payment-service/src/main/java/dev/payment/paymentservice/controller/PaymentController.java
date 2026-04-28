@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +30,39 @@ public class PaymentController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         String merchantId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         CreatePaymentResponse response = paymentService.createPayment(idempotencyKey, request, merchantId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping
+    @Operation(summary = "Create payment", description = "Create or get a payment")
+    public ResponseEntity<ApiResponse<CreatePaymentResponse>> createPayment(
+            @RequestBody Map<String, Object> request) {
+        String merchantId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String orderId = (String) request.get("orderId");
+        
+        if (orderId != null && orderId.matches("[a-fA-F0-9-]{36}")) {
+            try {
+                PaymentStatusResponse existing = paymentService.getPaymentStatusById(orderId);
+                CreatePaymentResponse response = new CreatePaymentResponse();
+                response.setPaymentId(existing.getPaymentId());
+                response.setOrderId(existing.getOrderId());
+                response.setAmount(existing.getAmount());
+                response.setCurrency(existing.getCurrency());
+                response.setStatus(existing.getStatus());
+                return ResponseEntity.ok(ApiResponse.success(response));
+            } catch (Exception e) {
+            }
+        }
+        
+        CreateOrderRequest orderRequest = new CreateOrderRequest();
+        orderRequest.setOrderId(orderId);
+        Object amountObj = request.get("amount");
+        if (amountObj != null) {
+            orderRequest.setAmount(new BigDecimal(amountObj.toString()));
+        }
+        orderRequest.setCurrency((String) request.get("currency"));
+        orderRequest.setPaymentMethod((String) request.get("method"));
+        CreatePaymentResponse response = paymentService.createPayment(null, orderRequest, merchantId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

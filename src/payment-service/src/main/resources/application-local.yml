@@ -1,0 +1,19 @@
+spring:
+  flyway:
+    enabled: false
+
+  cors:
+    enabled: false
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payflow
+    username: payflow
+    password: payflow
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+server:
+  port: 8083

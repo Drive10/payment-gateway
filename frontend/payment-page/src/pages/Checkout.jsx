@@ -433,6 +433,7 @@ export default function Checkout() {
                 )}
 
                 <button
+                  type="button"
                   onClick={handlePay}
                   disabled={disabled}
                   className="w-full rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 py-4 text-base font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all hover:shadow-xl hover:shadow-cyan-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"

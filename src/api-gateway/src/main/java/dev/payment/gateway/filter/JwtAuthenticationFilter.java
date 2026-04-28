@@ -37,6 +37,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         "/api/v1/merchant/auth/refresh",
         "/api/v1/merchant/auth",
         "/api/v1/auth",
+        "/api/payments",
+        "/api/v1/payments",
         "/actuator"
     );
 

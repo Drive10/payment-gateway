@@ -129,7 +129,7 @@ public class Payment {
                 case AUTHORIZATION_PENDING -> from == CREATED;
                 case CHALLENGE_REQUIRED -> from == AUTHORIZATION_PENDING;
                 case AUTHORIZED -> from == AUTHORIZATION_PENDING || from == CHALLENGE_REQUIRED;
-                case CAPTURED -> from == AUTHORIZED;
+                case CAPTURED -> from == AUTHORIZED || from == CREATED;
                 case FAILED -> from == CREATED || from == AUTHORIZATION_PENDING || from == CHALLENGE_REQUIRED;
                 case CANCELLED -> from == CREATED || from == AUTHORIZATION_PENDING || from == AUTHORIZED;
                 case REFUNDED -> from == CAPTURED;

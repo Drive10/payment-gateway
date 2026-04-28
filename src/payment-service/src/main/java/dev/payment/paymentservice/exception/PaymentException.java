@@ -29,4 +29,8 @@ public class PaymentException extends RuntimeException {
     public static PaymentException paymentFailed(String message) {
         return new PaymentException(message, HttpStatus.PAYMENT_REQUIRED, ErrorCodes.PAYMENT_FAILED);
     }
+
+    public static PaymentException internal(String message) {
+        return new PaymentException(message, HttpStatus.INTERNAL_SERVER_ERROR, ErrorCodes.INTERNAL_ERROR);
+    }
 }
