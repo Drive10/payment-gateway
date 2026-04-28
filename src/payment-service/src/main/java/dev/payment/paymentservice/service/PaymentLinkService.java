@@ -28,8 +28,7 @@ public class PaymentLinkService {
 
     private static final Map<String, String> SEEDED_MERCHANTS = new HashMap<>();
     static {
-        SEEDED_MERCHANTS.put("33333333-3333-3333-3333-333333333333", "Demo Electronics Store");
-        SEEDED_MERCHANTS.put("44444444-4444-4444-4444-444444444444", "Demo Fashion Boutique");
+        SEEDED_MERCHANTS.put("default-merchant", "PayFlow Demo Store");
     }
 
     public PaymentLinkService(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {

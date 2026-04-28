@@ -15,7 +15,6 @@
         <module>src/api-gateway</module>
         <module>src/audit-service</module>
         <module>src/auth-service</module>
-        <module>src/merchant-backend</module>
         <module>src/notification-service</module>
         <module>src/payment-service</module>
         <module>src/simulator-service</module>

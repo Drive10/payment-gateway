@@ -1,12 +1,11 @@
 package dev.payment.paymentservice.security;
 
-import dev.payment.paymentservice.client.MerchantAuthClient;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,9 +17,13 @@ import java.util.Map;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
-    private final MerchantAuthClient authClient;
+
+    @Value("${app.merchant.api-key:payflow_test_key_12345}")
+    private String merchantApiKey;
+
+    @Value("${app.merchant.id:default-merchant}")
+    private String merchantId;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -46,10 +49,8 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String apiKey = authHeader.substring(7);
-        Map<String, Object> merchantInfo = authClient.validateApiKey(apiKey);
-
-        if (merchantInfo != null) {
-            String merchantId = (String) merchantInfo.get("merchantId");
+        
+        if (merchantApiKey.equals(apiKey)) {
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     merchantId, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_MERCHANT")));
             SecurityContextHolder.getContext().setAuthentication(authentication);
