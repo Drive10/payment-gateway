@@ -332,9 +332,10 @@ public class PaymentService {
         String paymentId = payment.getId().toString();
         BigDecimal platformFee = payment.getPlatformFee() != null ? payment.getPlatformFee() : BigDecimal.ZERO;
         BigDecimal gatewayFee = payment.getGatewayFee() != null ? payment.getGatewayFee() : BigDecimal.ZERO;
-        BigDecimal merchantNet = payment.getAmount().subtract(platformFee).subtract(gatewayFee);
+        BigDecimal amount = payment.getAmount();
+        BigDecimal merchantNet = amount.subtract(platformFee).subtract(gatewayFee);
 
-        persistLedgerEntry(paymentId, null, "CUSTOMER_DEBIT", payment.getAmount(), payment.getCurrency(), paymentId + ":customer_debit");
+        persistLedgerEntry(paymentId, null, "CUSTOMER_DEBIT", amount, payment.getCurrency(), paymentId + ":customer_debit");
         if (platformFee.compareTo(BigDecimal.ZERO) > 0) {
             persistLedgerEntry(paymentId, null, "PLATFORM_FEE", platformFee, payment.getCurrency(), paymentId + ":platform_fee");
         }
