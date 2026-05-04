@@ -68,14 +68,14 @@ SPRING_PROFILES_ACTIVE=local mvn spring-boot:run -pl src/merchant-backend
 ```
 
 ## Service Ports
- 
-| Service | Port | Auth |
-|---------|------|------|
-| API Gateway | 8080 | JWT for /merchant routes |
-| Merchant Backend | 8081 | JWT from frontend |
-| Payment Service | 8083 | API Key |
-| Notification | 8084 | - |
-| Simulator | 8086 | - |
+
+| Service | Port | Access | Auth |
+|---------|------|--------|------|
+| API Gateway | 8080 | **Public** | JWT |
+| Payment Service | 8083 | Internal only | Internal Token |
+| Auth Service | 8082 | Internal only | JWT |
+| Notification | 8084 | Internal only | - |
+| Simulator | 8086 | Internal only | - |
 
 
 ## Security Development Practices
@@ -126,21 +126,9 @@ We use a centralized configuration approach. All secrets and environment-specifi
 - `REDIS_HOST=localhost`
 - `REDIS_PORT=6379`
 - `KAFKA_BOOTSTRAP_SERVERS=localhost:9092`
-- `JWT_SECRET` (auto-generated if missing)
-- `MERCHANT_BACKEND_URL=http://localhost:8081`
+- `JWT_SECRET` - **Required** - must be set
+- `INTERNAL_AUTH_SECRET` - **Required** - internal service token signing key
 - `PAYMENT_SERVICE_URL=http://localhost:8083`
-- `PAYMENT_SERVICE_API_KEY=sk_test_merchant123`
- 
+- `MERCHANT_API_KEYS` - Comma-separated merchant API keys
+
 See `.env.example` for the complete list of variables.
-
-
-## API Key Setup
-
-For local development, use the test API key:
-```
-Authorization: Bearer sk_test_merchant123
-```
-
-This key must be configured in both:
-1. Merchant backend's `payment-service.api-key` config
-2. Payment service's `payment-service.api-key` config

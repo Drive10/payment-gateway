@@ -98,13 +98,16 @@ Shared Infrastructure: PostgreSQL | Redis | Kafka | Docker Compose
 
 ### Trust Boundaries
 
+**All payment endpoints require authentication via API Gateway.**
+
 | Component | Zone | Authentication Method |
 |----------|------|---------------------|
-| Frontend | UNTRUSTED | None (calls only via API key) |
+| Frontend | UNTRUSTED | JWT via API Gateway |
 | API Gateway | BOUNDARY | JWT validation for auth routes |
 | Auth Service | TRUSTED | JWT + API Key management |
-| Payment Service | TRUSTED | API Key (Bearer sk_test_*) |
+| Payment Service | TRUSTED | **JWT (via internal token)** |
 | Simulator | ISOLATED | None (internal) |
+| Notification | ISOLATED | None (internal) |
 
 **Critical Rule**: Frontend MUST NEVER call payment APIs directly. All payment requests use API keys.
 
@@ -217,14 +220,22 @@ make dev
 
 ## API Reference
 
-### Payment Service API
+All payment API calls MUST go through the API Gateway (port 8080) with a valid JWT token.
 
-#### Create Payment
+### Authentication
 
+1. First, login to get a JWT token:
 ```bash
-curl -X POST http://localhost:8083/api/payments/create-order \
+curl -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk_test_merchant123" \
+  -d '{"email":"merchant@test.com","password":"Password123"}'
+```
+
+2. Use the token for subsequent requests:
+```bash
+curl -X POST http://localhost:8080/api/payments/create-order \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <JWT_TOKEN>" \
   -H "Idempotency-Key: pay_123" \
   -d '{
     "orderId": "order_abc123",
@@ -254,40 +265,40 @@ curl -X POST http://localhost:8083/api/payments/create-order \
 #### Get Payment Status
 
 ```bash
-curl -X GET http://localhost:8083/api/payments/status/order_abc123 \
-  -H "Authorization: Bearer sk_test_merchant123"
+curl -X GET http://localhost:8080/api/payments/status/order_abc123 \
+  -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 
 #### Capture Payment
 
 ```bash
-curl -X POST http://localhost:8083/api/payments/{paymentId}/capture \
+curl -X POST http://localhost:8080/api/payments/{paymentId}/capture \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk_test_merchant123"
+  -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 
 #### Authorize Payment (Pending)
 
 ```bash
-curl -X POST http://localhost:8083/api/payments/{paymentId}/authorize-pending \
+curl -X POST http://localhost:8080/api/payments/{paymentId}/authorize-pending \
    -H "Content-Type: application/json" \
-   -H "Authorization: Bearer sk_test_merchant123"
+   -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 
 #### Authorize Payment
 
 ```bash
-curl -X POST http://localhost:8083/api/payments/{paymentId}/authorize \
+curl -X POST http://localhost:8080/api/payments/{paymentId}/authorize \
    -H "Content-Type: application/json" \
-   -H "Authorization: Bearer sk_test_merchant123"
+   -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 
 #### Verify OTP (for 3DS)
 
 ```bash
-curl -X POST http://localhost:8083/api/payments/{paymentId}/verify-otp \
+curl -X POST http://localhost:8080/api/payments/{paymentId}/verify-otp \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk_test_merchant123" \
+  -H "Authorization: Bearer <JWT_TOKEN>" \
   -d '{"otp": "123456"}'
 ```
 
@@ -296,9 +307,9 @@ curl -X POST http://localhost:8083/api/payments/{paymentId}/verify-otp \
 #### Create Refund
 
 ```bash
-curl -X POST http://localhost:8083/api/payments/refund \
+curl -X POST http://localhost:8080/api/payments/refund \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk_test_merchant123" \
+  -H "Authorization: Bearer <JWT_TOKEN>" \
   -d '{
     "paymentId": "uuid-here",
     "amount": 250.00,
@@ -329,8 +340,8 @@ curl -X POST http://localhost:8083/api/payments/refund \
 #### Get Refund Status
 
 ```bash
-curl -X GET http://localhost:8083/api/payments/refund/ref_abc123 \
-  -H "Authorization: Bearer sk_test_merchant123"
+curl -X GET http://localhost:8080/api/payments/refund/ref_abc123 \
+  -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 
 ### Error Response Format
@@ -414,10 +425,28 @@ PayFlow incorporates multiple security scanning tools to ensure code and contain
 - JWT for authentication service
 
 ## Security Posture
-- **Payment Service uses API Keys**: `sk_test_*` for test, `sk_live_*` for production
-- **JWT used at gateway edge**: For auth routes
-- **No merchantId in API requests**: Resolved from API key
-- **Frontend is UNTRUSTED**: Only calls via API key
+
+- **All payment endpoints require JWT** via API Gateway
+- **Internal service-to-service auth**: Signed tokens (`X-Internal-Service-Token`)
+- **No direct public access** to internal services (gateway-only ingress)
+- **Secrets rotated**: All secrets moved to environment variables
+
+### Secrets Configuration
+
+All secrets must be provided via environment variables. Copy `.env.example` and set values:
+
+```bash
+cp .env.example .env
+# Edit .env with actual secrets
+```
+
+Required secrets:
+- `JWT_SECRET` - JWT signing key
+- `INTERNAL_AUTH_SECRET` - Internal service token signing key
+- `POSTGRES_PASSWORD` - Database password
+- `REDIS_PASSWORD` - Redis password
+- `PAYMENT_WEBHOOK_SECRET` - Webhook signature verification
+- `MERCHANT_API_KEYS` - Comma-separated merchant API keys
 
 ## Roadmap
 - Webhook delivery system
