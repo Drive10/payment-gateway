@@ -191,7 +191,7 @@ export default function Checkout() {
         transactionMode,
         description: sanitizeInput(paymentLinkData?.description || "Payment for order"),
       });
-      navigate("/processing", { state: { checkout } });
+      navigate("/processing", { state: { checkout, paymentMethod: method } });
     } catch (error: unknown) {
       const err = error as Error;
       setSubmitError(err?.message || "Payment failed. Please try again.");

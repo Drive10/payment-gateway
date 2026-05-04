@@ -62,37 +62,43 @@ export default function Processing() {
           setProgressMessage(message);
           setPollAttempt(attempt);
 
-          // Auto-capture for simulator/test mode when status is CREATED
+// Auto-capture for simulator/test mode when status is CREATED
           if (paymentStatus === "CREATED") {
-            // Test/sandbox mode: simulate OTP flow
-            if (!IS_PRODUCTION) {
+            // Test/sandbox mode: simulate OTP flow only for CARD payments
+            if (!IS_PRODUCTION && checkout.method === "card") {
               setStatus("AUTHORIZATION_PENDING");
               setProgressMessage("Awaiting OTP verification (test mode)");
               setShowOtpModal(true);
               await new Promise((r) => setTimeout(r, 500));
               return;
             }
-            setProgressMessage("Capturing payment...");
-            try {
-              const captureResponse = await fetch(
-                `${API_ROOT}/payments/${checkout.payment.id}/capture`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}),
-                  },
-                  body: JSON.stringify({}),
+            // For non-card payments in test mode, auto-capture
+            if (!IS_PRODUCTION && checkout.method !== "card") {
+              setProgressMessage("Capturing payment...");
+              try {
+                const captureResponse = await fetch(
+                  `${API_ROOT}/payments/${checkout.payment.id}/capture`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}),
+                    },
+                    body: JSON.stringify({}),
+                  }
+                );
+                const captureData = await captureResponse.json();
+                if (captureData.success && captureData.data) {
+                  setStatus(captureData.data.status);
+                  setProgressMessage("Payment captured!");
                 }
-              );
-              const captureData = await captureResponse.json();
-              if (captureData.success && captureData.data) {
-                setStatus(captureData.data.status);
-                setProgressMessage("Payment captured!");
+              } catch (captureErr) {
               }
-            } catch (captureErr) {
-              }
-            await new Promise((r) => setTimeout(r, 1000));
+              await new Promise((r) => setTimeout(r, 1000));
+              continue;
+            }
+            setProgressMessage("Waiting for payment provider...");
+            await new Promise((r) => setTimeout(r, 3000));
             continue;
           }
 

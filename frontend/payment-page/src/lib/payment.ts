@@ -227,20 +227,22 @@ export async function startCheckout({
   amount = 100,
   currency = "INR",
   method = "card",
+  orderId,
 }) {
   const { token } = await ensureAccessToken();
   let authToken = token;
   
   const correlationId = createCorrelationId("payment");
   
-  const orderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
+  const orderRef = orderId || `ORD-${Date.now().toString(36).toUpperCase()}`;
 
   const requestBody = JSON.stringify({
-    orderId: orderId,
+    orderId: orderRef,
     amount: amount,
     currency: currency,
     description: `Payment for ${productId || "order"}`,
     customerEmail: customerEmail,
+    paymentMethod: method,
   });
 
   let response;
@@ -301,6 +303,7 @@ export async function startCheckout({
       merchantId: response.merchantId,
       amount: response.amount,
       currency: response.currency,
+      paymentMethod: method,
     },
     checkoutUrl: response.checkoutUrl || response.payment?.checkoutUrl,
     amount,
