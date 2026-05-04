@@ -3,14 +3,8 @@ package dev.payment.authservice.dto;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Data
 public class RefreshTokenRequest {
     @NotBlank(message = "Refresh token is required")
     private String refreshToken;
-
-    public String getRefreshToken() { return refreshToken; }
-    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
 }

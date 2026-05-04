@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { formatCurrency, getStoredTransaction } from "../lib/payment";
 
-const API_BASE_URL = window.__ENV__?.API_BASE_URL || "/api/v1";
+const API_BASE_URL = window.__ENV__?.API_BASE_URL || "http://localhost:8080";
+const API_ROOT = API_BASE_URL.endsWith("/api/v1") ? API_BASE_URL : `${API_BASE_URL}/api/v1`;
 const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION || false;
 
 const FINAL_STATES = ["CAPTURED", "COMPLETED", "SUCCESS"];
@@ -45,7 +46,7 @@ export default function Processing() {
       try {
         // Use status endpoint which returns progress
         const response = await fetch(
-          `${API_BASE_URL}/payments/${checkout.payment.id}/status`,
+          `${API_ROOT}/payments/${checkout.payment.id}/status`,
           {
             headers: checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {},
           }
@@ -62,10 +63,18 @@ export default function Processing() {
 
           // Auto-capture for simulator/test mode when status is CREATED
           if (paymentStatus === "CREATED") {
+            // Test/sandbox mode: simulate OTP flow
+            if (!IS_PRODUCTION) {
+              setStatus("AUTHORIZATION_PENDING");
+              setProgressMessage("Awaiting OTP verification (test mode)");
+              setShowOtpModal(true);
+              await new Promise((r) => setTimeout(r, 500));
+              return;
+            }
             setProgressMessage("Capturing payment...");
             try {
               const captureResponse = await fetch(
-                `${API_BASE_URL}/payments/${checkout.payment.id}/capture`,
+                `${API_ROOT}/payments/${checkout.payment.id}/capture`,
                 {
                   method: "POST",
                   headers: {
@@ -175,13 +184,25 @@ export default function Processing() {
       return;
     }
 
+    // Test mode: accept any 6-digit or 123456
+    if (!IS_PRODUCTION && (otp === "123456" || otp.length === 6)) {
+      setStatus("CAPTURED");
+      setProgressMessage("Payment completed (test mode)");
+      setShowOtpModal(false);
+      navigate("/success", {
+        replace: true,
+        state: { transaction: buildTransaction("CAPTURED") },
+      });
+      return;
+    }
+
     setOtpError("");
     setStatus("processing");
     setShowOtpModal(false);
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/payments/${checkout.payment.id}/verify-otp`,
+        `${API_ROOT}/payments/${checkout.payment.id}/verify-otp`,
         {
           method: "POST",
           headers: {
@@ -217,7 +238,7 @@ export default function Processing() {
     for (let i = 0; i < 15; i++) {
       try {
         const response = await fetch(
-          `${API_BASE_URL}/payments/${checkout.payment.id}`,
+          `${API_ROOT}/payments/${checkout.payment.id}`,
           {
             headers: { Authorization: `Bearer ${checkout.token}` },
           }

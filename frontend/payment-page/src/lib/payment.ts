@@ -226,9 +226,10 @@ export async function startCheckout({
   customerEmail,
   amount = 100,
   currency = "INR",
+  method = "card",
 }) {
   const { token } = await ensureAccessToken();
-  const authToken = MERCHANT_API_KEY || token;
+  let authToken = token;
   
   const correlationId = createCorrelationId("payment");
   
@@ -257,6 +258,7 @@ export async function startCheckout({
       clearAuth();
       try {
         const refreshed = await ensureAccessToken();
+        authToken = refreshed.token;
         response = await apiRequest("/api/v1/payments/create-order", {
           method: "POST",
           headers: {
@@ -277,6 +279,7 @@ export async function startCheckout({
           },
           body: requestBody,
         });
+        authToken = MERCHANT_API_KEY;
       }
     } else {
       throw error;
@@ -285,9 +288,23 @@ export async function startCheckout({
 
   const checkout = {
     token: authToken,
-    order: response.order,
-    payment: response.payment,
-    checkoutUrl: response.checkoutUrl,
+    order: response.order || {
+      id: response.orderId,
+      externalReference: response.orderId,
+    },
+    payment: response.payment || {
+      id: response.paymentId,
+      paymentId: response.paymentId,
+      orderId: response.orderId,
+      status: response.status,
+      checkoutUrl: response.checkoutUrl,
+      merchantId: response.merchantId,
+      amount: response.amount,
+      currency: response.currency,
+    },
+    checkoutUrl: response.checkoutUrl || response.payment?.checkoutUrl,
+    amount,
+    method,
     correlationId,
   };
 

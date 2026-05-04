@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
-const API_BASE_URL = window.__ENV__?.API_BASE_URL || '/api/v1';
+const API_BASE_URL = window.__ENV__?.API_BASE_URL || 'http://localhost:8080';
+const API_ROOT = API_BASE_URL.endsWith('/api/v1') ? API_BASE_URL : `${API_BASE_URL}/api/v1`;
 
 export default function ThreeDsChallenge() {
   const [searchParams] = useSearchParams();
@@ -33,7 +34,7 @@ export default function ThreeDsChallenge() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/payments/${transactionId}/verify-3ds`,
+        `${API_ROOT}/payments/${transactionId}/verify-3ds`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

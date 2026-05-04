@@ -1,5 +1,6 @@
 package dev.payment.paymentservice.config;
 
+import lombok.*;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import java.util.*;
@@ -33,19 +34,11 @@ public class PaymentConfig {
         return currencies.get(currency.toUpperCase());
     }
 
+    @Data
+    @AllArgsConstructor
     public static class CurrencyConfig {
         private String name;
         private String symbol;
         private int decimalPlaces;
-
-        public CurrencyConfig(String name, String symbol, int decimalPlaces) {
-            this.name = name;
-            this.symbol = symbol;
-            this.decimalPlaces = decimalPlaces;
-        }
-
-        public String getName() { return name; }
-        public String getSymbol() { return symbol; }
-        public int getDecimalPlaces() { return decimalPlaces; }
     }
 }

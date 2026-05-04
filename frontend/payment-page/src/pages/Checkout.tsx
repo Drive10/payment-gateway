@@ -12,7 +12,8 @@ import {
   validateCardForm,
 } from "../lib/payment";
 
-const API_BASE_URL = window.__ENV__?.API_BASE_URL || "/api/v1";
+const API_BASE_URL = window.__ENV__?.API_BASE_URL || "http://localhost:8080";
+const API_ROOT = API_BASE_URL.endsWith("/api/v1") ? API_BASE_URL : `${API_BASE_URL}/api/v1`;
 const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION || false;
 
 const initialForm = {
@@ -100,7 +101,7 @@ export default function Checkout() {
   const loadPaymentLink = async (referenceId) => {
     setLoadingLink(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/payments/link/${referenceId}`);
+      const response = await fetch(`${API_ROOT}/payments/link/${referenceId}`);
       const data = await response.json();
       if (data.success && data.data) {
         setPaymentLinkData(data.data);
