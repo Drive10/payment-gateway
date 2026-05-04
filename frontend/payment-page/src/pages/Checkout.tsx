@@ -479,6 +479,13 @@ export default function Checkout() {
           </motion.div>
         </div>
       </div>
+
+      {!IS_PRODUCTION && (
+        <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 9999 }}>
+          <button onClick={() => setValues({ cardNumber: "4111111111111111", expiry: "1228", cvv: "123", cardholder: "Test User" })} style={{ background: "#4338ca", color: "white", padding: "8px 16px", borderRadius: "8px", fontSize: "12px", marginRight: "8px" }}>Fill Card</button>
+          <button onClick={() => { setMethod("upi"); setAmountInput("100"); }} style={{ background: "#0891b2", color: "white", padding: "8px 16px", borderRadius: "8px", fontSize: "12px" }}>Select UPI</button>
+        </div>
+      )}
     </div>
   );
 }

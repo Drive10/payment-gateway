@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { formatCurrency, getStoredTransaction } from "../lib/payment";
 import { OTPModal } from "../components/payment/OTPModal";
+import { DevTestPanel } from "../components/DevTestPanel";
 
 const API_BASE_URL = window.__ENV__?.API_BASE_URL || "http://localhost:8080";
 const API_ROOT = API_BASE_URL.endsWith("/api/v1") ? API_BASE_URL : `${API_BASE_URL}/api/v1`;
-const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION || false;
+const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION === true;
 
 const FINAL_STATES = ["CAPTURED", "COMPLETED", "SUCCESS"];
 const FAILURE_STATES = ["FAILED", "EXPIRED"];
@@ -390,6 +391,37 @@ export default function Processing() {
           </div>
         </div>
       </motion.section>
+
+      {!IS_PRODUCTION && (
+        <DevTestPanel
+          onSimulateSuccess={() => {
+            navigate("/success", {
+              replace: true,
+              state: {
+                transaction: {
+                  ...checkout,
+                  status: "CAPTURED",
+                  amount: checkout?.amount,
+                },
+              },
+            });
+          }}
+          onSimulateFailure={() => {
+            navigate("/failure", {
+              replace: true,
+              state: {
+                transaction: checkout,
+                error: "Test failure simulated",
+              },
+            });
+          }}
+          onSimulateOtp={() => setShowOtpModal(true)}
+          onClearStorage={() => {
+            localStorage.clear();
+            sessionStorage.clear();
+          }}
+        />
+      )}
     </main>
   );
 }
