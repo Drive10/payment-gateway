@@ -91,8 +91,7 @@ export default function Processing() {
                 setProgressMessage("Payment captured!");
               }
             } catch (captureErr) {
-              console.error("Capture error:", captureErr);
-            }
+              }
             await new Promise((r) => setTimeout(r, 1000));
             continue;
           }
@@ -142,7 +141,6 @@ export default function Processing() {
           await new Promise((r) => setTimeout(r, 3000));
         }
       } catch (err) {
-        console.error("Status poll error:", err);
         await new Promise((r) => setTimeout(r, 3000));
       }
     }

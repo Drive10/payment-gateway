@@ -111,13 +111,9 @@ export default function Checkout() {
       } else {
         setSubmitError("Invalid or expired payment link");
       }
-    } catch (error) {
-      console.error("Failed to load payment link:", error);
-      setSubmitError("Failed to load payment details");
-    } finally {
-      setLoadingLink(false);
-      setPaymentLinkChecked(true);
-    }
+} catch (err) {
+        setLoadingLink(false);
+      }
   };
 
   if (loadingLink) {
