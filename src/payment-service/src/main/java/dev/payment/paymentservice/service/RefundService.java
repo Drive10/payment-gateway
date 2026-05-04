@@ -128,11 +128,14 @@ public class RefundService {
         return refundRepository.findByPaymentId(paymentId);
     }
 
-    private void persistLedgerEntry(String paymentId, String refundId, String entryType, java.math.BigDecimal amount, String currency, String reference) {
+    private void persistLedgerEntry(String paymentId, String refundId, String entryTypeStr, java.math.BigDecimal amount, String currency, String reference) {
         if (ledgerEntryRepository.existsByReference(reference)) {
             return;
         }
 
+        LedgerEntry.EntryType entryType = "CUSTOMER_DEBIT".equals(entryTypeStr) || "REFUND_DEBIT_CUSTOMER".equals(entryTypeStr)
+            ? LedgerEntry.EntryType.DEBIT : LedgerEntry.EntryType.CREDIT;
+        
         LedgerEntry entry = LedgerEntry.builder()
                 .paymentId(paymentId)
                 .refundId(refundId)

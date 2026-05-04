@@ -113,6 +113,24 @@ public class Payment {
     @Builder.Default
     private BigDecimal refundAmount = BigDecimal.ZERO;
 
+    @Column(name = "captured_at")
+    private Instant capturedAt;
+
+    @Column(name = "capture_initiated_at")
+    private Instant captureInitiatedAt;
+
+    @Column(name = "capture_idempotency_key")
+    private String captureIdempotencyKey;
+
+    @Column(name = "refunded_at")
+    private Instant refundedAt;
+
+    @Column(name = "refund_initiated_at")
+    private Instant refundInitiatedAt;
+
+    @Column(name = "refund_idempotency_key")
+    private String refundIdempotencyKey;
+
     public boolean canTransitionTo(PaymentStatus target) {
         return target.isValidTransitionFrom(this.status);
     }

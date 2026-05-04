@@ -6,28 +6,28 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "outbox", schema = "public")
+@Table(name = "inbox", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Outbox {
+public class Inbox {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
-    private String aggregateId;
+    @Column(nullable = false, unique = true)
+    private String messageId;
 
     @Column(nullable = false)
-    private String eventType;
+    private String topic;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String payload;
 
     @Column(nullable = false)
-    private Instant createdAt;
+    private Instant receivedAt;
 
     @Column
     private Instant processedAt;
@@ -58,10 +58,6 @@ public class Outbox {
 
     public boolean isProcessed() {
         return processedAt != null;
-    }
-
-    public boolean isDeadLettered() {
-        return deadLettered;
     }
 
     public boolean canRetry() {

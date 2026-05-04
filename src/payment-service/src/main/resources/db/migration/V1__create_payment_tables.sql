@@ -1,34 +1,31 @@
--- Payment Service Schema
+-- Payment Service Canonical Schema
 -- Version: 1
--- Description: Create initial tables for payment service
+-- Description: Create canonical tables for payment domain
 
 CREATE SCHEMA IF NOT EXISTS payment_schema;
 SET search_path TO payment_schema;
 
--- Payments table
-CREATE TABLE IF NOT EXISTS payments (
+-- Payment Intent (main entity)
+CREATE TABLE IF NOT EXISTS payment_intent (
     id UUID PRIMARY KEY,
-    order_id VARCHAR(255),
+    version BIGINT NOT NULL DEFAULT 0,
+    idempotency_key VARCHAR(255) UNIQUE,
+    merchant_id VARCHAR(255) NOT NULL,
     amount DECIMAL(19,4) NOT NULL,
     currency VARCHAR(3) NOT NULL,
     status VARCHAR(50) NOT NULL,
-    merchant_id VARCHAR(255) NOT NULL,
-    correlation_id VARCHAR(255),
-    payment_method VARCHAR(100),
-    provider_reference VARCHAR(255),
-    failure_reason TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE,
     metadata TEXT,
+    client_secret VARCHAR(500),
     checkout_url VARCHAR(500),
-    idempotency_key VARCHAR(255),
     provider VARCHAR(100),
     provider_order_id VARCHAR(255),
     provider_payment_id VARCHAR(255),
+    provider_reference VARCHAR(255),
     provider_signature TEXT,
-    simulated BOOLEAN NOT NULL DEFAULT FALSE,
-    transaction_mode VARCHAR(50),
+    failure_reason TEXT,
     method VARCHAR(50),
     upi_id VARCHAR(255),
     upi_link VARCHAR(500),
@@ -36,24 +33,85 @@ CREATE TABLE IF NOT EXISTS payments (
     pricing_tier VARCHAR(100),
     platform_fee DECIMAL(19,4) DEFAULT 0,
     gateway_fee DECIMAL(19,4) DEFAULT 0,
-    refund_amount DECIMAL(19,4) DEFAULT 0
+    refunded_amount DECIMAL(19,4) DEFAULT 0,
+    metadata_json JSONB
 );
 
--- Refunds table
-CREATE TABLE IF NOT EXISTS refunds (
+-- Payment Attempt (authorization attempts)
+CREATE TABLE IF NOT EXISTS payment_attempt (
     id UUID PRIMARY KEY,
-    payment_id VARCHAR(255) NOT NULL,
-    refund_id VARCHAR(255) NOT NULL UNIQUE,
+    version BIGINT NOT NULL DEFAULT 0,
+    payment_intent_id UUID NOT NULL REFERENCES payment_intent(id),
+    attempt_number INTEGER NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    provider VARCHAR(100),
+    provider_reference VARCHAR(255),
+    provider_order_id VARCHAR(255),
+    provider_payment_id VARCHAR(255),
+    failure_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    metadata_json JSONB
+);
+
+-- Authorization (capture of funds)
+CREATE TABLE IF NOT EXISTS authorization (
+    id UUID PRIMARY KEY,
+    version BIGINT NOT NULL DEFAULT 0,
+    payment_intent_id UUID NOT NULL REFERENCES payment_intent(id),
     amount DECIMAL(19,4) NOT NULL,
-    refunded_amount DECIMAL(19,4) DEFAULT 0,
     currency VARCHAR(3) NOT NULL,
     status VARCHAR(50) NOT NULL,
-    reason TEXT,
+    provider VARCHAR(100),
+    provider_authorization_id VARCHAR(255),
+    expires_at TIMESTAMP WITH TIME ZONE,
+    captured_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
--- Outbox table for reliable event publishing
+-- Capture (funds captured)
+CREATE TABLE IF NOT EXISTS capture (
+    id UUID PRIMARY KEY,
+    version BIGINT NOT NULL DEFAULT 0,
+    payment_intent_id UUID NOT NULL REFERENCES payment_intent(id),
+    authorization_id UUID REFERENCES authorization(id),
+    amount DECIMAL(19,4) NOT NULL,
+    currency VARCHAR(3) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    provider_capture_id VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+-- Refund
+CREATE TABLE IF NOT EXISTS refund (
+    id UUID PRIMARY KEY,
+    version BIGINT NOT NULL DEFAULT 0,
+    payment_intent_id UUID NOT NULL REFERENCES payment_intent(id),
+    capture_id UUID REFERENCES capture(id),
+    amount DECIMAL(19,4) NOT NULL,
+    currency VARCHAR(3) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    reason TEXT,
+    refund_reference VARCHAR(255),
+    provider_refund_id VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+-- Idempotency Keys (unique constraint enforcement)
+CREATE TABLE IF NOT EXISTS idempotency_key (
+    id UUID PRIMARY KEY,
+    key VARCHAR(255) NOT NULL UNIQUE,
+    payment_intent_id UUID REFERENCES payment_intent(id),
+    endpoint VARCHAR(255) NOT NULL,
+    response_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Outbox for reliable event publishing
 CREATE TABLE IF NOT EXISTS outbox (
     id UUID PRIMARY KEY,
     aggregate_type VARCHAR(100) NOT NULL,
@@ -61,16 +119,21 @@ CREATE TABLE IF NOT EXISTS outbox (
     event_type VARCHAR(100) NOT NULL,
     payload TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    processed_at TIMESTAMP WITH TIME ZONE
+    processed_at TIMESTAMP WITH TIME ZONE,
+    retry_count INTEGER DEFAULT 0,
+    last_retry_at TIMESTAMP WITH TIME ZONE
 );
 
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(order_id);
-CREATE INDEX IF NOT EXISTS idx_payments_merchant_id ON payments(merchant_id);
-CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
-CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at);
-CREATE INDEX IF NOT EXISTS idx_payments_idempotency_key ON payments(idempotency_key) WHERE idempotency_key IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_refunds_payment_id ON refunds(payment_id);
-CREATE INDEX IF NOT EXISTS idx_outbox_processed_at ON outbox(processed_at) WHERE processed_at IS NULL;
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_payment_intent_merchant ON payment_intent(merchant_id);
+CREATE INDEX IF NOT EXISTS idx_payment_intent_status ON payment_intent(status);
+CREATE INDEX IF NOT EXISTS idx_payment_intent_idempotency ON payment_intent(idempotency_key);
+CREATE INDEX IF NOT EXISTS idx_payment_intent_created ON payment_intent(created_at);
+CREATE INDEX IF NOT EXISTS idx_payment_attempt_intent ON payment_attempt(payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_authorization_intent ON authorization(payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_capture_intent ON capture(payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_refund_intent ON refund(payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_idempotency_key ON idempotency_key(key) WHERE expires_at > CURRENT_TIMESTAMP;
+CREATE INDEX IF NOT EXISTS idx_outbox_pending ON outbox(processed_at) WHERE processed_at IS NULL;
 
 SET search_path TO public;

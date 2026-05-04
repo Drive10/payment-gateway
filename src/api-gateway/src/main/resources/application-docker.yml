@@ -31,6 +31,10 @@ spring:
           uri: http://payment-service:8083
           predicates:
             - Path=/api/v1/payments/**
+        - id: admin-service
+          uri: http://payment-service:8083
+          predicates:
+            - Path=/admin/**
         - id: swagger-ui
           uri: http://payment-service:8083
           predicates:

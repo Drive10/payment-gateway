@@ -1,0 +1,130 @@
+{
+  "dashboard": {
+    "title": "PayFlow Payment Dashboard",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Payment Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(payment_requests_total{status='success'}[5m])",
+            "legendFormat": "Success"
+          },
+          {
+            "expr": "rate(payment_requests_total[5m])",
+            "legendFormat": "Total"
+          }
+        ],
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}
+      },
+      {
+        "id": 2,
+        "title": "Payment Latency (p95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(payment_request_latency_bucket[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(payment_request_latency_bucket[5m]))",
+            "legendFormat": "p99"
+          }
+        ],
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 0.3},
+            {"color": "red", "value": 0.5}
+          ]
+        }
+      },
+      {
+        "id": 3,
+        "title": "Webhook Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(webhooks_received_total[5m])",
+            "legendFormat": "Received"
+          },
+          {
+            "expr": "rate(webhooks_processed_total[5m])",
+            "legendFormat": "Processed"
+          },
+          {
+            "expr": "rate(webhooks_failed_total[5m])",
+            "legendFormat": "Failed"
+          }
+        ],
+        "gridPos": {"x": 0, "y": 8, "w": 8, "h": 6}
+      },
+      {
+        "id": 4,
+        "title": "Outbox Backlog",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "events_outbox_pending",
+            "legendFormat": "Pending"
+          },
+          {
+            "expr": "events_outbox_dead_lettered",
+            "legendFormat": "DLQ"
+          }
+        ],
+        "gridPos": {"x": 8, "y": 8, "w": 8, "h": 6},
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 100},
+                {"color": "red", "value": 1000}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Settlement Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(settlements_completed_total[1h])",
+            "legendFormat": "Completed"
+          },
+          {
+            "expr": "rate(settlements_failed_total[1h])",
+            "legendFormat": "Failed"
+          }
+        ],
+        "gridPos": {"x": 16, "y": 8, "w": 8, "h": 6}
+      },
+      {
+        "id": 6,
+        "title": "Reconciliation Mismatches",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(reconciliation_mismatches_total[5m])",
+            "legendFormat": "Mismatches"
+          }
+        ],
+        "gridPos": {"x": 0, "y": 14, "w": 24, "h": 8}
+      }
+    ],
+    "version": 1,
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}

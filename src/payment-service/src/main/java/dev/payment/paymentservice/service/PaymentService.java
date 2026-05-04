@@ -30,7 +30,8 @@ public class PaymentService {
     private final LedgerEntryRepository ledgerEntryRepository;
     private final WebhookInboxEventRepository webhookInboxEventRepository;
     private final StringRedisTemplate redisTemplate;
-    private final ObjectMapper objectMapper;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String IDEMPOTENCY_PREFIX = "idempotency:";
     private static final String OPERATION_IDEMPOTENCY_PREFIX = "operation-idempotency:";
@@ -135,10 +136,19 @@ public class PaymentService {
             throw PaymentException.badRequest("Only authorized payments can be captured");
         }
 
+        if (payment.getCaptureInitiatedAt() != null) {
+            throw PaymentException.badRequest("Capture already in progress or completed");
+        }
+
+        payment.setCaptureInitiatedAt(Instant.now());
+        payment.setCaptureIdempotencyKey(idempotencyKey);
         payment.setStatus(PaymentStatus.CAPTURED);
+        payment.setCapturedAt(Instant.now());
         paymentRepository.save(payment);
+        
         writeCaptureLedgerEntries(payment);
-        saveEvent(paymentId, "PAYMENT_CAPTURED", Map.of("paymentId", paymentId));
+        saveEvent(paymentId, "PAYMENT_CAPTURED", Map.of("paymentId", paymentId, "idempotencyKey", idempotencyKey));
+        
         CreatePaymentResponse response = toPaymentResponse(payment, "Payment captured");
         cacheOperationResponse(paymentId, "capture", idempotencyKey, response);
         return response;
@@ -334,11 +344,14 @@ public class PaymentService {
         persistLedgerEntry(paymentId, null, "MERCHANT_CREDIT", merchantNet, payment.getCurrency(), paymentId + ":merchant_credit");
     }
 
-    private void persistLedgerEntry(String paymentId, String refundId, String entryType, BigDecimal amount, String currency, String reference) {
+    private void persistLedgerEntry(String paymentId, String refundId, String entryTypeStr, BigDecimal amount, String currency, String reference) {
         if (ledgerEntryRepository.existsByReference(reference)) {
             return;
         }
 
+        LedgerEntry.EntryType entryType = "CUSTOMER_DEBIT".equals(entryTypeStr) || "REFUND_DEBIT_CUSTOMER".equals(entryTypeStr)
+            ? LedgerEntry.EntryType.DEBIT : LedgerEntry.EntryType.CREDIT;
+        
         LedgerEntry entry = LedgerEntry.builder()
             .paymentId(paymentId)
             .refundId(refundId)

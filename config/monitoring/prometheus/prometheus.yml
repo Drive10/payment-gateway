@@ -2,45 +2,39 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: []
-
-rule_files:
-  - /etc/prometheus/alert_rules.yml
-
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'api-gateway'
-    static_configs:
-      - targets: ['api-gateway:8080']
-    metrics_path: '/actuator/prometheus'
-
-  - job_name: 'auth-service'
-    static_configs:
-      - targets: ['auth-service:8081']
-    metrics_path: '/actuator/prometheus'
-
-  - job_name: 'order-service'
-    static_configs:
-      - targets: ['order-service:8082']
-    metrics_path: '/actuator/prometheus'
-
-  - job_name: 'payment-service'
+  - job_name: 'payflow-payment-service'
     static_configs:
       - targets: ['payment-service:8083']
-    metrics_path: '/actuator/prometheus'
 
-  - job_name: 'notification-service'
+  - job_name: 'payflow-auth-service'
     static_configs:
-      - targets: ['notification-service:8084']
-    metrics_path: '/actuator/prometheus'
+      - targets: ['auth-service:8082']
 
-  - job_name: 'simulator-service'
+  - job_name: 'payflow-api-gateway'
     static_configs:
-      - targets: ['simulator-service:8086']
-    metrics_path: '/actuator/prometheus'
+      - targets: ['api-gateway:8080']
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:7072']
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - 'payflow-slos.yml'

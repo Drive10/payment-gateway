@@ -1,0 +1,107 @@
+# PayFlow SLOs and Alerting Rules
+
+groups:
+  - name: payflow-slos
+    interval: 30s
+    rules:
+      # Payment Latency SLO: 95th percentile < 500ms
+      - alert: PaymentLatencyHigh
+        expr: histogram_quantile(0.95, rate(payment_request_latency_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "Payment request latency above SLO"
+          description: "95th percentile latency is {{ $value }}s, exceeds 500ms SLO"
+          runbook: "https://runbooks.payflow.dev/latency"
+
+      # Payment Success Rate SLO: > 99%
+      - alert: PaymentSuccessRateLow
+        expr: rate(payment_requests_total{status="success"}[5m]) / rate(payment_requests_total[5m]) < 0.99
+        for: 5m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "Payment success rate below SLO"
+          description: "Success rate is {{ $value | percent }}, below 99% SLO"
+
+      # Webhook Processing Lag SLO: < 5 seconds
+      - alert: WebhookProcessingLag
+        expr: rate(webhooks_received_total[5m]) - rate(webhooks_processed_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Webhook processing lag detected"
+          description: "{{ $value }} webhooks pending for > 2 minutes"
+
+      # Dead Letter Queue Growth
+      - alert: DeadLetterQueueGrowing
+        expr: increase(events_dead_lettered_total[1m]) > 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High rate of events moving to DLQ"
+          description: "{{ $value }} events failed in last minute"
+
+      # Reconciliation Mismatches
+      - alert: ReconciliationMismatches
+        expr: rate(reconciliation_mismatches_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Reconciliation mismatch detected"
+          description: "State drift detected between local and provider"
+
+      - alert: ReconciliationMismatchesHigh
+        expr: sum(increase(reconciliation_mismatches_total[1h])) > 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Multiple reconciliation mismatches"
+          description: "{{ $value }} mismatches in last hour"
+
+      # Settlement Failures
+      - alert: SettlementFailuresHigh
+        expr: rate(settlements_failed_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Settlement failures detected"
+          description: "Settlement batch failed"
+
+      # Outbox Backlog
+      - alert: OutboxBacklog
+        expr: events_outbox_pending > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox event backlog growing"
+          description: "{{ $value }} events pending"
+
+      # Database Connection Pool
+      - alert: DatabaseConnectionPoolExhausted
+        expr: hikaricp_connections_active / hikaricp_connections_max > 0.9
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection pool near capacity"
+          description: "{{ $value | percent }} of connections in use"
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "{{ $value | percent }} of requests returning 5xx"

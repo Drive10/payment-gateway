@@ -11,6 +11,11 @@ const API_BASE_URL = import.meta.env.VITE_API_GATEWAY_URL
   ? import.meta.env.VITE_API_GATEWAY_URL 
   : "http://localhost:8080";
 const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
+const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION === true;
+const MERCHANT_API_KEY =
+  window.__ENV__?.MERCHANT_API_KEY ||
+  import.meta.env.VITE_MERCHANT_API_KEY ||
+  (IS_PRODUCTION ? "" : "sk_test_88573d07c94d45f58ead0e698918f420");
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm the platform is running and try again.";
 const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
@@ -223,6 +228,7 @@ export async function startCheckout({
   currency = "INR",
 }) {
   const { token } = await ensureAccessToken();
+  const authToken = MERCHANT_API_KEY || token;
   
   const correlationId = createCorrelationId("payment");
   
@@ -231,7 +237,7 @@ export async function startCheckout({
   const response = await apiRequest("/api/v1/payments/create-order", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${authToken}`,
       "X-Request-Id": correlationId,
     },
     body: JSON.stringify({
@@ -244,7 +250,7 @@ export async function startCheckout({
   });
 
   const checkout = {
-    token: token,
+    token: authToken,
     order: response.order,
     payment: response.payment,
     checkoutUrl: response.checkoutUrl,
