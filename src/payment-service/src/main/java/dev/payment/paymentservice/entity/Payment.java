@@ -76,6 +76,9 @@ public class Payment {
     @Column(name = "provider_signature")
     private String providerSignature;
 
+    @Column(name = "client_secret")
+    private String clientSecret;
+
     @Column(name = "simulated", nullable = false)
     @Builder.Default
     private Boolean simulated = false;
@@ -118,6 +121,7 @@ public class Payment {
         CREATED,
         AUTHORIZATION_PENDING,
         CHALLENGE_REQUIRED,
+        PROCESSING,
         AUTHORIZED,
         CAPTURED,
         FAILED,
@@ -128,8 +132,9 @@ public class Payment {
             return switch (this) {
                 case AUTHORIZATION_PENDING -> from == CREATED;
                 case CHALLENGE_REQUIRED -> from == AUTHORIZATION_PENDING;
+                case PROCESSING -> from == AUTHORIZATION_PENDING || from == CHALLENGE_REQUIRED;
                 case AUTHORIZED -> from == AUTHORIZATION_PENDING || from == CHALLENGE_REQUIRED;
-                case CAPTURED -> from == AUTHORIZED || from == CREATED;
+                case CAPTURED -> from == AUTHORIZED;
                 case FAILED -> from == CREATED || from == AUTHORIZATION_PENDING || from == CHALLENGE_REQUIRED;
                 case CANCELLED -> from == CREATED || from == AUTHORIZATION_PENDING || from == AUTHORIZED;
                 case REFUNDED -> from == CAPTURED;

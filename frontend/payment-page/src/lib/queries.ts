@@ -109,7 +109,7 @@ export const usePaymentHistory = (limit = 10, offset = 0) => {
   return useQuery({
     queryKey: ['payments', limit, offset],
     queryFn: async () => {
-      const response = await api.get(`/api/v1/payments?limit=${limit}&offset=${offset}`, {
+      const response = await api.get(`/api/v1/payments/list?limit=${limit}&offset=${offset}`, {
         headers: getAuthHeaders(),
       });
       return response.data.data;

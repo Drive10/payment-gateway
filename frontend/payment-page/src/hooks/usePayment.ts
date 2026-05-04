@@ -80,20 +80,22 @@ export function usePayment({
         idempotencyKey: idempotencyKeyRef.current,
       });
 
-      const { transactionId, status: backendStatus, errorCode, message } = response.data;
+      const payload = response.data?.data ?? response.data;
+      const { transactionId, paymentId, status: backendStatus, errorCode, message } = payload;
+      const resolvedTxnId = transactionId || paymentId;
       const frontendStatus = mapBackendStatus(backendStatus);
 
       setState({
         status: frontendStatus,
         error: frontendStatus === 'failed' ? (message || 'Payment failed') : null,
-        transactionId,
+        transactionId: resolvedTxnId,
       });
 
-      if (transactionId && frontendStatus !== 'failed') {
-        setSearchParams({ [TXN_PARAM]: transactionId });
+      if (resolvedTxnId && frontendStatus !== 'failed') {
+        setSearchParams({ [TXN_PARAM]: resolvedTxnId });
       }
 
-      return { transactionId, status: frontendStatus };
+      return { transactionId: resolvedTxnId, status: frontendStatus };
     } catch (error: any) {
       const message = error.response?.data?.error?.message || error.response?.data?.message || 'Payment failed. Please try again.';
       setState(prev => ({
@@ -119,7 +121,9 @@ export function usePayment({
         email: upiDetails.email,
       });
 
-      const { transactionId, status: backendStatus, checkoutUrl, message } = response.data;
+      const payload = response.data?.data ?? response.data;
+      const { transactionId, paymentId, status: backendStatus, checkoutUrl, message } = payload;
+      const resolvedTxnId = transactionId || paymentId;
       const frontendStatus = mapBackendStatus(backendStatus);
 
       // For UPI payments, redirect to UPI app if deep link provided
@@ -130,7 +134,7 @@ export function usePayment({
       setState({
         status: frontendStatus,
         error: frontendStatus === 'failed' ? (message || 'Payment failed') : null,
-        transactionId,
+        transactionId: resolvedTxnId,
       });
 
       // For UPI, automatically start polling if in awaiting state
@@ -139,7 +143,7 @@ export function usePayment({
         // The Processing page will handle polling
       }
 
-      return { transactionId, status: frontendStatus, checkoutUrl };
+      return { transactionId: resolvedTxnId, status: frontendStatus, checkoutUrl };
     } catch (error: any) {
       const message = error.response?.data?.error?.message || error.response?.data?.message || 'Payment failed. Please try again.';
       setState(prev => ({
@@ -165,16 +169,18 @@ export function usePayment({
         email: netBankingDetails.email,
       });
 
-      const { transactionId, status: backendStatus, message } = response.data;
+      const payload = response.data?.data ?? response.data;
+      const { transactionId, paymentId, status: backendStatus, message } = payload;
+      const resolvedTxnId = transactionId || paymentId;
       const frontendStatus = mapBackendStatus(backendStatus);
 
       setState({
         status: frontendStatus,
         error: frontendStatus === 'failed' ? (message || 'Payment failed') : null,
-        transactionId,
+        transactionId: resolvedTxnId,
       });
 
-      return { transactionId, status: frontendStatus };
+      return { transactionId: resolvedTxnId, status: frontendStatus };
     } catch (error: any) {
       const message = error.response?.data?.error?.message || error.response?.data?.message || 'Payment failed. Please try again.';
       setState(prev => ({
@@ -199,7 +205,7 @@ export function usePayment({
         otp,
       });
 
-      const backendStatus = response.data.status;
+      const backendStatus = (response.data?.data ?? response.data).status;
       const frontendStatus = mapBackendStatus(backendStatus);
 
       if (frontendStatus === 'success') {
@@ -212,7 +218,7 @@ export function usePayment({
         throw new Error('OTP verification failed');
       }
 
-      return response.data;
+      return response.data?.data ?? response.data;
     } catch (error: any) {
       const message = error.response?.data?.message || 'OTP verification failed';
       setState(prev => ({
@@ -230,7 +236,8 @@ export function usePayment({
     for (let i = 0; i < maxPolls; i++) {
       try {
         const response = await api.get(`/api/v1/payments/${state.transactionId}/status`);
-        const backendStatus = response.data.status;
+        const payload = response.data?.data ?? response.data;
+        const backendStatus = payload.status;
         const frontendStatus = mapBackendStatus(backendStatus);
         
         if (frontendStatus === 'success') {
@@ -238,27 +245,27 @@ export function usePayment({
             ...prev,
             status: 'success',
           }));
-          return response.data;
+          return payload;
         } else if (frontendStatus === 'failed') {
           setState(prev => ({
             ...prev,
             status: 'failed',
             error: 'Payment failed',
           }));
-          return response.data;
+          return payload;
         } else if (frontendStatus === 'expired') {
           setState(prev => ({
             ...prev,
             status: 'expired',
             error: 'Payment expired',
           }));
-          return response.data;
+          return payload;
         } else if (frontendStatus === 'pending_otp') {
           setState(prev => ({
             ...prev,
             status: 'pending_otp',
           }));
-          return response.data;
+          return payload;
         }
 
         await new Promise(resolve => setTimeout(resolve, intervalMs));

@@ -116,7 +116,7 @@ async function apiRequest(path, options = {}) {
 }
 
 export async function login(email, password) {
-  const auth = await apiRequest("/api/v1/merchant/auth/login", {
+  const auth = await apiRequest("/api/v1/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
@@ -128,7 +128,7 @@ export async function login(email, password) {
   const authData = {
     token: auth.accessToken,
     refreshToken: auth.refreshToken,
-    user: auth.user,
+    user: { email },
     expiresAt: Date.now() + (auth.expiresIn || 3600) * 1000,
   };
   persistAuth(authData);
@@ -142,7 +142,7 @@ export async function register(email, password, firstName, lastName) {
   if (lastName) customer.lastName = lastName;
   if (password) customer.password = password;
 
-  await apiRequest("/api/v1/merchant/auth/register", {
+  await apiRequest("/api/v1/auth/register", {
     method: "POST",
     body: JSON.stringify(customer),
   });
@@ -161,7 +161,7 @@ export async function ensureAccessToken() {
     if (isExpired || isExpiringSoon) {
       if (storedAuth.refreshToken) {
         try {
-          const refreshed = await apiRequest("/api/v1/merchant/auth/refresh", {
+          const refreshed = await apiRequest("/api/v1/auth/refresh", {
             method: "POST",
             body: JSON.stringify({ refreshToken: storedAuth.refreshToken }),
           });
@@ -311,7 +311,7 @@ export async function getPaymentStatus(paymentId, token) {
 }
 
 export async function getPaymentHistory(token, limit = 10, offset = 0) {
-  return apiRequest(`/api/v1/payments?limit=${limit}&offset=${offset}`, {
+  return apiRequest(`/api/v1/payments/list?limit=${limit}&offset=${offset}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

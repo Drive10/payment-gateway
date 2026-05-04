@@ -7,6 +7,8 @@ import dev.payment.paymentservice.entity.Payment;
 import dev.payment.paymentservice.entity.Payment.PaymentStatus;
 import dev.payment.paymentservice.repository.OutboxRepository;
 import dev.payment.paymentservice.repository.PaymentRepository;
+import dev.payment.paymentservice.repository.LedgerEntryRepository;
+import dev.payment.paymentservice.repository.WebhookInboxEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +44,12 @@ class PaymentServiceTest {
     private StringRedisTemplate redisTemplate;
 
     @Mock
+    private LedgerEntryRepository ledgerEntryRepository;
+
+    @Mock
+    private WebhookInboxEventRepository webhookInboxEventRepository;
+
+    @Mock
     private ValueOperations<String, String> valueOperations;
 
     private PaymentService paymentService;
@@ -53,7 +61,14 @@ class PaymentServiceTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        paymentService = new PaymentService(paymentRepository, outboxRepository, redisTemplate, objectMapper);
+        paymentService = new PaymentService(
+                paymentRepository,
+                outboxRepository,
+                ledgerEntryRepository,
+                webhookInboxEventRepository,
+                redisTemplate,
+                objectMapper
+        );
 
         orderId = "order_test_" + UUID.randomUUID().toString().substring(0, 8);
         payment = Payment.builder()

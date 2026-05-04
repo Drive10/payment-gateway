@@ -7,6 +7,10 @@ import dev.payment.paymentservice.entity.Refund;
 import dev.payment.paymentservice.entity.Refund.RefundStatus;
 import dev.payment.paymentservice.repository.PaymentRepository;
 import dev.payment.paymentservice.repository.RefundRepository;
+import dev.payment.paymentservice.repository.LedgerEntryRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +34,15 @@ class RefundServiceTest {
     @Mock
     private PaymentRepository paymentRepository;
 
+    @Mock
+    private LedgerEntryRepository ledgerEntryRepository;
+
+    @Mock
+    private StringRedisTemplate redisTemplate;
+
+    @Mock
+    private ValueOperations<String, String> valueOperations;
+
     private RefundService refundService;
 
     private Refund refund;
@@ -38,7 +51,8 @@ class RefundServiceTest {
 
     @BeforeEach
     void setUp() {
-        refundService = new RefundService(refundRepository, paymentRepository);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        refundService = new RefundService(refundRepository, paymentRepository, ledgerEntryRepository, redisTemplate, new ObjectMapper());
 
         paymentId = UUID.randomUUID();
         payment = Payment.builder()
