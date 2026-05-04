@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import CardForm from "../components/CardForm";
 import UpiQR from "../components/UpiQR";
@@ -14,7 +14,7 @@ import {
 
 const API_BASE_URL = window.__ENV__?.API_BASE_URL || "http://localhost:8080";
 const API_ROOT = API_BASE_URL.endsWith("/api/v1") ? API_BASE_URL : `${API_BASE_URL}/api/v1`;
-const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION || false;
+const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION === true;
 
 const initialForm = {
   cardNumber: "",
@@ -145,14 +145,23 @@ export default function Checkout() {
   };
 
   const handleAmountChange = (e) => {
-    const value = e.target.value.replace(/[^0-9]/g, "");
+    const value = e.target.value.replace(/[^0-9.]/g, "");
     setAmountInput(value);
+  };
+
+  const sanitizeInput = (value: string) => {
+    return value.replace(/[<>'";&]/g, "");
   };
 
   const handlePay = async () => {
     const amount = parseFloat(amountInput);
     
-    if (!amountInput || amount <= 0) {
+    if (!amountInput || amountInput.trim() === "") {
+      setSubmitError("Please enter a payment amount");
+      return;
+    }
+
+    if (isNaN(amount) || amount <= 0) {
       setSubmitError("Please enter a valid payment amount");
       return;
     }
@@ -182,13 +191,14 @@ export default function Checkout() {
       const checkout = await startCheckout({
         amount,
         method,
-        cardholder: values.cardholder,
+        cardholder: sanitizeInput(values.cardholder),
         transactionMode,
-        description: paymentLinkData?.description || "Payment for order",
+        description: sanitizeInput(paymentLinkData?.description || "Payment for order"),
       });
       navigate("/processing", { state: { checkout } });
-    } catch (error) {
-      setSubmitError(error.message || "Payment failed. Please try again.");
+    } catch (error: unknown) {
+      const err = error as Error;
+      setSubmitError(err?.message || "Payment failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
