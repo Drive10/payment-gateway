@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
-import { getStoredTransaction } from "../lib/payment";
+import { getStoredTransaction } from "../lib/payment.ts";
 
 export default function Success() {
   const location = useLocation();

@@ -12,7 +12,7 @@ const ThreeDsChallenge = lazy(() => import("./pages/ThreeDsChallenge"));
 export default function App() {
   return (
     <ToastProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Suspense
           fallback={
             <main className="flex min-h-screen items-center justify-center px-4">

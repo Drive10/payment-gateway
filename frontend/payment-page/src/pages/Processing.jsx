@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { formatCurrency, getStoredTransaction } from "../lib/payment";
+import { formatCurrency, getStoredTransaction } from "../lib/payment.ts";
 
 const API_BASE_URL = window.__ENV__?.API_BASE_URL || "/api/v1";
 const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION || false;

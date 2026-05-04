@@ -11,7 +11,11 @@ const API_BASE_URL = window.__ENV__?.API_BASE_URL
   || import.meta.env.VITE_API_GATEWAY_URL 
   || "http://localhost:8083";
 const DEFAULT_MERCHANT_ID = window.__ENV__?.MERCHANT_ID || import.meta.env.VITE_MERCHANT_ID || "11c16124-5407-46cf-812c-8b36f7c894b7";
-const MERCHANT_API_KEY = window.__ENV__?.MERCHANT_API_KEY || import.meta.env.VITE_MERCHANT_API_KEY || "sk_test_88573d07c94d45f58ead0e698918f420";
+const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION === true;
+const MERCHANT_API_KEY =
+  window.__ENV__?.MERCHANT_API_KEY ||
+  import.meta.env.VITE_MERCHANT_API_KEY ||
+  (IS_PRODUCTION ? "" : "sk_test_88573d07c94d45f58ead0e698918f420");
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm the platform is running and try again.";
 const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
@@ -152,10 +156,61 @@ export async function register(email, password, firstName, lastName) {
 }
 
 export async function ensureAccessToken() {
-  return {
-    token: MERCHANT_API_KEY,
-    customer: { email: "customer@example.com", firstName: "Guest", lastName: "User" }
-  };
+  const storedAuth = getStoredAuth();
+
+  if (storedAuth?.token) {
+    const bufferTime = 5 * 60 * 1000;
+    const isExpired = storedAuth.expiresAt && Date.now() > storedAuth.expiresAt;
+    const isExpiringSoon = storedAuth.expiresAt && Date.now() + bufferTime > storedAuth.expiresAt;
+
+    if (!isExpired && !isExpiringSoon) {
+      return { token: storedAuth.token, customer: storedAuth.user };
+    }
+
+    if (storedAuth.refreshToken) {
+      try {
+        const refreshed = await apiRequest("/api/v1/auth/refresh", {
+          method: "POST",
+          body: JSON.stringify({ refreshToken: storedAuth.refreshToken }),
+        });
+        if (refreshed?.accessToken) {
+          const newAuth = {
+            ...storedAuth,
+            token: refreshed.accessToken,
+            refreshToken: refreshed.refreshToken || storedAuth.refreshToken,
+            expiresAt: Date.now() + (refreshed.expiresIn || 3600) * 1000,
+          };
+          persistAuth(newAuth);
+          return { token: newAuth.token, customer: newAuth.user };
+        }
+      } catch {
+        clearAuth();
+      }
+    }
+  }
+
+  const sessionKey = randomToken(10);
+  const customer = buildCustomerIdentity(`user.${sessionKey}@example.com`, "Customer", "User");
+
+  try {
+    await apiRequest("/api/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify(customer),
+    });
+  } catch (error) {
+    if (!String(error.message).toLowerCase().includes("exists")) {
+      if (MERCHANT_API_KEY) {
+        return {
+          token: MERCHANT_API_KEY,
+          customer: { email: "customer@example.com", firstName: "Guest", lastName: "User" },
+        };
+      }
+      throw error;
+    }
+  }
+
+  const auth = await login(customer.email, customer.password);
+  return { token: auth.token, customer: auth.user };
 }
 
 export async function logout() {
@@ -179,28 +234,63 @@ export async function startCheckout({
   const correlationId = createCorrelationId("payment");
 
   const executeCheckout = async () => {
-    const order = await apiRequest("/api/v1/payments/create-order", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${MERCHANT_API_KEY}`,
-        "X-Request-Id": correlationId,
-      },
-      body: JSON.stringify({
-        orderId: externalReference,
-        amount: amount,
-        currency: "INR",
-        description: description || `Payment for order ${externalReference}`,
-customerEmail: customerEmail || "customer@example.com",
-        customerName: customerName || "Customer",
-      }),
+    const { token } = await ensureAccessToken();
+    const orderBody = JSON.stringify({
+      orderId: externalReference,
+      amount: amount,
+      currency: "INR",
+      description: description || `Payment for order ${externalReference}`,
+      customerEmail: customerEmail || "customer@example.com",
+      customerName: customerName || "Customer",
     });
+
+    let order;
+    try {
+      order = await apiRequest("/api/v1/payments/create-order", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Request-Id": correlationId,
+        },
+        body: orderBody,
+      });
+    } catch (error) {
+      if (error?.status === 401 && token !== MERCHANT_API_KEY) {
+        clearAuth();
+        try {
+          const refreshed = await ensureAccessToken();
+          order = await apiRequest("/api/v1/payments/create-order", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${refreshed.token}`,
+              "X-Request-Id": correlationId,
+            },
+            body: orderBody,
+          });
+        } catch {
+          if (!MERCHANT_API_KEY) {
+            throw error;
+          }
+          order = await apiRequest("/api/v1/payments/create-order", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${MERCHANT_API_KEY}`,
+              "X-Request-Id": correlationId,
+            },
+            body: orderBody,
+          });
+        }
+      } else {
+        throw error;
+      }
+    }
 
     const merchantIdToSend = order?.merchantId ?? DEFAULT_MERCHANT_ID;
     const idempotencyKey = `pay-guest-${externalReference}`;
     const payment = await apiRequest("/api/v1/payments", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${MERCHANT_API_KEY}`,
+        Authorization: `Bearer ${token}`,
         "Idempotency-Key": idempotencyKey,
         "X-Request-Id": correlationId,
       },
@@ -222,7 +312,7 @@ customerEmail: customerEmail || "customer@example.com",
     });
 
     const checkout = {
-      token: MERCHANT_API_KEY,
+      token,
       order,
       payment,
       amount,
@@ -251,7 +341,7 @@ export async function captureCheckout(checkout, onStatusChange) {
       const payment = await apiRequest(`/api/v1/payments/${checkout.payment.paymentId}/capture`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${MERCHANT_API_KEY}`,
+          Authorization: `Bearer ${checkout.token}`,
           "X-Request-Id": checkout.correlationId ?? createCorrelationId("capture"),
         },
         body: JSON.stringify({}),

@@ -10,7 +10,7 @@ import {
   formatCurrency,
   startCheckout,
   validateCardForm,
-} from "../lib/payment";
+} from "../lib/payment.ts";
 
 const API_BASE_URL = window.__ENV__?.API_BASE_URL || "/api/v1";
 const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION || false;

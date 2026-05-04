@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { UPI_ID } from "../lib/payment";
+import { UPI_ID } from "../lib/payment.ts";
 
 export default function UpiQR() {
   const [showQR, setShowQR] = useState(false);

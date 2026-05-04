@@ -234,20 +234,54 @@ export async function startCheckout({
   
   const orderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
 
-  const response = await apiRequest("/api/v1/payments/create-order", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      "X-Request-Id": correlationId,
-    },
-    body: JSON.stringify({
-      orderId: orderId,
-      amount: amount,
-      currency: currency,
-      description: `Payment for ${productId || "order"}`,
-      customerEmail: customerEmail,
-    }),
+  const requestBody = JSON.stringify({
+    orderId: orderId,
+    amount: amount,
+    currency: currency,
+    description: `Payment for ${productId || "order"}`,
+    customerEmail: customerEmail,
   });
+
+  let response;
+  try {
+    response = await apiRequest("/api/v1/payments/create-order", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        "X-Request-Id": correlationId,
+      },
+      body: requestBody,
+    });
+  } catch (error) {
+    if (error?.status === 401 && authToken !== MERCHANT_API_KEY) {
+      clearAuth();
+      try {
+        const refreshed = await ensureAccessToken();
+        response = await apiRequest("/api/v1/payments/create-order", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${refreshed.token}`,
+            "X-Request-Id": correlationId,
+          },
+          body: requestBody,
+        });
+      } catch {
+        if (!MERCHANT_API_KEY) {
+          throw error;
+        }
+        response = await apiRequest("/api/v1/payments/create-order", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${MERCHANT_API_KEY}`,
+            "X-Request-Id": correlationId,
+          },
+          body: requestBody,
+        });
+      }
+    } else {
+      throw error;
+    }
+  }
 
   const checkout = {
     token: authToken,

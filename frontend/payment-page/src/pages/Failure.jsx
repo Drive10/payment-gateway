@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
-import { getStoredTransaction } from "../lib/payment";
+import { getStoredTransaction } from "../lib/payment.ts";
 
 const DECLINE_MESSAGES = {
   generic_decline: "Your card was declined by the issuing bank. Please try a different card.",

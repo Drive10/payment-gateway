@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { getStoredAuth, logout, getOrderHistory, getPaymentHistory, formatCurrency } from "../lib/payment";
+import { getStoredAuth, logout, getOrderHistory, getPaymentHistory, formatCurrency } from "../lib/payment.ts";
 
 export default function Dashboard() {
   const navigate = useNavigate();

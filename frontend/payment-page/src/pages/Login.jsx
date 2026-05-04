@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { login, register } from "../lib/payment";
+import { login, register } from "../lib/payment.ts";
 
 export default function Login() {
   const navigate = useNavigate();

@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { detectCardBrand, formatCardNumber, formatExpiry, isValidCardNumber } from "../lib/payment";
+import { detectCardBrand, formatCardNumber, formatExpiry, isValidCardNumber } from "../lib/payment.ts";
 
 const cardBrands = {
   Visa: { color: "from-blue-600 to-blue-800", pattern: /^4/ },
