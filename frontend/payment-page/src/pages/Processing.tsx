@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { formatCurrency, getStoredTransaction } from "../lib/payment";
+import { OTPModal } from "../components/payment/OTPModal";
 
 const API_BASE_URL = window.__ENV__?.API_BASE_URL || "http://localhost:8080";
 const API_ROOT = API_BASE_URL.endsWith("/api/v1") ? API_BASE_URL : `${API_BASE_URL}/api/v1`;
@@ -284,56 +285,40 @@ export default function Processing() {
 
   if (showOtpModal) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-4 py-10">
-        <motion.section
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
-        >
-          <div className="bg-gradient-to-r from-cyan-600 to-teal-600 p-6 text-white">
-            <h1 className="text-xl font-semibold">Verify Payment</h1>
-            <p className="mt-2 text-sm text-cyan-100">
-              Enter the 6-digit OTP sent to your registered mobile number
-            </p>
-          </div>
-          <div className="p-6">
-            <div className="mb-4">
-              <label className="mb-2 block text-sm font-medium text-slate-700">
-                OTP Code
-              </label>
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="Enter 6-digit OTP"
-                className="w-full rounded-xl border-2 border-slate-300 px-4 py-3 text-center text-2xl tracking-widest focus:border-cyan-500 focus:outline-none"
-                maxLength={6}
-              />
-              {otpError && (
-                <p className="mt-2 text-sm text-red-600">{otpError}</p>
-              )}
-            </div>
-            <p className="mb-4 text-center text-sm text-slate-500">
-              Test OTP: <span className="font-mono font-semibold">123456</span>
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleCancel}
-                className="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleOtpSubmit}
-                disabled={status === "processing"}
-                className="flex-1 rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white"
-              >
-                {status === "processing" ? "Verifying..." : "Verify OTP"}
-              </button>
-            </div>
-          </div>
-        </motion.section>
-      </main>
+      <OTPModal
+        isOpen={showOtpModal}
+        onClose={() => setShowOtpModal(false)}
+        onVerify={async (otpValue: string) => {
+          setStatus("processing");
+          setShowOtpModal(false);
+          try {
+            const response = await fetch(
+              `${API_ROOT}/payments/${paymentId}/verify-otp`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${checkout.token}`,
+                },
+                body: JSON.stringify({ otp: otpValue }),
+              }
+            );
+            const data = await response.json();
+            if (data.success && data.data?.status === "CAPTURED") {
+              navigate("/success", {
+                replace: true,
+                state: { transaction: buildTransaction("CAPTURED") },
+              });
+            } else {
+              pollBackendForStatus();
+            }
+          } catch {
+            pollBackendForStatus();
+          }
+        }}
+        onResendOtp={() => {}}
+        onCancel={handleCancel}
+      />
     );
   }
 
