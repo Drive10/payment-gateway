@@ -293,7 +293,7 @@ export default function Processing() {
           setShowOtpModal(false);
           try {
             const response = await fetch(
-              `${API_ROOT}/payments/${paymentId}/verify-otp`,
+              `${API_ROOT}/payments/${checkout.payment.id}/verify-otp`,
               {
                 method: "POST",
                 headers: {
