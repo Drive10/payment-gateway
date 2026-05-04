@@ -1,9 +1,29 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { UPI_ID } from "../lib/payment";
 
-export default function UpiQR() {
-  const [showQR, setShowQR] = useState(false);
+interface UpiQRProps {
+  amount?: number;
+  onPay?: () => void;
+  autoShow?: boolean;
+}
+
+export default function UpiQR({ amount = 100, onPay, autoShow = false }: UpiQRProps) {
+  const [showQR, setShowQR] = useState(autoShow);
   const [QRCodeSVG, setQRCodeSVG] = useState(null);
+  const hasCalledOnPay = useRef(false);
+
+  useEffect(() => {
+    if (autoShow && !showQR) {
+      setShowQR(true);
+    }
+  }, [autoShow, showQR]);
+
+  useEffect(() => {
+    if (showQR && autoShow && onPay && !hasCalledOnPay.current) {
+      hasCalledOnPay.current = true;
+      setTimeout(() => onPay(), 500);
+    }
+  }, [showQR, autoShow, onPay]);
 
   useEffect(() => {
     if (showQR) {
@@ -11,12 +31,14 @@ export default function UpiQR() {
     }
   }, [showQR]);
 
+  const upiLink = `upi://pay?pa=${UPI_ID}&pn=PayFlow Merchant&am=${amount}&cu=INR`;
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-100">
           <svg className="h-8 w-8 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 001 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1-1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
           </svg>
         </div>
         <h4 className="text-lg font-semibold text-slate-900">Pay with UPI</h4>
@@ -31,7 +53,7 @@ export default function UpiQR() {
             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1-1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1-1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
             </svg>
             Show QR Code
           </button>
@@ -39,7 +61,7 @@ export default function UpiQR() {
           <div className="mt-4 flex flex-col items-center justify-center">
             <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-white p-4">
               <QRCodeSVG
-                value={`upi://pay?pa=${UPI_ID}&pn=PayFlow Merchant&am=100&cu=INR`}
+                value={upiLink}
                 size={180}
                 bgColor="white"
                 fgColor="black"

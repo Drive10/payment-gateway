@@ -218,7 +218,8 @@ export default function Checkout() {
     (method === "card" &&
       (!values.cardNumber || !values.expiry || !values.cvv || !values.cardholder.trim())) ||
     (method === "netbanking" && !values.bankCode) ||
-    (method === "wallet" && !values.wallet);
+    (method === "wallet" && !values.wallet) ||
+    (method === "upi" && !IS_PRODUCTION);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50">
@@ -416,11 +417,11 @@ export default function Checkout() {
                 </div>
                 )}
 
-                <div className="mb-6">
+<div className="mb-6">
                   {method === "card" ? (
                     <CardForm values={values} errors={errors} onChange={handleChange} />
                    ) : method === "upi" ? (
-                     <UpiQR />
+                    <UpiQR amount={amount} onPay={handlePay} autoShow={!IS_PRODUCTION} />
                    ) : method === "netbanking" ? (
                      <NetBankingForm values={values} onChange={handleChange} />
                    ) : (
@@ -452,6 +453,8 @@ export default function Checkout() {
                       </svg>
                       Processing...
                     </span>
+                  ) : !IS_PRODUCTION && method === "upi" ? (
+                    "Confirm UPI Payment"
                   ) : (
                     `Pay ${formatCurrency(displayAmount) || "₹0"}`
                   )}
