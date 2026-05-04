@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow
     username: payflow
-    password: payflow
+    password: ${POSTGRES_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
@@ -11,4 +11,4 @@ spring:
     bootstrap-servers: localhost:9092
 
 server:
-  port: 8086
+  port: 8087
