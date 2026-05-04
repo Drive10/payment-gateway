@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:payflow}
     username: ${POSTGRES_USER:payflow}
-    password: ${POSTGRES_PASSWORD:payflow}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -25,7 +25,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:payflow}
+      password: ${REDIS_PASSWORD}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
@@ -39,6 +39,12 @@ app:
     url: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
   notification:
     url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+  webhook:
+    secret: ${PAYMENT_WEBHOOK_SECRET}
+  internal-auth:
+    secret: ${INTERNAL_AUTH_SECRET}
+  merchant:
+    api-keys: ${MERCHANT_API_KEYS}
 
 payment:
   supported-currencies:

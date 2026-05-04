@@ -1,15 +1,18 @@
 spring:
   flyway:
     enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: update
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow
     username: payflow
-    password: payflow
+    password: ${POSTGRES_PASSWORD}
   data:
     redis:
       host: localhost
       port: 6379
-      password: payflow
+      password: ${REDIS_PASSWORD}
   kafka:
     bootstrap-servers: localhost:9092
 
@@ -20,6 +23,12 @@ app:
     url: http://localhost:8086
   notification:
     url: http://localhost:8085
+  webhook:
+    secret: ${PAYMENT_WEBHOOK_SECRET}
+  internal-auth:
+    secret: ${INTERNAL_AUTH_SECRET}
+  merchant:
+    api-keys: ${MERCHANT_API_KEYS}
 
 server:
   port: 8083

@@ -1,13 +1,15 @@
 spring:
+  flyway:
+    enabled: false
   datasource:
     url: jdbc:postgresql://postgres:5432/payflow
     username: payflow
-    password: payflow
+    password: ${POSTGRES_PASSWORD}
   data:
     redis:
       host: redis
       port: 6379
-      password: payflow
+      password: ${REDIS_PASSWORD}
   kafka:
     bootstrap-servers: kafka:9092
 
@@ -18,6 +20,12 @@ app:
     url: http://simulator-service:8086
   notification:
     url: http://notification-service:8085
+  webhook:
+    secret: ${PAYMENT_WEBHOOK_SECRET}
+  internal-auth:
+    secret: ${INTERNAL_AUTH_SECRET}
+  merchant:
+    api-keys: ${MERCHANT_API_KEYS}
 
 server:
   port: 8083

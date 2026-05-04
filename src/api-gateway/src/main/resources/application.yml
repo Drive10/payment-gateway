@@ -9,7 +9,7 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowed-origins: "http://localhost:5173,http://127.0.0.1:5173"
+            allowed-origins: ${CORS_ALLOWED_ORIGINS}
             allowed-methods: "*"
             allowed-headers: "*"
             allow-credentials: true
@@ -39,8 +39,10 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:payflow}
+      password: ${REDIS_PASSWORD}
 
 app:
   jwt:
-    secret: ${JWT_SECRET:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    secret: ${JWT_SECRET}
+  internal-auth:
+    secret: ${INTERNAL_AUTH_SECRET}

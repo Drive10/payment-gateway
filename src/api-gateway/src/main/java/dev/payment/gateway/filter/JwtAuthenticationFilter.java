@@ -13,8 +13,10 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.List;
 
 @Component
@@ -22,23 +24,19 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
+    @Value("${app.internal-auth.secret}")
+    private String internalAuthSecret;
+
+    @Value("${spring.application.name}")
+    private String serviceName;
+
     private static final List<String> PUBLIC_PATHS = List.of(
         "/auth/login",
         "/auth/register",
         "/auth/refresh",
-        "/merchant/auth/login",
-        "/merchant/auth/register",
-        "/merchant/auth/refresh",
         "/api/v1/auth/login",
         "/api/v1/auth/register",
         "/api/v1/auth/refresh",
-        "/api/v1/merchant/auth/login",
-        "/api/v1/merchant/auth/register",
-        "/api/v1/merchant/auth/refresh",
-        "/api/v1/merchant/auth",
-        "/api/v1/auth",
-        "/api/payments",
-        "/api/v1/payments",
         "/actuator"
     );
 
@@ -64,7 +62,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String email = getEmailFromToken(token);
         String role = getRoleFromToken(token);
 
+        String internalToken = generateInternalToken(email, role);
+
         ServerHttpRequest modifiedRequest = request.mutate()
+            .header("X-Internal-Service-Token", internalToken)
             .header("X-User-Email", email)
             .header("X-User-Role", role)
             .build();
@@ -87,15 +88,39 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private String getEmailFromToken(String token) {
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-        Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-        return claims.getSubject();
+        try {
+            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            return claims.getSubject();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String getRoleFromToken(String token) {
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-        Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-        return claims.get("role", String.class);
+        try {
+            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            return claims.get("role", String.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String generateInternalToken(String email, String role) {
+        try {
+            SecretKey key = Keys.hmacShaKeyFor(internalAuthSecret.getBytes(StandardCharsets.UTF_8));
+            return Jwts.builder()
+                .subject(email)
+                .claim("role", role)
+                .claim("service", "api-gateway")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 300000))
+                .signWith(key)
+                .compact();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private Mono<Void> unauthorized(ServerHttpResponse response) {
