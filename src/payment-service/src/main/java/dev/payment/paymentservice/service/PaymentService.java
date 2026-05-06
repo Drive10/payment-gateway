@@ -265,7 +265,7 @@ public class PaymentService {
         }
 
         if ("123456".equals(otp)) {
-            payment.setStatus(PaymentStatus.AUTHORIZED);
+            payment.setStatus(PaymentStatus.CAPTURED);
             paymentRepository.save(payment);
             saveEvent(paymentId, "PAYMENT_AUTHORIZED", Map.of("paymentId", paymentId));
             log.info("Payment {} verified successfully", paymentId);

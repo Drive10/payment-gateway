@@ -211,16 +211,93 @@ public class PaymentController {
             @PathVariable("paymentId") String paymentId,
             @RequestBody Map<String, String> request) {
         paymentService.verifyOtp(paymentId, request.get("otp"));
-        return ResponseEntity.ok(ApiResponse.success(Map.of("status", "AUTHORIZED")));
+        return ResponseEntity.ok(ApiResponse.success(Map.of("status", "CAPTURED")));
     }
 
     @PostMapping("/verify-otp")
     @Operation(summary = "Verify OTP (compat)", description = "Verify OTP using transaction ID in body")
     public ResponseEntity<ApiResponse<Map<String, Object>>> verifyOtpCompat(@RequestBody VerifyOtpRequest request) {
         paymentService.verifyOtp(request.getTransactionId(), request.getOtp());
-        return ResponseEntity.ok(ApiResponse.success(Map.of("status", "AUTHORIZED")));
+return ResponseEntity.ok(ApiResponse.success(Map.of("status", "AUTHORIZED")));
     }
-
+    
+    @PostMapping("/{paymentId}/process")
+    @Operation(summary = "Process card payment", description = "Process card payment and return status")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> processPayment(
+            @PathVariable("paymentId") String paymentId,
+            @RequestBody Map<String, Object> request) {
+        String cardNumber = (String) request.get("cardNumber");
+        
+        String card = cardNumber != null ? cardNumber.replaceAll("\\s", "") : "";
+        String status;
+        Map<String, Object> nextAction = null;
+        dev.payment.paymentservice.entity.Payment.PaymentStatus dbStatus;
+        
+        if (card.startsWith("4000")) {
+            status = "FAILED";
+            dbStatus = dev.payment.paymentservice.entity.Payment.PaymentStatus.FAILED;
+        } else if (card.startsWith("4002")) {
+            status = "CHALLENGE_REQUIRED";
+            dbStatus = dev.payment.paymentservice.entity.Payment.PaymentStatus.CHALLENGE_REQUIRED;
+            nextAction = new java.util.HashMap<>();
+            nextAction.put("type", "3DS");
+            nextAction.put("url", "/3ds/challenge?txn=" + paymentId);
+        } else {
+            // All other cards require OTP
+            status = "AUTHORIZATION_PENDING";
+            dbStatus = dev.payment.paymentservice.entity.Payment.PaymentStatus.AUTHORIZATION_PENDING;
+            nextAction = new java.util.HashMap<>();
+            nextAction.put("type", "OTP");
+            nextAction.put("method", "card");
+        }
+        
+        // Update status in database
+        paymentService.updatePaymentStatus(paymentId, dbStatus);
+        
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("transactionId", paymentId);
+        response.put("status", status);
+        response.put("message", status.equals("CAPTURED") ? "Payment successful" : 
+                           status.equals("FAILED") ? "Payment failed" : "Additional verification required");
+        if (nextAction != null) {
+            response.put("nextAction", nextAction);
+        }
+        
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+    
+    @PostMapping("/upiv2/create")
+    @Operation(summary = "Create UPI payment", description = "Create UPI payment and return QR code")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createUpiPayment(
+            @RequestBody Map<String, Object> request) {
+        String amount = String.valueOf(request.get("amount"));
+        String vpa = (String) request.get("vpa");
+        String txnId = "UPI_" + System.currentTimeMillis();
+        
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("transactionId", txnId);
+        response.put("qrCode", "upi://pay?pa=merchant@upi&pn=Merchant&am=" + amount + "&cu=INR&tn=" + txnId);
+        response.put("status", "PENDING");
+        
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+    
+    @PostMapping("/upiv2/{transactionId}/check-status")
+    @Operation(summary = "Check UPI status", description = "Check UPI transaction status")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> checkUpiStatus(
+            @PathVariable String transactionId,
+            @RequestBody Map<String, Object> request) {
+        String vpa = (String) request.get("vpa");
+        
+        // Default to SUCCESS for test mode
+        String status = "SUCCESS";
+        if (vpa != null && vpa.toLowerCase().contains("fail")) {
+            status = "FAILED";
+        }
+        
+        return ResponseEntity.ok(ApiResponse.success(Map.of("status", status)));
+    }
+    
     private boolean verifyWebhookSignature(String payload, String signature) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");

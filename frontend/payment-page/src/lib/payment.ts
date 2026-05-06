@@ -7,9 +7,7 @@ export const TRANSACTION_MODES = {
   TEST: "TEST",
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_GATEWAY_URL 
-  ? import.meta.env.VITE_API_GATEWAY_URL 
-  : "http://localhost:8080";
+const API_BASE_URL = window.__ENV__?.API_BASE_URL || import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:3001";
 const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
 const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION === true;
 const MERCHANT_API_KEY =
@@ -49,8 +47,27 @@ function buildCustomerIdentity(email, firstName, lastName) {
   };
 }
 
+const STORAGE_KEY_CARD = "payflow-card-details";
+
 function persistCheckoutState(value) {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+}
+
+export function persistCardDetails(value) {
+  sessionStorage.setItem(STORAGE_KEY_CARD, JSON.stringify(value));
+}
+
+export function getStoredCardDetails() {
+  try {
+    const value = sessionStorage.getItem(STORAGE_KEY_CARD);
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearCardDetails() {
+  sessionStorage.removeItem(STORAGE_KEY_CARD);
 }
 
 function persistAuth(value) {
@@ -471,6 +488,18 @@ export function getStoredTransaction() {
     return value ? JSON.parse(value) : null;
   } catch {
     return null;
+  }
+}
+
+export function updateStoredTransaction(updates: Record<string, unknown>) {
+  try {
+    const value = sessionStorage.getItem(STORAGE_KEY);
+    if (value) {
+      const current = JSON.parse(value);
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...current, ...updates }));
+    }
+  } catch {
+    // ignore
   }
 }
 

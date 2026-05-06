@@ -7,8 +7,8 @@
 export const config = {
   // API Configuration
   api: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
-    gatewayUrl: import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
+    baseUrl: window.__ENV__?.API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001',
+    gatewayUrl: window.__ENV__?.API_BASE_URL || import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3001',
     timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000'),
   },
   

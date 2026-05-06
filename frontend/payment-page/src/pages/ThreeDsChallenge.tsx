@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
-const API_BASE_URL = window.__ENV__?.API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = window.__ENV__?.API_BASE_URL || 'http://localhost:3001';
 const API_ROOT = API_BASE_URL.endsWith('/api/v1') ? API_BASE_URL : `${API_BASE_URL}/api/v1`;
 
 export default function ThreeDsChallenge() {

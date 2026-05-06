@@ -1,11 +1,10 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { formatCurrency, getStoredTransaction } from "../lib/payment";
+import { formatCurrency, getStoredTransaction, getStoredCardDetails, updateStoredTransaction } from "../lib/payment";
 import { OTPModal } from "../components/payment/OTPModal";
-import { DevTestPanel } from "../components/DevTestPanel";
 
-const API_BASE_URL = window.__ENV__?.API_BASE_URL || "http://localhost:8080";
+const API_BASE_URL = window.__ENV__?.API_BASE_URL || "http://localhost:3001";
 const API_ROOT = API_BASE_URL.endsWith("/api/v1") ? API_BASE_URL : `${API_BASE_URL}/api/v1`;
 const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION === true;
 
@@ -65,17 +64,159 @@ export default function Processing() {
 
 // Auto-capture for simulator/test mode when status is CREATED
           if (paymentStatus === "CREATED") {
-            // Test/sandbox mode: simulate OTP flow only for CARD payments
+            // Test/sandbox mode: process card payment first
             if (!IS_PRODUCTION && checkout.method === "card") {
-              setStatus("AUTHORIZATION_PENDING");
-              setProgressMessage("Awaiting OTP verification (test mode)");
-              setShowOtpModal(true);
-              await new Promise((r) => setTimeout(r, 500));
+              setProgressMessage("Processing card payment...");
+              
+              const cardDetails = location.state?.cardDetails || getStoredCardDetails();
+              console.log('Processing - checkout.method:', checkout.method);
+              console.log('Processing - payment.id:', checkout.payment?.id);
+              console.log('Processing - cardDetails:', cardDetails);
+              
+              if (cardDetails) {
+                try {
+                  const processResponse = await fetch(
+                    `${API_ROOT}/payments/${checkout.payment.id}/process`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}),
+                      },
+                      body: JSON.stringify({
+                        cardNumber: cardDetails.cardNumber,
+                        expiry: cardDetails.expiry,
+                        cvv: cardDetails.cvv,
+                        cardholder: cardDetails.cardholder,
+                      }),
+                    }
+                  );
+const processData = await processResponse.json();
+                    console.log('Processing - process response:', processData);
+                    
+                    if (processData.success && processData.data) {
+                      const newStatus = processData.data.status;
+                      console.log('Processing - newStatus:', newStatus);
+                    
+                    if (newStatus === 'AUTHORIZATION_PENDING') {
+                      setStatus("AUTHORIZATION_PENDING");
+                      setProgressMessage("Awaiting OTP verification");
+                      setShowOtpModal(true);
+                      return;
+                    } else if (newStatus === 'CHALLENGE_REQUIRED') {
+                      setStatus("CHALLENGE_REQUIRED");
+                      setProgressMessage("Redirecting to 3D Secure...");
+                      await new Promise(r => setTimeout(r, 1500));
+                      navigate("/3ds/challenge", { replace: true, state: { checkout, transactionId: checkout.payment.id } });
+                      return;
+                    } else if (newStatus === 'FAILED') {
+                      setError(processData.data.message || "Payment failed");
+                      setStatus("failed");
+                      await new Promise(r => setTimeout(r, 2000));
+                      navigate("/failure", { replace: true, state: { transaction: checkout, error: processData.data.message } });
+                      return;
+                    } else {
+                      setStatus(newStatus);
+                      setProgressMessage("Payment processed successfully");
+                    }
+                  }
+                } catch (processErr) {
+                  console.error('Card processing error:', processErr);
+                }
+              }
               return;
             }
-            // For non-card payments in test mode, auto-capture
+            // For non-card payments in test mode
             if (!IS_PRODUCTION && checkout.method !== "card") {
-              setProgressMessage("Capturing payment...");
+              console.log('Processing UPI - method:', checkout.method, 'payment.id:', checkout.payment?.id);
+              setProgressMessage("Processing " + checkout.method + " payment...");
+              
+              // UPI requires special handling
+              if (checkout.method === "upi") {
+                console.log('Processing - entering UPI block');
+                try {
+                  // Create UPI payment
+                  console.log('Processing - calling upiv2/create, amount:', checkout.amount);
+                  const upiResponse = await fetch(
+                    `${API_ROOT}/payments/upiv2/create`,
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}),
+                      },
+                      body: JSON.stringify({
+                        amount: checkout.amount,
+                        vpa: "test@upi",
+                      }),
+                    }
+                  );
+                  const upiData = await upiResponse.json();
+                  console.log('Processing - UPI create response:', JSON.stringify(upiData));
+                  
+                  if (upiData.success && upiData.data) {
+                    const upiTxnId = upiData.data.transactionId;
+                    
+                    // Poll UPI status
+                    console.log('Processing - polling UPI status, txn:', upiTxnId);
+                    for (let i = 0; i < 10; i++) {
+                      console.log('Processing - polling attempt:', i);
+                      await new Promise((r) => setTimeout(r, 2000));
+                      const statusResponse = await fetch(
+                        `${API_ROOT}/payments/upiv2/${upiTxnId}/check-status`,
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}),
+                          },
+                          body: JSON.stringify({ vpa: "test@upi" }),
+                        }
+                      );
+                      const statusData = await statusResponse.json();
+                      console.log('Processing - UPI status response:', JSON.stringify(statusData));
+                      
+                      if (statusData.success && statusData.data) {
+                        const upiStatus = statusData.data.status;
+                        
+                        if (upiStatus === "SUCCESS") {
+                          setStatus("CAPTURED");
+                          setProgressMessage("Payment completed!");
+                          navigate("/success", {
+                            replace: true,
+                            state: {
+                              transaction: buildTransaction("CAPTURED"),
+                            },
+                          });
+                          return;
+                        } else if (upiStatus === "FAILED") {
+                          setStatus("failed");
+                          setError("Payment failed");
+                          navigate("/failure", {
+                            replace: true,
+                            state: { transaction: checkout, error: "Payment failed" },
+                          });
+                          return;
+                        }
+                      }
+                    }
+                    
+                    // Timeout - payment still pending
+                    setStatus("failed");
+                    setError("Payment verification timed out");
+                    navigate("/failure", {
+                      replace: true,
+                      state: { transaction: checkout, error: "Payment timeout" },
+                    });
+                    return;
+                  }
+                } catch (upiErr) {
+                  console.error('UPI error:', upiErr);
+                }
+                return; // Exit after UPI handling
+              }
+              
+              // For other methods (non-card, non-upi), try capture
               try {
                 const captureResponse = await fetch(
                   `${API_ROOT}/payments/${checkout.payment.id}/capture`,
@@ -192,6 +333,8 @@ export default function Processing() {
 
     // Test mode: accept any 6-digit or 123456
     if (!IS_PRODUCTION && (otp === "123456" || otp.length === 6)) {
+      const transaction = buildTransaction("CAPTURED");
+      updateStoredTransaction({ status: "CAPTURED", ...transaction });
       setStatus("CAPTURED");
       setProgressMessage("Payment completed (test mode)");
       setShowOtpModal(false);
@@ -391,37 +534,6 @@ export default function Processing() {
           </div>
         </div>
       </motion.section>
-
-      {!IS_PRODUCTION && (
-        <DevTestPanel
-          onSimulateSuccess={() => {
-            navigate("/success", {
-              replace: true,
-              state: {
-                transaction: {
-                  ...checkout,
-                  status: "CAPTURED",
-                  amount: checkout?.amount,
-                },
-              },
-            });
-          }}
-          onSimulateFailure={() => {
-            navigate("/failure", {
-              replace: true,
-              state: {
-                transaction: checkout,
-                error: "Test failure simulated",
-              },
-            });
-          }}
-          onSimulateOtp={() => setShowOtpModal(true)}
-          onClearStorage={() => {
-            localStorage.clear();
-            sessionStorage.clear();
-          }}
-        />
-      )}
     </main>
   );
 }
