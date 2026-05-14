@@ -1,93 +1,127 @@
-# PayFlow Development Guide
+# PayFlow — Development Guide
 
-## Quick Start
+## Quick Start (30 seconds)
 
 ```bash
-# One command to start everything (requires Docker + Maven + Node)
+# Prerequisites: Docker + Java 21 + Node 20
 ./start-dev.sh
 ```
+
+This single command:
+1. Creates `.env` with dev defaults (if missing)
+2. Starts PostgreSQL, Redis, Kafka via Docker
+3. Builds all 7 microservices
+4. Starts them with `local` profile
+5. Installs and starts the frontend
+6. Seeds test data (3 users, 5 sample payments)
 
 ## Manual Start
 
 ```bash
-# 1. Set up environment variables
-cp .env.example .env
-# Edit .env with actual secrets (defaults provided for dev)
+# 1. Environment
+cp .env.example .env           # Or edit manually
 
-# 2. Start infrastructure
+# 2. Infrastructure
 docker compose up -d
 
 # 3. Build
 mvn clean package -DskipTests
 
-# 4. Start all services with local profile
-mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local &
-mvn spring-boot:run -pl src/auth-service -Dspring-boot.run.profiles=local &
-mvn spring-boot:run -pl src/simulator-service -Dspring-boot.run.profiles=local &
-mvn spring-boot:run -pl src/notification-service -Dspring-boot.run.profiles=local &
-mvn spring-boot:run -pl src/analytics-service -Dspring-boot.run.profiles=local &
-mvn spring-boot:run -pl src/audit-service -Dspring-boot.run.profiles=local &
-mvn spring-boot:run -pl src/api-gateway -Dspring-boot.run.profiles=local &
+# 4. Run services
+./start-jars.sh                # From JARs (faster)
+# OR
+./start-services.sh            # From source
 
-# 5. Start frontend
+# 5. Frontend
 cd frontend/payment-page && npm run dev
 ```
 
-## Application Ports
+## Test Accounts
+
+| Email | Role | Password |
+|-------|------|----------|
+| `admin@payflow.dev` | Admin | `Password123` |
+| `merchant@test.com` | Merchant | `Password123` |
+| `dev@test.com` | Customer | `Password123` |
+
+All seeded on first startup via `DevDataInitializer`.
+
+## Sample Payments (pre-seeded)
+
+| Order | Amount | Status |
+|-------|--------|--------|
+| ORD-DEMO-001 | ₹5,000 | CAPTURED |
+| ORD-DEMO-002 | $1,200 | CAPTURED |
+| ORD-DEMO-003 | ₹2,500 | AUTHORIZED |
+| ORD-DEMO-004 | €800 | FAILED |
+| ORD-DEMO-005 | ₹9,999 | CREATED |
+
+Seeded on first startup via `PaymentDevSeeder`.
+
+## Service Ports
+
 | Service | Port | Access |
 |---------|------|--------|
 | Frontend | 5173 | Public |
-| API Gateway | 8080 | Public (ingress) |
-| Auth Service | 8082 | Internal |
-| Payment Service | 8083 | Internal |
-| Notification Service | 8085 | Internal |
-| Simulator Service | 8086 | Internal |
-| Analytics Service | 8087 | Internal |
-| Audit Service | 8088 | Internal |
+| API Gateway | 8080 | Public |
+| Auth | 8082 | Internal |
+| Payment | 8083 | Internal |
+| Notification | 8085 | Internal |
+| Simulator | 8086 | Internal |
+| Analytics | 8087 | Internal |
+| Audit | 8088 | Internal |
 
-## Security Model
+## Testing the API
 
-All payment endpoints require authentication. Access through API Gateway only.
-
-### Authentication Flow
-
-1. Login to get JWT:
 ```bash
-curl -X POST http://localhost:8080/auth/login \
+# Login
+TOKEN=$(curl -s http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@test.com","password":"Password123"}'
-```
+  -d '{"email":"dev@test.com","password":"Password123"}' | \
+  grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4)
 
-2. Use token for API requests:
-```bash
-curl -X POST http://localhost:8080/api/payments/create-order \
+# List payments (includes seeded sample data)
+curl -s http://localhost:8080/api/payments/list \
+  -H "Authorization: Bearer $TOKEN"
+
+# Create + process + capture
+PAYMENT_ID=$(curl -s http://localhost:8080/api/payments/create-order \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <JWT_TOKEN>" \
-  -d '{"orderId":"test123","amount":100,"currency":"USD","paymentMethod":"CARD"}'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"orderId":"test-1","amount":5000,"currency":"INR","paymentMethod":"CARD"}' | \
+  grep -o '"paymentId":"[^"]*"' | cut -d'"' -f4)
+
+curl -s -X POST "http://localhost:8080/api/payments/$PAYMENT_ID/process" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"cardNumber":"4111111111111111","expiry":"12/28","cvv":"123"}'
+
+curl -s -X POST "http://localhost:8080/api/payments/$PAYMENT_ID/authorize" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"otp":"123456"}'
+
+curl -s -X POST "http://localhost:8080/api/payments/$PAYMENT_ID/capture" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-## Secrets Configuration
+## Event-Driven Architecture
 
-Required environment variables in `.env`:
-```bash
-JWT_SECRET=your-256-bit-secret-key
-INTERNAL_AUTH_SECRET=internal-service-secret
-POSTGRES_PASSWORD=your-db-password
-REDIS_PASSWORD=your-redis-password
-PAYMENT_WEBHOOK_SECRET=webhook-signing-secret
-MERCHANT_API_KEYS=key1,key2  # Comma-separated
-CORS_ALLOWED_ORIGINS=http://localhost:5173
+```
+Payment → OutboxPoller(5s) → Kafka → Simulator → Webhook → Payment Service
+                                            → Analytics (metrics)
+                                            → Audit (compliance log)
+                                            → Notification (webhook delivery)
 ```
 
-## Makefile Targets
+## Makefile
 
 ```bash
-make infra-up        # Start Docker infrastructure (PostgreSQL, Redis, Kafka)
-make infra-down      # Stop infrastructure
-make build           # Build all JARs
-make test            # Run backend tests
-make all-services    # Start all microservices
-make frontend        # Start frontend dev server
-make dev             # Infrastructure + all services + frontend
-make dev-lite        # Infrastructure + payment + frontend
+make infra-up     # Docker: postgres + redis + kafka
+make infra-down   # Stop infrastructure
+make build        # Build all JARs
+make test         # Run backend tests
+make frontend     # Start frontend
+make all-services # Start all microservices
+make dev          # Full environment
+make dev-lite     # Infra + payment + frontend
 ```

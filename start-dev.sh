@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -e
 
 MODE="${1:-local}"
@@ -11,139 +10,168 @@ if [ "$MODE" != "local" ] && [ "$MODE" != "docker" ]; then
     exit 1
 fi
 
-echo "🚀 PayFlow Dev Setup - Mode: $MODE"
-echo "======================================"
+# ── Auto-create .env ─────────────────────────────────────────
+if [ ! -f .env ]; then
+    echo "📄 Creating .env from .env.example..."
+    cp .env.example .env
+    # Fill in dev defaults for required secrets
+    if grep -q "^POSTGRES_PASSWORD=$" .env; then sed -i 's/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=payflow_dev/' .env; fi
+    if grep -q "^REDIS_PASSWORD=$" .env; then sed -i 's/^REDIS_PASSWORD=$/REDIS_PASSWORD=redis_dev/' .env; fi
+    if grep -q "^JWT_SECRET=$" .env; then sed -i 's/^JWT_SECRET=$/JWT_SECRET=dev-jwt-secret-key-payflow-2024!/' .env; fi
+    if grep -q "^INTERNAL_AUTH_SECRET=$" .env; then sed -i 's/^INTERNAL_AUTH_SECRET=$/INTERNAL_AUTH_SECRET=dev-internal-secret/' .env; fi
+    if grep -q "^PAYMENT_WEBHOOK_SECRET=$" .env; then sed -i 's/^PAYMENT_WEBHOOK_SECRET=$/PAYMENT_WEBHOOK_SECRET=dev-webhook-secret/' .env; fi
+    if grep -q "^MERCHANT_API_KEYS=$" .env; then sed -i 's/^MERCHANT_API_KEYS=$/MERCHANT_API_KEYS=sk_test_payflow_dev_key_001,sk_test_payflow_dev_key_002/' .env; fi
+    echo "   ✓ .env created with dev defaults"
+fi
 
-# Check Docker
+source .env 2>/dev/null || true
+
+# ── Prerequisites ────────────────────────────────────────────
+echo ""
+echo "═══ PayFlow Dev Environment ═══"
+echo ""
+
 if ! command -v docker &> /dev/null; then
     echo "❌ Docker not found. Please install Docker."
     exit 1
 fi
 
-# Start infrastructure
-echo ""
+if ! command -v mvn &> /dev/null && [ "$MODE" = "local" ]; then
+    echo "❌ Maven not found. Install Maven or use: $0 docker"
+    exit 1
+fi
+
+# ── Infrastructure ──────────────────────────────────────────
 echo "📦 Starting infrastructure (PostgreSQL, Redis, Kafka)..."
 docker compose up -d
 
-# Wait for infrastructure
-echo "⏳ Waiting for infrastructure..."
-sleep 10
+echo -n "⏳ Waiting for infrastructure"
+for i in $(seq 1 15); do
+    pg_ready=$(docker compose exec -T postgres pg_isready -U payflow 2>/dev/null && echo 1 || echo 0)
+    redis_ok=$(docker compose exec -T redis redis-cli -a "$REDIS_PASSWORD" ping 2>/dev/null | grep -q PONG && echo 1 || echo 0)
+    kafka_ok=$(docker compose exec -T kafka kafka-broker-api-versions --bootstrap-server localhost:9092 2>/dev/null | head -1 | grep -q kafka && echo 1 || echo 0)
+    total=$((pg_ready + redis_ok + kafka_ok))
+    echo -n " [$total/3]"
+    [ "$total" -ge 3 ] && break
+    sleep 3
+done
+echo ""
 
+# ── Build ───────────────────────────────────────────────────
 if [ "$MODE" = "local" ]; then
-    # Local mode: services run locally
+    echo -n "🔨 Building services..."
+    mvn clean package -DskipTests -q -T 4C
+    echo " done"
+fi
+
+# ── Start Services ──────────────────────────────────────────
+if [ "$MODE" = "local" ]; then
     echo ""
-    echo "🔨 Building services..."
-    mvn clean package -DskipTests -q
+    echo "▶️  Starting all services..."
+
+    SERVICES=(
+        "auth-service:8082"
+        "payment-service:8083"
+        "simulator-service:8086"
+        "notification-service:8085"
+        "analytics-service:8087"
+        "audit-service:8088"
+        "api-gateway:8080"
+    )
+
+    for entry in "${SERVICES[@]}"; do
+        name="${entry%%:*}"
+        port="${entry##*:}"
+        log_name="${name%-service}"
+        [ "$name" = "api-gateway" ] && log_name="gateway"
+
+        mvn spring-boot:run -pl "src/$name" -Dspring-boot.run.profiles=local > "/tmp/$log_name.log" 2>&1 &
+        echo "   ✓ $name (:$port)"
+        sleep 1
+    done
 
     echo ""
-    echo "▶️  Starting services locally..."
+    echo -n "⏳ Waiting for services"
+    for i in $(seq 1 20); do
+        for entry in "${SERVICES[@]}"; do
+            port="${entry##*:}"
+            log_name="${entry%%:*}"
+            log_name="${log_name%-service}"
+            [ "$log_name" = "api-gateway" ] && log_name="gateway"
+            if [ ! -f "/tmp/$log_name.ready" ] && grep -q "Started" "/tmp/$log_name.log" 2>/dev/null; then
+                touch "/tmp/$log_name.ready"
+                echo -n " [$port]"
+            fi
+        done
+        ready=$(ls /tmp/{auth,payment,simulator,notification,analytics,audit,gateway}.ready 2>/dev/null | wc -l)
+        [ "$ready" -ge 7 ] && break
+        sleep 2
+    done
+    echo ""
+    echo "   All services ready"
 
-    # Payment Service
-    mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local > /tmp/payment.log 2>&1 &
-    echo "   ✓ Payment Service (8083)"
-
-    # Auth Service
-    mvn spring-boot:run -pl src/auth-service -Dspring-boot.run.profiles=local > /tmp/auth.log 2>&1 &
-    echo "   ✓ Auth Service (8082)"
-
-    # Simulator Service
-    mvn spring-boot:run -pl src/simulator-service -Dspring-boot.run.profiles=local > /tmp/simulator.log 2>&1 &
-    echo "   ✓ Simulator Service (8086)"
-
-    # Notification Service
-    mvn spring-boot:run -pl src/notification-service -Dspring-boot.run.profiles=local > /tmp/notification.log 2>&1 &
-    echo "   ✓ Notification Service (8085)"
-
-    # Analytics Service
-    mvn spring-boot:run -pl src/analytics-service -Dspring-boot.run.profiles=local > /tmp/analytics.log 2>&1 &
-    echo "   ✓ Analytics Service (8087)"
-
-    # Audit Service
-    mvn spring-boot:run -pl src/audit-service -Dspring-boot.run.profiles=local > /tmp/audit.log 2>&1 &
-    echo "   ✓ Audit Service (8088)"
-
-    # API Gateway
-    mvn spring-boot:run -pl src/api-gateway -Dspring-boot.run.profiles=local > /tmp/gateway.log 2>&1 &
-    echo "   ✓ API Gateway (8080)"
-
-    # Frontend
+    # ── Frontend ──────────────────────────────────────────────
     echo ""
     echo "🎨 Starting Frontend..."
-    cd frontend/payment-page && npm run dev > /tmp/frontend.log 2>&1 &
-    echo "   ✓ Frontend (5173)"
+    cd frontend/payment-page
+    if [ -d node_modules ]; then
+        npm run dev > /tmp/frontend.log 2>&1 &
+    else
+        echo "   Installing frontend dependencies (first time)..."
+        npm install --silent > /dev/null 2>&1
+        npm run dev > /tmp/frontend.log 2>&1 &
+    fi
+    cd "$OLDPWD"
 
 elif [ "$MODE" = "docker" ]; then
-    # Docker mode: build images first
     echo ""
-    echo "🔨 Building Docker images..."
-    mvn clean package -DskipTests -q -pl src/api-gateway,src/auth-service,src/payment-service,src/simulator-service,src/notification-service,src/analytics-service,src/audit-service
-
-    echo ""
-    echo "🐳 Starting all services in Docker..."
-
-    # Build and start all services
+    echo "🐳 Building and starting Docker containers..."
     docker compose up -d --build
-
-    echo "   ✓ All services started"
 fi
 
-# Wait for services to start
+# ── Verify ──────────────────────────────────────────────────
 echo ""
-echo "⏳ Waiting for services to be ready..."
-sleep 25
-
-# Create test merchant if not exists
-echo ""
-echo "👤 Setting up test merchant..."
-MERCHANT_RESPONSE=$(curl -s -X POST http://localhost:8082/merchant/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@merchant.com",
-    "password": "password123",
-    "businessName": "Test Merchant",
-    "webhookUrl": "https://test.com/webhook"
-  }' 2>/dev/null || echo "null")
-
-if [ "$MERCHANT_RESPONSE" != "null" ]; then
-  API_KEY=$(docker compose exec -T postgres psql -U payflow -d payflow -t -c "SELECT api_key FROM public.merchants WHERE email='test@merchant.com';" 2>/dev/null | xargs || echo "")
-  if [ -n "$API_KEY" ]; then
-    echo "   ✓ Merchant created: test@merchant.com"
-    echo "   ✓ API Key: $API_KEY"
-  fi
-fi
+echo -n "⏳ Verifying endpoints"
+for i in $(seq 1 10); do
+    gw=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/ 2>/dev/null || echo "000")
+    auth=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8082/auth/login -X POST -H "Content-Type: application/json" -d '{"email":"dev@test.com","password":"Password123"}' 2>/dev/null || echo "000")
+    [ "$gw" != "000" ] && [ "$auth" != "000" ] && break
+    sleep 2
+done
 
 echo ""
-echo "======================================"
-echo "✅ All services started!"
+echo ""
+echo "═══ ✅ PayFlow is running ═══"
 echo ""
 echo "📍 URLs:"
-
-if [ "$MODE" = "local" ]; then
-    echo "   Frontend:        http://localhost:5173"
-    echo "   Payment API:    http://localhost:8083"
-    echo "   Auth API:       http://localhost:8082"
-    echo "   API Gateway:    http://localhost:8080"
-    echo "   Swagger:        http://localhost:8083/swagger-ui.html"
-elif [ "$MODE" = "docker" ]; then
-    echo "   Frontend:        http://localhost:5173"
-    echo "   API Gateway:    http://localhost:8080"
-    echo "   Payment API:    http://localhost:8083"
-    echo "   Auth API:       http://localhost:8082"
-    echo "   Swagger:        http://localhost:8083/swagger-ui.html"
-fi
-
+echo "   Frontend:     http://localhost:5173"
+echo "   API Gateway:  http://localhost:8080"
+echo "   Auth:         http://localhost:8082"
+echo "   Payment:      http://localhost:8083"
+echo "   Swagger:      http://localhost:8083/swagger-ui.html"
 echo ""
-echo "🔑 Test API Key: $API_KEY"
+echo "🔑 Test Accounts (all password: Password123):"
+echo "   Admin:     admin@payflow.dev"
+echo "   Merchant:  merchant@test.com"
+echo "   Customer:  dev@test.com"
 echo ""
-echo "💡 Payment Flow:"
-echo "   1. Create order: POST /api/payments/create-order"
-echo "   2. Authorize:    POST /api/payments/{id}/authorize-pending"
-echo "   3. Authorize:    POST /api/payments/{id}/authorize"
-echo "   4. Capture:     POST /api/payments/{id}/capture"
+echo "💡 Quick test:"
+echo "  TOKEN=\$(curl -s http://localhost:8082/auth/login -H 'Content-Type: application/json'"
+echo "    -d '{\"email\":\"dev@test.com\",\"password\":\"Password123\"}'"
+echo "    | grep -o '\"accessToken\":\"[^\"]*\"' | cut -d'\"' -f4)"
+echo ""
+echo "  curl -s http://localhost:8080/api/payments/list -H \"Authorization: Bearer \$TOKEN\""
 echo ""
 echo "Press Ctrl+C to stop all services"
-echo ""
 
-# Wait for interrupt
-trap "docker compose down 2>/dev/null; exit" SIGINT SIGTERM
+# ── Cleanup on exit ─────────────────────────────────────────
+cleanup() {
+    echo ""
+    echo "🛑 Stopping..."
+    kill $(jobs -p) 2>/dev/null
+    docker compose down 2>/dev/null
+    rm -f /tmp/{auth,payment,simulator,notification,analytics,audit,gateway}.ready
+    echo "Done."
+}
+trap cleanup SIGINT SIGTERM
 wait
