@@ -12,7 +12,7 @@ From this portal, you can select any service from the dropdown menu to view its 
 
 ### Full Development Environment
 ```bash
-make dev  # Starts all infrastructure, services, and frontend
+./start-dev.sh  # Starts infrastructure, builds, and runs all services + frontend
 ```
 
 ### Selective Service Development
@@ -22,14 +22,14 @@ When working on a specific service, you can start just what you need:
 # Start infrastructure only
 make infra-up
 
-# Start merchant backend with local profile
-make dev-merchant
+# Start auth service with local profile
+make auth
 
 # Start payment service with local profile
-make dev-payment
+make payment
 
 # Start frontend only
-make dev-frontend
+make frontend
 
 # Start payment service + frontend (lightweight)
 make dev-lite
@@ -39,32 +39,28 @@ make dev-lite
 
 | Target | Description |
 |--------|-------------|
-| `make dev-merchant` | Merchant backend service |
-| `make dev-payment` | Payment service with local dev profile |
-| `make dev-frontend` | Frontend development server |
-| `make dev-gateway` | API Gateway only |
-| `make dev-notification` | Notification service only |
-| `make dev-simulator` | Simulator service only |
-| `make dev-lite` | Infra + merchant + payment + frontend |
-| `make dev` | Full development environment |
+| `make auth` | Auth service (8082) |
+| `make payment` | Payment service (8083) |
+| `make frontend` | Frontend development server |
+| `make gateway` | API Gateway (8080) |
+| `make notification` | Notification service (8085) |
+| `make simulator` | Simulator service (8086) |
+| `make analytics` | Analytics service (8087) |
+| `make audit` | Audit service (8088) |
+| `make dev-lite` | Infra + payment + frontend |
+| `make all-services` | All microservices |
+| `make dev` | Infra + all services + frontend |
 
 ## Local Development Profiles
 
-Services now support a `local` Spring profile that optimizes for development:
-- Shorter timeouts and retry counts
-- Failing fast circuit breaker settings
-- Isolated Kafka topics (prefixed with `.local`)
-- Disabled JPA auto-update (use migrations instead)
-- Shorter idempotency TTL
+Services support a `local` Spring profile that optimizes for development:
+- Disabled Flyway (uses JPA ddl-auto=update instead)
+- Localhost connections for PostgreSQL, Redis, Kafka
+- Direct service URLs (no Docker internal hostnames)
 
 To activate local profile explicitly:
 ```bash
 SPRING_PROFILES_ACTIVE=local mvn spring-boot:run -pl src/payment-service
-```
-
-Merchant backend:
-```bash
-SPRING_PROFILES_ACTIVE=local mvn spring-boot:run -pl src/merchant-backend
 ```
 
 ## Service Ports
@@ -72,10 +68,12 @@ SPRING_PROFILES_ACTIVE=local mvn spring-boot:run -pl src/merchant-backend
 | Service | Port | Access | Auth |
 |---------|------|--------|------|
 | API Gateway | 8080 | **Public** | JWT |
-| Payment Service | 8083 | Internal only | Internal Token |
 | Auth Service | 8082 | Internal only | JWT |
-| Notification | 8084 | Internal only | - |
+| Payment Service | 8083 | Internal only | Internal Token |
+| Notification | 8085 | Internal only | - |
 | Simulator | 8086 | Internal only | - |
+| Analytics | 8087 | Internal only | - |
+| Audit | 8088 | Internal only | - |
 
 
 ## Security Development Practices
@@ -100,16 +98,11 @@ Remote debugging available on port 5005:
 mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
 ```
 
-Merchant backend debugging:
-```bash
-mvn spring-boot:run -pl src/merchant-backend -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006"
-```
-
 ### Testing
 Run service-specific tests:
 ```bash
-mvn test -pl src/merchant-backend
 mvn test -pl src/payment-service
+mvn test -pl src/auth-service
 mvn test -pl src/notification-service
 ```
 

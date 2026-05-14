@@ -8,7 +8,7 @@
         <groupId>dev.payment</groupId>
         <artifactId>payflow-parent</artifactId>
         <version>1.0.0</version>
-        <relativePath>../../../pom.xml</relativePath>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>payment-service</artifactId>

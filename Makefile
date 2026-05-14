@@ -11,18 +11,20 @@ help:
 	@echo ""
 	@echo "Services:"
 	@echo "  make gateway        - Run API Gateway (8080)"
-	@echo "  make merchant      - Run Merchant Backend (8081)"
-	@echo "  make payment       - Run Payment Service (8083)"
-	@echo "  make notification  - Run Notification Service (8084)"
+  @echo "  make auth          - Run Auth Service (8082)"
+  @echo "  make payment       - Run Payment Service (8083)"
+  @echo "  make notification  - Run Notification Service (8085)"
+  @echo "  make analytics     - Run Analytics Service (8087)"
+  @echo "  make audit         - Run Audit Service (8088)"
 	@echo "  make simulator    - Run Simulator Service (8086)"
 	@echo "  make frontend     - Run Frontend (5173)"
 	@echo "  make all-services  - Run all services"
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev           - Start dev environment (infra + all services)"
-	@echo "  make dev-merchant  - Run merchant backend only"
-	@echo "  make logs          - View all logs"
-	@echo "  make logs-svc      - View specific service logs (e.g., make logs-svc SVC=payment)"
+  @echo "  make dev-auth      - Run auth service only"
+  @echo "  make logs          - View all logs"
+  @echo "  make logs-svc      - View specific service logs (e.g., make logs-svc SVC=payment)"
 	@echo ""
 	@echo "Build:"
 	@echo "  make build         - Build all JARs"
@@ -74,8 +76,8 @@ infra-restart: infra-down infra-up
 gateway:
 	mvn spring-boot:run -pl src/api-gateway -Dspring-boot.run.profiles=local
 
-merchant:
-	mvn spring-boot:run -pl src/merchant-backend -Dspring-boot.run.profiles=local
+auth:
+	mvn spring-boot:run -pl src/auth-service -Dspring-boot.run.profiles=local
 
 payment:
 	mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local
@@ -97,15 +99,15 @@ frontend:
 
 all-services:
 	mvn spring-boot:run \
-		-pl src/api-gateway,src/merchant-backend,src/payment-service,src/notification-service,src/simulator-service,src/audit-service,src/analytics-service
+		-pl src/api-gateway,src/auth-service,src/payment-service,src/notification-service,src/simulator-service,src/audit-service,src/analytics-service
 
 dev: infra-up all-services frontend
 
 dev-payment: infra-up
 	mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local
 
-dev-merchant: infra-up
-	mvn spring-boot:run -pl src/merchant-backend -Dspring-boot.run.profiles=local
+dev-auth: infra-up
+	mvn spring-boot:run -pl src/auth-service -Dspring-boot.run.profiles=local
 
 dev-frontend:
 	cd frontend/payment-page && npm run dev

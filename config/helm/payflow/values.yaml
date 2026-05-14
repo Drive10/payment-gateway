@@ -61,7 +61,7 @@ paymentService:
 notificationService:
   replicaCount: 2
   image: notification-service
-  port: 8084
+  port: 8085
   resources:
     requests:
       memory: 256Mi

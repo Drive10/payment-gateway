@@ -30,7 +30,7 @@
     },
     {
       "name": "Notification API",
-      "inputSpec": "http://localhost:8084/api-docs",
+      "inputSpec": "http://localhost:8085/api-docs",
       "outputDir": "src/api/notification"
     }
   ]

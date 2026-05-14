@@ -1,18 +1,25 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import sentryVitePlugin from "@sentry/vite-plugin";
 import path from "path";
 
-export default defineConfig(() => {
+export default defineConfig(async () => {
+  const plugins = [react()];
+
+  if (process.env.VITE_SENTRY_ENABLED) {
+    try {
+      const sentryVitePlugin = (await import("@sentry/vite-plugin")).default;
+      plugins.push(sentryVitePlugin({
+        org: process.env.VITE_SENTRY_ORG,
+        project: process.env.VITE_SENTRY_PROJECT,
+        silent: !process.env.PROD,
+      }));
+    } catch {
+      // Sentry plugin not available
+    }
+  }
+
   return {
-    plugins: [
-      react(),
-      sentryVitePlugin({
-        org: import.meta.env.VITE_SENTRY_ORG,
-        project: import.meta.env.VITE_SENTRY_PROJECT,
-        silent: !import.meta.env.PROD,
-      }),
-    ],
+    plugins,
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
@@ -55,6 +62,12 @@ proxy: {
     },
     optimizeDeps: {
       include: ["react", "react-dom", "react-router-dom", "axios"],
+    },
+    test: {
+      include: ["src/**/*.test.{ts,tsx}"],
+      exclude: ["tests/**", "node_modules/**"],
+      environment: "jsdom",
+      setupFiles: [],
     },
   };
 });

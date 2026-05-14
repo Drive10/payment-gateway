@@ -7,7 +7,7 @@ export const TRANSACTION_MODES = {
   TEST: "TEST",
 };
 
-const API_BASE_URL = window.__ENV__?.API_BASE_URL || import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:3001";
+const API_BASE_URL = window.__ENV__?.API_BASE_URL || import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:8080";
 const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
 const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION === true;
 const MERCHANT_API_KEY =

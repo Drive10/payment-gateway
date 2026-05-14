@@ -54,9 +54,13 @@ if [ "$MODE" = "local" ]; then
     mvn spring-boot:run -pl src/notification-service -Dspring-boot.run.profiles=local > /tmp/notification.log 2>&1 &
     echo "   ✓ Notification Service (8085)"
 
-    # Merchant Backend
-    mvn spring-boot:run -pl src/merchant-backend -Dspring-boot.run.profiles=local > /tmp/merchant.log 2>&1 &
-    echo "   ✓ Merchant Backend (8084)"
+    # Analytics Service
+    mvn spring-boot:run -pl src/analytics-service -Dspring-boot.run.profiles=local > /tmp/analytics.log 2>&1 &
+    echo "   ✓ Analytics Service (8087)"
+
+    # Audit Service
+    mvn spring-boot:run -pl src/audit-service -Dspring-boot.run.profiles=local > /tmp/audit.log 2>&1 &
+    echo "   ✓ Audit Service (8088)"
 
     # API Gateway
     mvn spring-boot:run -pl src/api-gateway -Dspring-boot.run.profiles=local > /tmp/gateway.log 2>&1 &
@@ -72,7 +76,7 @@ elif [ "$MODE" = "docker" ]; then
     # Docker mode: build images first
     echo ""
     echo "🔨 Building Docker images..."
-    mvn clean package -DskipTests -q -pl src/api-gateway,src/auth-service,src/payment-service,src/simulator-service,src/notification-service,src/merchant-backend
+    mvn clean package -DskipTests -q -pl src/api-gateway,src/auth-service,src/payment-service,src/simulator-service,src/notification-service,src/analytics-service,src/audit-service
 
     echo ""
     echo "🐳 Starting all services in Docker..."

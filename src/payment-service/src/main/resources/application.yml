@@ -38,7 +38,7 @@ app:
   simulator:
     url: ${SIMULATOR_SERVICE_URL:http://localhost:8086}
   notification:
-    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8085}
   webhook:
     secret: ${PAYMENT_WEBHOOK_SECRET}
   internal-auth:

@@ -3,7 +3,7 @@
 ## Quick Start
 
 ```bash
-# One command to start everything
+# One command to start everything (requires Docker + Maven + Node)
 ./start-dev.sh
 ```
 
@@ -12,7 +12,7 @@
 ```bash
 # 1. Set up environment variables
 cp .env.example .env
-# Edit .env with actual secrets
+# Edit .env with actual secrets (defaults provided for dev)
 
 # 2. Start infrastructure
 docker compose up -d
@@ -20,60 +20,34 @@ docker compose up -d
 # 3. Build
 mvn clean package -DskipTests
 
-# 4. Start services with local profile
+# 4. Start all services with local profile
 mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local &
 mvn spring-boot:run -pl src/auth-service -Dspring-boot.run.profiles=local &
 mvn spring-boot:run -pl src/simulator-service -Dspring-boot.run.profiles=local &
+mvn spring-boot:run -pl src/notification-service -Dspring-boot.run.profiles=local &
+mvn spring-boot:run -pl src/analytics-service -Dspring-boot.run.profiles=local &
+mvn spring-boot:run -pl src/audit-service -Dspring-boot.run.profiles=local &
+mvn spring-boot:run -pl src/api-gateway -Dspring-boot.run.profiles=local &
 
 # 5. Start frontend
 cd frontend/payment-page && npm run dev
 ```
 
-## Known Issues & Fixes
-
-### Flyway + PostgreSQL Compatibility
-- **Issue**: Flyway 10.15.0 doesn't support PostgreSQL 14.x/15.x/16.x
-- **Fix**: Disable Flyway in `application-local.yml`:
-  ```yaml
-  spring:
-    flyway:
-      enabled: false
-  ```
-
-### Auth Service Bean Conflict
-- **Issue**: Duplicate `passwordEncoder` bean
-- **Fix**: Add to `application-local.yml`:
-  ```yaml
-  spring:
-    main:
-      allow-bean-definition-overriding: true
-  ```
-
-### Docker Compose Issues
-- **Issue**: sample-data.sql fails during init
-- **Fix**: Remove `- ./config/sample-data.sql:/docker-entrypoint-initdb.d/sample-data.sql` from docker-compose.yml
-- Use PostgreSQL 14 (not 15/16)
-
-### Frontend CORS Issue
-- **Issue**: Frontend at localhost:5173 cannot reach backend
-- **Fix**: Point to gateway:
-  ```javascript
-  window.__ENV__ = {
-    API_BASE_URL: "http://localhost:8080",  // Point to gateway
-    IS_PRODUCTION: false
-  };
-  ```
-
 ## Application Ports
-- Frontend: 5173
-- Payment API: 8083 **(**internal only**)**
-- Auth API: 8082 **(**internal only**)**
-- API Gateway: 8080 **(**public ingress**)**
-- Simulator: 8086 **(**internal only**)**
+| Service | Port | Access |
+|---------|------|--------|
+| Frontend | 5173 | Public |
+| API Gateway | 8080 | Public (ingress) |
+| Auth Service | 8082 | Internal |
+| Payment Service | 8083 | Internal |
+| Notification Service | 8085 | Internal |
+| Simulator Service | 8086 | Internal |
+| Analytics Service | 8087 | Internal |
+| Audit Service | 8088 | Internal |
 
 ## Security Model
 
-All payment endpoints now require authentication. Access through API Gateway only.
+All payment endpoints require authentication. Access through API Gateway only.
 
 ### Authentication Flow
 
@@ -103,4 +77,17 @@ REDIS_PASSWORD=your-redis-password
 PAYMENT_WEBHOOK_SECRET=webhook-signing-secret
 MERCHANT_API_KEYS=key1,key2  # Comma-separated
 CORS_ALLOWED_ORIGINS=http://localhost:5173
+```
+
+## Makefile Targets
+
+```bash
+make infra-up        # Start Docker infrastructure (PostgreSQL, Redis, Kafka)
+make infra-down      # Stop infrastructure
+make build           # Build all JARs
+make test            # Run backend tests
+make all-services    # Start all microservices
+make frontend        # Start frontend dev server
+make dev             # Infrastructure + all services + frontend
+make dev-lite        # Infrastructure + payment + frontend
 ```

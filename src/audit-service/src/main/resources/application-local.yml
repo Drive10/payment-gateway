@@ -1,4 +1,6 @@
 spring:
+  flyway:
+    enabled: false
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow
     username: payflow
@@ -11,4 +13,4 @@ spring:
     bootstrap-servers: localhost:9092
 
 server:
-  port: 8087
+  port: 8088

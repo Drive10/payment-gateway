@@ -16,7 +16,7 @@ spec:
         app: notification-service
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "8084"
+        prometheus.io/port: "8085"
         prometheus.io/path: "/actuator/prometheus"
     spec:
       securityContext:
@@ -28,7 +28,7 @@ spec:
           image: notification-service:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8084
+            - containerPort: 8085
               name: http
           resources:
             requests:
@@ -65,7 +65,7 @@ spec:
   type: ClusterIP
   ports:
     - port: 80
-      targetPort: 8084
+      targetPort: 8085
       name: http
   selector:
     app: notification-service
