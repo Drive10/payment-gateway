@@ -1,5 +1,4 @@
 #!/bin/bash
-source .env
 
 SERVICES_DIR=src
 JAVA_OPTS="-Dspring.profiles.active=local"

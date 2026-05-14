@@ -10,22 +10,6 @@ if [ "$MODE" != "local" ] && [ "$MODE" != "docker" ]; then
     exit 1
 fi
 
-# ── Auto-create .env ─────────────────────────────────────────
-if [ ! -f .env ]; then
-    echo "📄 Creating .env from .env.example..."
-    cp .env.example .env
-    # Fill in dev defaults for required secrets
-    if grep -q "^POSTGRES_PASSWORD=$" .env; then sed -i 's/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=payflow_dev/' .env; fi
-    if grep -q "^REDIS_PASSWORD=$" .env; then sed -i 's/^REDIS_PASSWORD=$/REDIS_PASSWORD=redis_dev/' .env; fi
-    if grep -q "^JWT_SECRET=$" .env; then sed -i 's/^JWT_SECRET=$/JWT_SECRET=dev-jwt-secret-key-payflow-2024!/' .env; fi
-    if grep -q "^INTERNAL_AUTH_SECRET=$" .env; then sed -i 's/^INTERNAL_AUTH_SECRET=$/INTERNAL_AUTH_SECRET=dev-internal-secret/' .env; fi
-    if grep -q "^PAYMENT_WEBHOOK_SECRET=$" .env; then sed -i 's/^PAYMENT_WEBHOOK_SECRET=$/PAYMENT_WEBHOOK_SECRET=dev-webhook-secret/' .env; fi
-    if grep -q "^MERCHANT_API_KEYS=$" .env; then sed -i 's/^MERCHANT_API_KEYS=$/MERCHANT_API_KEYS=sk_test_payflow_dev_key_001,sk_test_payflow_dev_key_002/' .env; fi
-    echo "   ✓ .env created with dev defaults"
-fi
-
-source .env 2>/dev/null || true
-
 # ── Prerequisites ────────────────────────────────────────────
 echo ""
 echo "═══ PayFlow Dev Environment ═══"
@@ -48,7 +32,7 @@ docker compose up -d
 echo -n "⏳ Waiting for infrastructure"
 for i in $(seq 1 15); do
     pg_ready=$(docker compose exec -T postgres pg_isready -U payflow 2>/dev/null && echo 1 || echo 0)
-    redis_ok=$(docker compose exec -T redis redis-cli -a "$REDIS_PASSWORD" ping 2>/dev/null | grep -q PONG && echo 1 || echo 0)
+    redis_ok=$(docker compose exec -T redis redis-cli -a "redis_dev_pass_123" ping 2>/dev/null | grep -q PONG && echo 1 || echo 0)
     kafka_ok=$(docker compose exec -T kafka kafka-broker-api-versions --bootstrap-server localhost:9092 2>/dev/null | head -1 | grep -q kafka && echo 1 || echo 0)
     total=$((pg_ready + redis_ok + kafka_ok))
     echo -n " [$total/3]"

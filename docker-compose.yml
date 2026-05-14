@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-payflow}
       POSTGRES_USER: ${POSTGRES_USER:-payflow}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: payflow_dev_pass_123
     command: >
       postgres
       -c max_connections=50
@@ -33,7 +33,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: payflow-redis
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+    command: redis-server --requirepass redis_dev_pass_123
     ports:
       - "6379:6379"
     volumes:
@@ -41,7 +41,7 @@ services:
     networks:
       - payflow-network
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "redis_dev_pass_123", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

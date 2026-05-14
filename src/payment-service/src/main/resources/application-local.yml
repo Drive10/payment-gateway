@@ -14,12 +14,12 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/payflow
     username: payflow
-    password: ${POSTGRES_PASSWORD}
+    password: payflow_dev_pass_123
   data:
     redis:
       host: localhost
       port: 6379
-      password: ${REDIS_PASSWORD}
+      password: redis_dev_pass_123
   kafka:
     bootstrap-servers: localhost:9092
     producer:
@@ -36,11 +36,11 @@ app:
   notification:
     url: http://localhost:8085
   webhook:
-    secret: ${PAYMENT_WEBHOOK_SECRET}
+    secret: webhook_secret_dev_789
   internal-auth:
-    secret: ${INTERNAL_AUTH_SECRET}
+    secret: internal_service_secret_for_payflow_dev_environment_123456789
   merchant:
-    api-keys: ${MERCHANT_API_KEYS}
+    api-keys: merchant_key_test_001,merchant_key_test_002
 
 server:
   port: 8083

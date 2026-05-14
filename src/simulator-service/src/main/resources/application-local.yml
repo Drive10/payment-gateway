@@ -9,7 +9,7 @@ app:
   payment-service:
     url: http://localhost:8083
   webhook:
-    secret: ${PAYMENT_WEBHOOK_SECRET}
+    secret: webhook_secret_dev_789
 
 server:
   port: 8086
