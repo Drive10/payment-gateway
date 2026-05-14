@@ -10,13 +10,13 @@ spring:
       group-id: simulator-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 app:
   payment-service:
     url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+  webhook:
+    secret: ${PAYMENT_WEBHOOK_SECRET}
 
 springdoc:
   api-docs:
