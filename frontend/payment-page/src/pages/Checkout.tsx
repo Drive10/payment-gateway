@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import CardForm from "../components/CardForm";
 import UpiQR from "../components/UpiQR";
+import NetBankingForm from "../components/NetBankingForm";
+import WalletForm from "../components/WalletForm";
 import {
   TRANSACTION_MODES,
   formatCurrency,
@@ -44,6 +46,28 @@ const paymentMethods = [
       </svg>
     ),
     accent: "emerald",
+  },
+  {
+    id: "netbanking",
+    name: "Net Banking",
+    desc: "All Major Banks",
+    icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2-2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+      </svg>
+    ),
+    accent: "amber",
+  },
+  {
+    id: "wallet",
+    name: "Wallet",
+    desc: "Paytm, Amazon Pay & more",
+    icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+      </svg>
+    ),
+    accent: "purple",
   },
 ];
 
@@ -208,6 +232,8 @@ export default function Checkout() {
     !isValidAmount ||
     (method === "card" &&
       (!values.cardNumber || !values.expiry || !values.cvv || !values.cardholder.trim())) ||
+    (method === "netbanking" && !values.bankCode) ||
+    (method === "wallet" && !values.wallet) ||
     (method === "upi" && !IS_PRODUCTION);
 
   return (
@@ -443,6 +469,10 @@ export default function Checkout() {
 <div className="mb-6">
                   {method === "card" ? (
                     <CardForm values={values} errors={errors} onChange={handleChange} />
+                   ) : method === "netbanking" ? (
+                    <NetBankingForm values={values} onChange={handleChange} />
+                   ) : method === "wallet" ? (
+                    <WalletForm values={values} onChange={handleChange} />
                    ) : (
                     <UpiQR amount={amount} onPay={handlePay} autoShow={!IS_PRODUCTION} />
                    )}
@@ -473,6 +503,20 @@ export default function Checkout() {
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         Processing Payment...
+                      </>
+                    ) : method === "netbanking" ? (
+                      <>
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2-2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                        </svg>
+                        Pay with Net Banking
+                      </>
+                    ) : method === "wallet" ? (
+                      <>
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        Pay with Wallet
                       </>
                     ) : !IS_PRODUCTION && method === "upi" ? (
                       <>
@@ -530,6 +574,8 @@ export default function Checkout() {
             <div style={{ fontSize: "10px", color: "#666", width: "100%", marginTop: "8px", marginBottom: "4px" }}>💱 Payment Methods</div>
             <button onClick={() => { setMethod("card"); setAmountInput("100"); }} style={{ background: "#4338ca", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Card</button>
             <button onClick={() => { setMethod("upi"); setAmountInput("100"); }} style={{ background: "#0891b2", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>UPI</button>
+            <button onClick={() => { setMethod("netbanking"); setAmountInput("100"); setValues((v) => ({...v, bankCode: "sbi"})); }} style={{ background: "#d97706", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>NetBanking</button>
+            <button onClick={() => { setMethod("wallet"); setAmountInput("100"); setValues((v) => ({...v, wallet: "paytm"})); }} style={{ background: "#7c3aed", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Wallet</button>
             <button onClick={() => { localStorage.clear(); sessionStorage.clear(); }} style={{ background: "#475569", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Clear</button>
           </div>
         </div>

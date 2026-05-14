@@ -7,7 +7,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "ledger_entries", schema = "public")
+@Table(name = "ledger_entries", schema = "public", indexes = {
+    @Index(name = "idx_ledger_merchant_id", columnList = "merchant_id"),
+    @Index(name = "idx_ledger_payment_id", columnList = "payment_id"),
+    @Index(name = "idx_ledger_account_id", columnList = "account_id"),
+    @Index(name = "idx_ledger_reference", columnList = "reference", unique = true)
+})
 @Getter
 @Setter
 @NoArgsConstructor

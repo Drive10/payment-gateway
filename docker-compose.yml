@@ -22,6 +22,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./config/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql
+      - ./config/seed-data.sql:/docker-entrypoint-initdb.d/seed-data.sql
     networks:
       - payflow-network
     healthcheck:

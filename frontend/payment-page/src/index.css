@@ -9,6 +9,15 @@
   font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
 * {
   box-sizing: border-box;
 }

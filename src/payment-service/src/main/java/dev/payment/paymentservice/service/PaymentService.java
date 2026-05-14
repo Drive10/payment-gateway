@@ -220,9 +220,8 @@ public class PaymentService {
     }
 
     public List<PaymentStatusResponse> getAllPayments(int limit, int offset) {
-        return paymentRepository.findAll().stream()
-            .limit(limit)
-            .skip(offset)
+        return paymentRepository.findAll(org.springframework.data.domain.PageRequest.of(offset / limit, limit))
+            .stream()
             .map(p -> PaymentStatusResponse.builder()
                 .paymentId(p.getId().toString())
                 .orderId(p.getOrderId())
@@ -353,7 +352,7 @@ public class PaymentService {
             merchantId, LedgerEntry.AccountType.MERCHANT_RECEivable);
     }
 
-    private void persistLedgerEntry(String paymentId, String refundId, String entryTypeStr, BigDecimal amount, String currency, String reference,
+    private synchronized void persistLedgerEntry(String paymentId, String refundId, String entryTypeStr, BigDecimal amount, String currency, String reference,
                                      String accountId, LedgerEntry.AccountType accountType) {
         if (ledgerEntryRepository.existsByReference(reference)) {
             return;

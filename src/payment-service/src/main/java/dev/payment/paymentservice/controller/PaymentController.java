@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
 import java.util.List;
@@ -307,7 +308,7 @@ return ResponseEntity.ok(ApiResponse.success(Map.of("status", "AUTHORIZED")));
             for (byte b : hash) {
                 hex.append(String.format("%02x", b));
             }
-            return hex.toString().equals(signature);
+            return MessageDigest.isEqual(hex.toString().getBytes(StandardCharsets.UTF_8), signature.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             return false;
         }

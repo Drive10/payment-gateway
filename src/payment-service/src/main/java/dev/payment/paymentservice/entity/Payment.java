@@ -7,7 +7,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "payments", schema = "public")
+@Table(name = "payments", schema = "public", indexes = {
+    @Index(name = "idx_payments_merchant_id", columnList = "merchant_id"),
+    @Index(name = "idx_payments_order_id", columnList = "order_id"),
+    @Index(name = "idx_payments_status", columnList = "status"),
+    @Index(name = "idx_payments_correlation_id", columnList = "correlation_id"),
+    @Index(name = "idx_payments_idempotency_key", columnList = "idempotency_key")
+})
 @Getter
 @Setter
 @NoArgsConstructor

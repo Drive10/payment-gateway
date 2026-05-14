@@ -7,7 +7,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "refunds", schema = "public")
+@Table(name = "refunds", schema = "public", indexes = {
+    @Index(name = "idx_refund_payment_id", columnList = "payment_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor

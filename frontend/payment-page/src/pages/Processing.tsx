@@ -69,9 +69,8 @@ export default function Processing() {
               setProgressMessage("Processing card payment...");
               
               const cardDetails = location.state?.cardDetails || getStoredCardDetails();
-              console.log('Processing - checkout.method:', checkout.method);
-              console.log('Processing - payment.id:', checkout.payment?.id);
-              console.log('Processing - cardDetails:', cardDetails);
+              console.debug('Processing - method:', checkout.method);
+              console.debug('Processing - payment.id:', checkout.payment?.id);
               
               if (cardDetails) {
                 try {
@@ -92,11 +91,11 @@ export default function Processing() {
                     }
                   );
 const processData = await processResponse.json();
-                    console.log('Processing - process response:', processData);
+                    console.debug('Processing - process response:', processData);
                     
                     if (processData.success && processData.data) {
                       const newStatus = processData.data.status;
-                      console.log('Processing - newStatus:', newStatus);
+                      console.debug('Processing - newStatus:', newStatus);
                     
                     if (newStatus === 'AUTHORIZATION_PENDING') {
                       setStatus("AUTHORIZATION_PENDING");
@@ -128,15 +127,15 @@ const processData = await processResponse.json();
             }
             // For non-card payments in test mode
             if (!IS_PRODUCTION && checkout.method !== "card") {
-              console.log('Processing UPI - method:', checkout.method, 'payment.id:', checkout.payment?.id);
+              console.debug('Processing UPI - method:', checkout.method, 'payment.id:', checkout.payment?.id);
               setProgressMessage("Processing " + checkout.method + " payment...");
               
               // UPI requires special handling
               if (checkout.method === "upi") {
-                console.log('Processing - entering UPI block');
+                console.debug('Processing - entering UPI block');
                 try {
                   // Create UPI payment
-                  console.log('Processing - calling upiv2/create, amount:', checkout.amount);
+                  console.debug('Processing - calling upiv2/create, amount:', checkout.amount);
                   const upiResponse = await fetch(
                     `${API_ROOT}/payments/upiv2/create`,
                     {
@@ -152,15 +151,15 @@ const processData = await processResponse.json();
                     }
                   );
                   const upiData = await upiResponse.json();
-                  console.log('Processing - UPI create response:', JSON.stringify(upiData));
+                  console.debug('Processing - UPI create response:', JSON.stringify(upiData));
                   
                   if (upiData.success && upiData.data) {
                     const upiTxnId = upiData.data.transactionId;
                     
                     // Poll UPI status
-                    console.log('Processing - polling UPI status, txn:', upiTxnId);
+                    console.debug('Processing - polling UPI status, txn:', upiTxnId);
                     for (let i = 0; i < 10; i++) {
-                      console.log('Processing - polling attempt:', i);
+                      console.debug('Processing - polling attempt:', i);
                       await new Promise((r) => setTimeout(r, 2000));
                       const statusResponse = await fetch(
                         `${API_ROOT}/payments/upiv2/${upiTxnId}/check-status`,
@@ -174,7 +173,7 @@ const processData = await processResponse.json();
                         }
                       );
                       const statusData = await statusResponse.json();
-                      console.log('Processing - UPI status response:', JSON.stringify(statusData));
+                      console.debug('Processing - UPI status response:', JSON.stringify(statusData));
                       
                       if (statusData.success && statusData.data) {
                         const upiStatus = statusData.data.status;

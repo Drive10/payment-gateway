@@ -12,7 +12,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import javax.crypto.Mac;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.List;
 
@@ -46,7 +49,7 @@ public class MerchantApiKeyAuthFilter extends OncePerRequestFilter {
             List<String> validKeys = parseApiKeys(merchantApiKeys);
             
             for (String validKey : validKeys) {
-                if (validKey.equals(apiKey)) {
+                if (MessageDigest.isEqual(apiKey.getBytes(StandardCharsets.UTF_8), validKey.getBytes(StandardCharsets.UTF_8))) {
                     String merchantId = extractMerchantId(validKey);
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             merchantId, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_MERCHANT")));
