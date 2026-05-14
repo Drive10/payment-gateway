@@ -147,7 +147,10 @@ public class PaymentService {
         paymentRepository.save(payment);
         
         writeCaptureLedgerEntries(payment);
-        saveEvent(paymentId, "PAYMENT_CAPTURED", Map.of("paymentId", paymentId, "idempotencyKey", idempotencyKey));
+        Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("paymentId", paymentId);
+        if (idempotencyKey != null) payload.put("idempotencyKey", idempotencyKey);
+        saveEvent(paymentId, "PAYMENT_CAPTURED", payload);
         
         CreatePaymentResponse response = toPaymentResponse(payment, "Payment captured");
         cacheOperationResponse(paymentId, "capture", idempotencyKey, response);
@@ -330,22 +333,28 @@ public class PaymentService {
 
     private void writeCaptureLedgerEntries(Payment payment) {
         String paymentId = payment.getId().toString();
+        String merchantId = payment.getMerchantId();
         BigDecimal platformFee = payment.getPlatformFee() != null ? payment.getPlatformFee() : BigDecimal.ZERO;
         BigDecimal gatewayFee = payment.getGatewayFee() != null ? payment.getGatewayFee() : BigDecimal.ZERO;
         BigDecimal amount = payment.getAmount();
         BigDecimal merchantNet = amount.subtract(platformFee).subtract(gatewayFee);
 
-        persistLedgerEntry(paymentId, null, "CUSTOMER_DEBIT", amount, payment.getCurrency(), paymentId + ":customer_debit");
+        persistLedgerEntry(paymentId, null, "CUSTOMER_DEBIT", amount, payment.getCurrency(), paymentId + ":customer_debit",
+            merchantId + "_CUSTOMER", LedgerEntry.AccountType.CUSTOMER_ESCROW);
         if (platformFee.compareTo(BigDecimal.ZERO) > 0) {
-            persistLedgerEntry(paymentId, null, "PLATFORM_FEE", platformFee, payment.getCurrency(), paymentId + ":platform_fee");
+            persistLedgerEntry(paymentId, null, "PLATFORM_FEE", platformFee, payment.getCurrency(), paymentId + ":platform_fee",
+                "PLATFORM", LedgerEntry.AccountType.PLATFORM_FEE_RECEIVABLE);
         }
         if (gatewayFee.compareTo(BigDecimal.ZERO) > 0) {
-            persistLedgerEntry(paymentId, null, "GATEWAY_FEE", gatewayFee, payment.getCurrency(), paymentId + ":gateway_fee");
+            persistLedgerEntry(paymentId, null, "GATEWAY_FEE", gatewayFee, payment.getCurrency(), paymentId + ":gateway_fee",
+                "GATEWAY", LedgerEntry.AccountType.PAYMENT_GATEWAY);
         }
-        persistLedgerEntry(paymentId, null, "MERCHANT_CREDIT", merchantNet, payment.getCurrency(), paymentId + ":merchant_credit");
+        persistLedgerEntry(paymentId, null, "MERCHANT_CREDIT", merchantNet, payment.getCurrency(), paymentId + ":merchant_credit",
+            merchantId, LedgerEntry.AccountType.MERCHANT_RECEivable);
     }
 
-    private void persistLedgerEntry(String paymentId, String refundId, String entryTypeStr, BigDecimal amount, String currency, String reference) {
+    private void persistLedgerEntry(String paymentId, String refundId, String entryTypeStr, BigDecimal amount, String currency, String reference,
+                                     String accountId, LedgerEntry.AccountType accountType) {
         if (ledgerEntryRepository.existsByReference(reference)) {
             return;
         }
@@ -354,12 +363,14 @@ public class PaymentService {
             ? LedgerEntry.EntryType.DEBIT : LedgerEntry.EntryType.CREDIT;
         
         LedgerEntry entry = LedgerEntry.builder()
-            .paymentId(paymentId)
-            .refundId(refundId)
+            .accountId(accountId)
+            .accountType(accountType)
             .entryType(entryType)
             .amount(amount)
             .currency(currency)
             .reference(reference)
+            .paymentId(paymentId)
+            .refundId(refundId)
             .build();
         ledgerEntryRepository.save(entry);
     }

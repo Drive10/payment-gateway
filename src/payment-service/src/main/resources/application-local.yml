@@ -22,6 +22,11 @@ spring:
       password: ${REDIS_PASSWORD}
   kafka:
     bootstrap-servers: localhost:9092
+    producer:
+      properties:
+        metadata.max.age.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
 
 app:
   auth-service:

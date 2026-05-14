@@ -79,9 +79,9 @@ public class RefundService {
         paymentRepository.save(payment);
 
         persistLedgerEntry(payment.getId().toString(), refund.getId().toString(), "REFUND_DEBIT_MERCHANT", refundAmount, payment.getCurrency(),
-                payment.getId() + ":refund_debit:" + refund.getId());
+                payment.getId() + ":refund_debit:" + refund.getId(), payment.getMerchantId(), LedgerEntry.AccountType.MERCHANT_RECEivable);
         persistLedgerEntry(payment.getId().toString(), refund.getId().toString(), "REFUND_CREDIT_CUSTOMER", refundAmount, payment.getCurrency(),
-                payment.getId() + ":refund_credit:" + refund.getId());
+                payment.getId() + ":refund_credit:" + refund.getId(), payment.getMerchantId() + "_CUSTOMER", LedgerEntry.AccountType.CUSTOMER_ESCROW);
 
         RefundResponse response = RefundResponse.builder()
                 .refundId(refund.getId().toString())
@@ -128,7 +128,8 @@ public class RefundService {
         return refundRepository.findByPaymentId(paymentId);
     }
 
-    private void persistLedgerEntry(String paymentId, String refundId, String entryTypeStr, java.math.BigDecimal amount, String currency, String reference) {
+    private void persistLedgerEntry(String paymentId, String refundId, String entryTypeStr, java.math.BigDecimal amount, String currency, String reference,
+                                     String accountId, LedgerEntry.AccountType accountType) {
         if (ledgerEntryRepository.existsByReference(reference)) {
             return;
         }
@@ -137,12 +138,14 @@ public class RefundService {
             ? LedgerEntry.EntryType.DEBIT : LedgerEntry.EntryType.CREDIT;
         
         LedgerEntry entry = LedgerEntry.builder()
-                .paymentId(paymentId)
-                .refundId(refundId)
+                .accountId(accountId)
+                .accountType(accountType)
                 .entryType(entryType)
                 .amount(amount)
                 .currency(currency)
                 .reference(reference)
+                .paymentId(paymentId)
+                .refundId(refundId)
                 .build();
         ledgerEntryRepository.save(entry);
     }
