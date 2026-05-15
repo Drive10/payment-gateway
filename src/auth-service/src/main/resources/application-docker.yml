@@ -4,20 +4,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
   datasource:
     url: jdbc:postgresql://postgres:5432/payflow
-    username: payflow
     password: payflow_dev_pass_123
   data:
     redis:
       host: redis
-      port: 6379
       password: redis_dev_pass_123
-
 app:
   jwt:
     secret: jwt_secret_key_payflow_dev_2024_min_length_32_chars
@@ -25,15 +18,3 @@ app:
     secret: internal_auth_secret_payflow_dev_2024
   cors:
     allowed-origins: "*"
-
-server:
-  port: 8082
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: always

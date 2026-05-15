@@ -1,19 +1,10 @@
-server:
-  port: ${APP_PORT:8080}
-
 spring:
-  application:
-    name: api-gateway
   cloud:
     gateway:
       globalcors:
         cors-configurations:
           '[/**]':
             allowed-origin-patterns: "*"
-            allowed-methods: "*"
-            allowed-headers: "*"
-            allow-credentials: true
-            max-age: 3600
       routes:
         - id: auth-service
           uri: http://auth-service:8082
@@ -42,9 +33,7 @@ spring:
   data:
     redis:
       host: redis
-      port: 6379
       password: redis_dev_pass_123
-
 app:
   jwt:
     secret: jwt_secret_key_payflow_dev_2024_min_length_32_chars

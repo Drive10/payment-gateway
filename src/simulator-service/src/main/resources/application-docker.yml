@@ -1,10 +1,8 @@
 spring:
   kafka:
     bootstrap-servers: kafka:9092
-
 app:
+  payment-service:
+    url: http://payment-service:8083
   webhook:
     secret: payflow_webhook_secret_dev_2024
-
-server:
-  port: 8086
