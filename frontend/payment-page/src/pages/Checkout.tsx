@@ -202,12 +202,26 @@ export default function Checkout() {
     setSubmitError("");
 
     try {
+      const bankNames = {
+        sbi: "State Bank of India", hdfc: "HDFC Bank", icici: "ICICI Bank",
+        axis: "Axis Bank", kotak: "Kotak Mahindra", yesbank: "YES Bank",
+        pnb: "Punjab National Bank", idbi: "IDBI Bank",
+        canara: "Canara Bank", union: "Union Bank of India",
+      };
+      const walletNames = {
+        paytm: "Paytm", amazon: "Amazon Pay", phonepe: "PhonePe",
+        googlepay: "Google Pay", mobikwik: "MobiKwik", freecharge: "FreeCharge",
+        olamoney: "Ola Money", airtel: "Airtel Payments Bank",
+      };
+
       const checkout = await startCheckout({
         amount,
         method,
         cardholder: sanitizeInput(values.cardholder),
         transactionMode,
         description: sanitizeInput(paymentLinkData?.description || "Payment for order"),
+        bankName: bankNames[values.bankCode] || null,
+        walletName: walletNames[values.wallet] || null,
       });
       if (method === "card") {
         persistCardDetails(values);

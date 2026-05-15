@@ -245,7 +245,18 @@ export async function startCheckout({
   currency = "INR",
   method = "card",
   orderId,
-}) {
+  bankName,
+  walletName,
+}: {
+  productId?: string;
+  customerEmail?: string;
+  amount?: number;
+  currency?: string;
+  method?: string;
+  orderId?: string;
+  bankName?: string | null;
+  walletName?: string | null;
+} = {}) {
   const { token } = await ensureAccessToken();
   let authToken = token;
   
@@ -325,6 +336,8 @@ export async function startCheckout({
     checkoutUrl: response.checkoutUrl || response.payment?.checkoutUrl,
     amount,
     method,
+    bankName,
+    walletName,
     correlationId,
   };
 

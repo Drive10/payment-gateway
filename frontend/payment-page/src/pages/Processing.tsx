@@ -215,27 +215,65 @@ const processData = await processResponse.json();
                 return; // Exit after UPI handling
               }
               
-              // For other methods (non-card, non-upi), try capture
-              try {
-                const captureResponse = await fetch(
-                  `${API_ROOT}/payments/${checkout.payment.id}/capture`,
-                  {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}),
-                    },
-                    body: JSON.stringify({}),
+              // ── Net Banking ───────────────────────────────
+              if (checkout.method === "netbanking") {
+                setProgressMessage("Redirecting to bank portal...");
+                await new Promise(r => setTimeout(r, 2000));
+
+                // Simulate redirect to bank page
+                setStatus("redirecting_bank");
+                setProgressMessage("Connected to " + (checkout.bankName || "bank"));
+                await new Promise(r => setTimeout(r, 1500));
+
+                setProgressMessage("Awaiting authentication...");
+                await new Promise(r => setTimeout(r, 2000));
+
+                // Auto-complete test mode payment
+                try {
+                  const captureRes = await fetch(
+                    `${API_ROOT}/payments/${checkout.payment.id}/capture`,
+                    { method: "POST", headers: { "Content-Type": "application/json", ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}) } }
+                  );
+                  const captureData = await captureRes.json();
+                  if (captureData.success) {
+                    setStatus("CAPTURED");
+                    setProgressMessage("Payment completed via Net Banking!");
+                    navigate("/success", { replace: true, state: { transaction: buildTransaction("CAPTURED") } });
+                    return;
                   }
-                );
-                const captureData = await captureResponse.json();
-                if (captureData.success && captureData.data) {
-                  setStatus(captureData.data.status);
-                  setProgressMessage("Payment captured!");
-                }
-              } catch (captureErr) {
+                } catch (_) {}
+                continue;
               }
-              await new Promise((r) => setTimeout(r, 1000));
+
+              // ── Wallet ────────────────────────────────────
+              if (checkout.method === "wallet") {
+                setProgressMessage("Connecting to " + (checkout.walletName || "wallet") + "...");
+                await new Promise(r => setTimeout(r, 1500));
+
+                setProgressMessage("Checking balance...");
+                await new Promise(r => setTimeout(r, 1000));
+
+                setStatus("pending_wallet");
+                setProgressMessage("Enter your wallet PIN to confirm");
+                await new Promise(r => setTimeout(r, 2000));
+
+                // Auto-complete test mode payment
+                try {
+                  const captureRes = await fetch(
+                    `${API_ROOT}/payments/${checkout.payment.id}/capture`,
+                    { method: "POST", headers: { "Content-Type": "application/json", ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}) } }
+                  );
+                  const captureData = await captureRes.json();
+                  if (captureData.success) {
+                    setStatus("CAPTURED");
+                    setProgressMessage("Payment completed via Wallet!");
+                    navigate("/success", { replace: true, state: { transaction: buildTransaction("CAPTURED") } });
+                    return;
+                  }
+                } catch (_) {}
+                continue;
+              }
+
               continue;
             }
             setProgressMessage("Waiting for payment provider...");
@@ -420,7 +458,7 @@ const processData = await processResponse.json();
             amount: checkout.amount,
             amountLabel: formatCurrency(checkout.amount),
             method: checkout.method,
-            methodLabel: checkout.method === "upi" ? "UPI" : "Card",
+    methodLabel: checkout.method === "upi" ? "UPI" : checkout.method === "netbanking" ? (checkout.bankName || "Net Banking") : checkout.method === "wallet" ? (checkout.walletName || "Wallet") : "Card",
             customerLabel: checkout.cardholder || `${checkout.customer?.firstName} ${checkout.customer?.lastName}`.trim(),
             environmentLabel: "Sandbox lane",
             correlationId: checkout.correlationId,
@@ -508,7 +546,15 @@ const processData = await processResponse.json();
         className="w-full max-w-2xl overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 text-white shadow-[0_30px_120px_rgba(2,6,23,0.48)]"
       >
         <div className="grid gap-8 p-8 md:grid-cols-[0.9fr_1.1fr] md:p-10">
-          <div className="rounded-[1.75rem] border border-cyan-400/15 bg-[linear-gradient(180deg,rgba(14,116,144,0.3),rgba(15,23,42,0.92))] p-6">
+          <div className={`rounded-[1.75rem] border p-6 ${
+            status === "redirecting_bank"
+              ? "border-indigo-400/30 bg-[linear-gradient(180deg,rgba(99,102,241,0.3),rgba(15,23,42,0.92))]"
+              : status === "pending_wallet"
+              ? "border-purple-400/30 bg-[linear-gradient(180deg,rgba(168,85,247,0.3),rgba(15,23,42,0.92))]"
+              : status === "failed"
+              ? "border-red-400/30 bg-[linear-gradient(180deg,rgba(239,68,68,0.3),rgba(15,23,42,0.92))]"
+              : "border-cyan-400/15 bg-[linear-gradient(180deg,rgba(14,116,144,0.3),rgba(15,23,42,0.92))]"
+          }`}>
             {status === "failed" ? (
               <>
                 <div className="mx-auto h-16 w-16 rounded-full border-4 border-red-400" />
@@ -517,6 +563,55 @@ const processData = await processResponse.json();
                 </h1>
                 <p className="mt-3 text-sm leading-6 text-slate-300">
                   {error || "Redirecting..."}
+                </p>
+              </>
+            ) : status === "redirecting_bank" ? (
+              <>
+                <div className="mx-auto h-14 w-14 rounded-xl bg-white flex items-center justify-center">
+                  <svg width="32" height="32" viewBox="0 0 40 40">
+                    <rect width="40" height="40" rx="6" fill="#6366f1" />
+                    <rect y="28" width="40" height="5" fill="rgba(255,255,255,0.2)" rx="2" />
+                    <rect x="12" y="8" width="16" height="16" rx="2" fill="rgba(255,255,255,0.3)" />
+                    <text x="20" y="21" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">{checkout?.bankName?.charAt(0) || "B"}</text>
+                  </svg>
+                </div>
+                <h1 className="mt-6 text-xl font-semibold tracking-tight text-indigo-300">
+                  {checkout?.bankName || "Bank"} Portal
+                </h1>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-slate-300">
+                    <svg className="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    <span>Secure connection established</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-300">
+                    <svg className="h-4 w-4 text-indigo-400 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>Awaiting authentication...</span>
+                  </div>
+                </div>
+                <p className="mt-4 text-xs leading-5 text-slate-500">
+                  You will be redirected to {checkout?.bankName || "your bank"}'s secure login page
+                </p>
+              </>
+            ) : status === "pending_wallet" ? (
+              <>
+                <div className="mx-auto h-14 w-14 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white text-xs font-bold shadow-lg">
+                  {checkout?.walletName?.split(" ").map(w => w[0]).join("").slice(0, 2) || "W"}
+                </div>
+                <h1 className="mt-6 text-xl font-semibold tracking-tight text-purple-300">
+                  {checkout?.walletName || "Wallet"}
+                </h1>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-slate-300">
+                    <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    <span>Wallet connected</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-300">
+                    <svg className="h-4 w-4 text-purple-400 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>Verifying PIN...</span>
+                  </div>
+                </div>
+                <p className="mt-4 text-xs leading-5 text-slate-500">
+                  Processing payment via {checkout?.walletName || "wallet"}
                 </p>
               </>
             ) : (
@@ -528,7 +623,7 @@ const processData = await processResponse.json();
                 <p className="mt-3 text-sm leading-6 text-slate-300">
                   {pollAttempt > 0 
                     ? `Verifying payment (attempt ${pollAttempt}/10)`
-                    : "Confirming provider authorization, publishing the payment event, and waiting for ledger-safe completion."}
+                    : progressMessage}
                 </p>
               </>
             )}
