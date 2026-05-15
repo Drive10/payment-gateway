@@ -5,6 +5,7 @@ import CardForm from "../components/CardForm";
 import UpiQR from "../components/UpiQR";
 import NetBankingForm from "../components/NetBankingForm";
 import WalletForm from "../components/WalletForm";
+import { DevTestPanel } from "../components/DevTestPanel";
 import {
   TRANSACTION_MODES,
   formatCurrency,
@@ -573,29 +574,19 @@ export default function Checkout() {
         </div>
       </div>
 
-      {!IS_PRODUCTION && (
-        <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 9999 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", maxWidth: "320px" }}>
-            <div style={{ fontSize: "10px", color: "#666", width: "100%", marginBottom: "4px" }}>💳 Card Schemes</div>
-            <button onClick={() => setValues({ cardNumber: "4111111111111111", expiry: "12/28", cvv: "123", cardholder: "Test User" })} style={{ background: "#4338ca", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Visa</button>
-            <button onClick={() => setValues({ cardNumber: "5111111111111111", expiry: "12/28", cvv: "123", cardholder: "Test User" })} style={{ background: "#4338ca", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Mastercard</button>
-            <button onClick={() => setValues({ cardNumber: "371111111111111", expiry: "12/28", cvv: "1234", cardholder: "Test User" })} style={{ background: "#4338ca", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Amex</button>
-            <button onClick={() => setValues({ cardNumber: "6011111111111111", expiry: "12/28", cvv: "123", cardholder: "Test User" })} style={{ background: "#4338ca", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>RuPay</button>
-            
-            <div style={{ fontSize: "10px", color: "#666", width: "100%", marginTop: "8px", marginBottom: "4px" }}>🔄 Payment Outcomes</div>
-            <button onClick={() => setValues({ cardNumber: "4111111111111111", expiry: "12/28", cvv: "123", cardholder: "Test User" })} style={{ background: "#059669", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Success</button>
-            <button onClick={() => setValues({ cardNumber: "4000000000000000", expiry: "12/28", cvv: "123", cardholder: "Test User" })} style={{ background: "#dc2626", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Failed (4000)</button>
-            <button onClick={() => setValues({ cardNumber: "4002000000000000", expiry: "12/28", cvv: "123", cardholder: "Test User" })} style={{ background: "#f59e0b", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>3DS (4002)</button>
-            <button onClick={() => setValues({ cardNumber: "4003000000000000", expiry: "12/28", cvv: "123", cardholder: "Test User" })} style={{ background: "#8b5cf6", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>OTP Flow (4003)</button>
-            
-            <div style={{ fontSize: "10px", color: "#666", width: "100%", marginTop: "8px", marginBottom: "4px" }}>💱 Payment Methods</div>
-            <button onClick={() => { setMethod("card"); setAmountInput("100"); }} style={{ background: "#4338ca", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Card</button>
-            <button onClick={() => { setMethod("upi"); setAmountInput("100"); }} style={{ background: "#0891b2", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>UPI</button>
-            <button onClick={() => { setMethod("netbanking"); setAmountInput("100"); setValues((v) => ({...v, bankCode: "sbi"})); }} style={{ background: "#d97706", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>NetBanking</button>
-            <button onClick={() => { setMethod("wallet"); setAmountInput("100"); setValues((v) => ({...v, wallet: "paytm"})); }} style={{ background: "#7c3aed", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Wallet</button>
-            <button onClick={() => { localStorage.clear(); sessionStorage.clear(); }} style={{ background: "#475569", color: "white", padding: "6px 10px", borderRadius: "6px", fontSize: "11px" }}>Clear</button>
-          </div>
-        </div>
+      {!IS_PRODUCTION && transactionMode === TRANSACTION_MODES.TEST && (
+        <DevTestPanel
+          onFillValues={(vals) => setValues(prev => ({ ...prev, ...vals }))}
+          onSetMethod={(m) => setMethod(m)}
+          onSetAmount={(a) => setAmountInput(a)}
+          onQuickPay={async (method, amount, extras) => {
+            setMethod(method);
+            setAmountInput(amount);
+            if (extras) setValues(prev => ({ ...prev, ...extras }));
+            await new Promise(r => setTimeout(r, 100));
+            handlePay();
+          }}
+        />
       )}
     </div>
   );
