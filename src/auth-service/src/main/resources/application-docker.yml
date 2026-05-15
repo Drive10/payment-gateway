@@ -11,20 +11,20 @@ spring:
   datasource:
     url: jdbc:postgresql://postgres:5432/payflow
     username: payflow
-    password: ${POSTGRES_PASSWORD}
+    password: payflow_dev_pass_123
   data:
     redis:
       host: redis
       port: 6379
-      password: ${REDIS_PASSWORD}
+      password: redis_dev_pass_123
 
 app:
   jwt:
-    secret: ${JWT_SECRET}
+    secret: jwt_secret_key_payflow_dev_2024_min_length_32_chars
   internal-auth:
-    secret: ${INTERNAL_AUTH_SECRET}
+    secret: internal_auth_secret_payflow_dev_2024
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+    allowed-origins: "*"
 
 server:
   port: 8082

@@ -7,6 +7,8 @@ import java.util.*;
 
 @Configuration
 @ConfigurationProperties(prefix = "payment")
+@Getter
+@Setter
 public class PaymentConfig {
     private Set<String> supportedCurrencies = new HashSet<>(Set.of("INR", "USD", "EUR", "GBP"));
     private Map<String, CurrencyConfig> currencies = new HashMap<>();
@@ -16,14 +18,6 @@ public class PaymentConfig {
         currencies.put("USD", new CurrencyConfig("US Dollar", "$", 2));
         currencies.put("EUR", new CurrencyConfig("Euro", "€", 2));
         currencies.put("GBP", new CurrencyConfig("British Pound", "£", 2));
-    }
-
-    public Set<String> getSupportedCurrencies() {
-        return supportedCurrencies;
-    }
-
-    public void setSupportedCurrencies(Set<String> supportedCurrencies) {
-        this.supportedCurrencies = supportedCurrencies;
     }
 
     public boolean isCurrencySupported(String currency) {

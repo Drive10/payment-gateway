@@ -3,6 +3,10 @@ package dev.payment.paymentservice.service;
 import dev.payment.paymentservice.dto.*;
 import dev.payment.paymentservice.exception.PaymentException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -16,6 +20,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class PaymentLinkService {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
@@ -29,11 +34,6 @@ public class PaymentLinkService {
     private static final Map<String, String> SEEDED_MERCHANTS = new HashMap<>();
     static {
         SEEDED_MERCHANTS.put("default-merchant", "PayFlow Demo Store");
-    }
-
-    public PaymentLinkService(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
-        this.redisTemplate = redisTemplate;
-        this.objectMapper = objectMapper;
     }
 
     public PaymentLinkResponse createPaymentLink(CreatePaymentLinkRequest request, String merchantId) {
@@ -104,10 +104,10 @@ public class PaymentLinkService {
         return "PL" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
     }
 
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class PaymentLinkData {
         private String referenceId;
         private String merchantId;

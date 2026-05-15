@@ -9,7 +9,7 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowed-origins: ${CORS_ALLOWED_ORIGINS}
+            allowed-origin-patterns: "*"
             allowed-methods: "*"
             allowed-headers: "*"
             allow-credentials: true
@@ -43,10 +43,10 @@ spring:
     redis:
       host: redis
       port: 6379
-      password: ${REDIS_PASSWORD}
+      password: redis_dev_pass_123
 
 app:
   jwt:
-    secret: ${JWT_SECRET}
+    secret: jwt_secret_key_payflow_dev_2024_min_length_32_chars
   internal-auth:
-    secret: ${INTERNAL_AUTH_SECRET}
+    secret: internal_auth_secret_payflow_dev_2024

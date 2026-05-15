@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -21,6 +22,7 @@ import java.util.Base64;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class WebhookSecurityFilter extends OncePerRequestFilter {
 
     @Value("${app.webhook.secret}")
@@ -38,10 +40,6 @@ public class WebhookSecurityFilter extends OncePerRequestFilter {
     private static final String SIGNATURE_ALGORITHM = "HmacSHA256";
 
     private final StringRedisTemplate redisTemplate;
-
-    public WebhookSecurityFilter(StringRedisTemplate redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
