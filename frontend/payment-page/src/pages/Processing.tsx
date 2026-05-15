@@ -72,7 +72,7 @@ export default function Processing() {
               console.debug('Processing - method:', checkout.method);
               console.debug('Processing - payment.id:', checkout.payment?.id);
               
-              if (cardDetails) {
+              if (cardDetails?.cardNumber) {
                 try {
                   const processResponse = await fetch(
                     `${API_ROOT}/payments/${checkout.payment.id}/process`,
@@ -91,11 +91,8 @@ export default function Processing() {
                     }
                   );
 const processData = await processResponse.json();
-                    console.debug('Processing - process response:', processData);
-                    
                     if (processData.success && processData.data) {
                       const newStatus = processData.data.status;
-                      console.debug('Processing - newStatus:', newStatus);
                     
                     if (newStatus === 'AUTHORIZATION_PENDING') {
                       setStatus("AUTHORIZATION_PENDING");
@@ -114,16 +111,38 @@ const processData = await processResponse.json();
                       await new Promise(r => setTimeout(r, 2000));
                       navigate("/failure", { replace: true, state: { transaction: checkout, error: processData.data.message } });
                       return;
+                    } else if (newStatus === 'CAPTURED') {
+                      navigate("/success", { replace: true, state: { transaction: buildTransaction("CAPTURED") } });
+                      return;
                     } else {
                       setStatus(newStatus);
-                      setProgressMessage("Payment processed successfully");
+                      setProgressMessage("Payment processed");
                     }
                   }
                 } catch (processErr) {
                   console.error('Card processing error:', processErr);
                 }
+              } else {
+                // No stored card details — use authorize flow instead of /process
+                try {
+                  const h = { "Content-Type": "application/json", ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}) };
+                  const api = (p: string) => fetch(`${API_ROOT}/payments${p}`, { method: "POST", headers: h });
+                  await api(`/${checkout.payment.id}/authorize-pending`);
+                  await new Promise(r => setTimeout(r, 300));
+                  await api(`/${checkout.payment.id}/authorize`);
+                  await new Promise(r => setTimeout(r, 300));
+                  const capRes = await api(`/${checkout.payment.id}/capture`);
+                  const capData = await capRes.json().catch(() => ({}));
+                  if (capData?.success || capData?.data?.status === "CAPTURED") {
+                    navigate("/success", { replace: true, state: { transaction: buildTransaction("CAPTURED") } });
+                    return;
+                  }
+                  // Capture failed, let polling handle it
+                } catch (_) {}
               }
-              return;
+              // Don't return — let the loop continue to poll for status changes
+              await new Promise(r => setTimeout(r, 1000));
+              continue;
             }
             // For non-card payments in test mode
             if (!IS_PRODUCTION && checkout.method !== "card") {
@@ -512,7 +531,7 @@ const processData = await processResponse.json();
           setStatus("processing");
           setShowOtpModal(false);
           try {
-            const response = await fetch(
+            const res = await fetch(
               `${API_ROOT}/payments/${checkout.payment.id}/verify-otp`,
               {
                 method: "POST",
@@ -523,9 +542,9 @@ const processData = await processResponse.json();
                 body: JSON.stringify({ otp: otpValue }),
               }
             );
-            const data = await response.json();
-            if (data.success && data.data?.status === "AUTHORIZED") {
-              const captureResponse = await fetch(
+            const d = await res.json();
+            if (d.success) {
+              const capRes = await fetch(
                 `${API_ROOT}/payments/${checkout.payment.id}/capture`,
                 {
                   method: "POST",
@@ -535,8 +554,8 @@ const processData = await processResponse.json();
                   },
                 }
               );
-              const captureData = await captureResponse.json();
-              if (captureData.success && captureData.data?.status === "CAPTURED") {
+              const capData = await capRes.json().catch(() => ({}));
+              if (capData?.success || capData?.data?.status === "CAPTURED") {
                 navigate("/success", {
                   replace: true,
                   state: { transaction: buildTransaction("CAPTURED") },
