@@ -83,10 +83,10 @@ export default function Processing() {
                         ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}),
                       },
                       body: JSON.stringify({
-                        last4: cardDetails.cardNumber?.slice(-4),
+                        cardNumber: cardDetails.cardNumber,
                         expiry: cardDetails.expiry,
+                        cvv: "123",
                         cardholder: cardDetails.cardholder,
-                        token: 'sim_token_' + checkout.payment.id,
                       }),
                     }
                   );
@@ -364,9 +364,8 @@ const processData = await processResponse.json();
 
     // Test mode: accept any 6-digit or 123456
     if (!IS_PRODUCTION && (otp === "123456" || otp.length === 6)) {
-      // Call backend to verify before marking success
       try {
-        const response = await fetch(
+        const res = await fetch(
           `${API_ROOT}/payments/${checkout.payment.id}/verify-otp`,
           {
             method: "POST",
@@ -377,22 +376,31 @@ const processData = await processResponse.json();
             body: JSON.stringify({ otp }),
           }
         );
-        const data = await response.json();
-        if (data.success) {
-          const transaction = buildTransaction("CAPTURED");
-          updateStoredTransaction({ status: "CAPTURED", ...transaction });
-          setStatus("CAPTURED");
-          setProgressMessage("Payment completed (test mode)");
-          setShowOtpModal(false);
-          navigate("/success", {
-            replace: true,
-            state: { transaction: buildTransaction("CAPTURED") },
-          });
-          return;
+        const d = await res.json();
+        if (d.success) {
+          // OTP verified → payment is now AUTHORIZED → capture
+          const capRes = await fetch(
+            `${API_ROOT}/payments/${checkout.payment.id}/capture`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${checkout.token}`,
+              },
+            }
+          );
+          const capData = await capRes.json().catch(() => ({}));
+          if (capData?.success || capData?.data?.status === "CAPTURED") {
+            const tx = buildTransaction("CAPTURED");
+            updateStoredTransaction({ status: "CAPTURED", ...tx });
+            setStatus("CAPTURED");
+            setProgressMessage("Payment completed");
+            setShowOtpModal(false);
+            navigate("/success", { replace: true, state: { transaction: tx } });
+            return;
+          }
         }
-      } catch (err) {
-        // Fall through to verify-otp API call
-      }
+      } catch (_) {}
     }
 
     setOtpError("");
