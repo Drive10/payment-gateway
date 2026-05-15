@@ -1,43 +1,24 @@
-# Codeowners
-# These owners will be requested for review when someone opens a pull request that changes one of their files.
-
-# Overall project ownership
+# Overall
 * @Drive10
 
-# Security-critical files
-/.github/workflows/ @Drive10
-/.github/dependabot.yml @Drive10
+# CI / Security
+/.github/ @Drive10
 SECURITY.md @Drive10
 
-# Backend Services
-/services/api-gateway/ @Drive10
-/services/auth-service/ @Drive10
-/services/order-service/ @Drive10
-/services/payment-service/ @Drive10
-/services/notification-service/ @Drive10
-/services/simulator-service/ @Drive10
-/services/graphql-gateway/ @Drive10
-/services/search-service/ @Drive10
-/services/analytics-service/ @Drive10
-/services/audit-service/ @Drive10
+# Backend services
+/src/api-gateway/ @Drive10
+/src/auth-service/ @Drive10
+/src/payment-service/ @Drive10
+/src/notification-service/ @Drive10
+/src/simulator-service/ @Drive10
+/src/analytics-service/ @Drive10
+/src/audit-service/ @Drive10
 
-# Frontend application
-/web/payment-page/ @Drive10
+# Frontend
+/frontend/payment-page/ @Drive10
 
-# Shared library
-/libs/common/ @Drive10
-
-# Infrastructure and Docker
-Dockerfile.build @Drive10
+# Infrastructure & config
 docker-compose.yml @Drive10
-docker-compose.monitoring.yml @Drive10
-
-# Database migrations
-/services/*/src/main/resources/db/migration/ @Drive10
-
-# Configuration files
-*.yml @Drive10
-*.yaml @Drive10
-pom.xml @Drive10
 Makefile @Drive10
-.env* @Drive10
+pom.xml @Drive10
+Dockerfile @Drive10

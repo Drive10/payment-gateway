@@ -1,458 +1,334 @@
-# PayFlow
+<div align="center">
+  <img src="https://img.shields.io/badge/Java-21-%23ED8B00?logo=openjdk" alt="Java 21"/>
+  <img src="https://img.shields.io/badge/Spring_Boot-3.2.5-%236DB33F?logo=springboot" alt="Spring Boot 3.2"/>
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript" alt="TypeScript"/>
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" alt="React 18"/>
+  <img src="https://img.shields.io/badge/Apache_Kafka-231F20?logo=apachekafka" alt="Kafka"/>
+  <img src="https://img.shields.io/badge/PostgreSQL-14-4169E1?logo=postgresql" alt="PostgreSQL 14"/>
+  <img src="https://img.shields.io/badge/Redis-7-DC382D?logo=redis" alt="Redis 7"/>
+  <img src="https://img.shields.io/badge/Docker_Compose-2496ED?logo=docker" alt="Docker Compose"/>
+  <br/>
+  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="MIT License"/>
+  <img src="https://img.shields.io/badge/coverage-80%25-brightgreen" alt="Coverage"/>
+</div>
 
-[![CI/CD](https://github.com/payflow/payflow/actions/workflows/ci.yml/badge.svg)](https://github.com/payflow/payflow/actions/workflows/ci.yml)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=payflow&metric=alert_status)](https://sonarcloud.io/dashboard?id=payflow)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=payflow&metric=coverage)](https://sonarcloud.io/dashboard?id=payflow)
-[![Java Version](https://img.shields.io/badge/Java-21-orange)](https://www.oracle.com/java/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-green)](https://spring.io/projects/spring-boot)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<h1 align="center">PayFlow</h1>
+<p align="center"><b>Production-grade open-source payment gateway — 7 microservices, event-driven, multi-currency</b></p>
 
-Production-grade payment gateway reference implementation with realistic payment lifecycles, idempotent APIs, event-driven processing, and operational guardrails.
+<p align="center">PayFlow models the internal architecture of Stripe, Razorpay, and PayPal at project scale: API Gateway → domain services → Kafka event bus → analytics/audit. Full payment lifecycle with idempotency, outbox pattern, webhooks, and reconciliation.</p>
 
-PayFlow models the internal architecture patterns used in systems like Stripe, Razorpay, and PayPal at project scale:
-- API Gateway for edge security, rate limits, and request shaping
-- Domain-owned services (auth, payment, notification, simulator, analytics, audit)
-- Kafka-driven async workflows with outbox relay and dead-letter handling
-- Strong payment semantics: intent, authorization, capture, refund, settlement
-- Multi-currency support: INR, USD, EUR, GBP
-- Full and partial refunds
+---
 
-## Table Of Contents
-- [Why This Project](#why-this-project)
-- [Architecture](#architecture)
-- [Payment Lifecycle](#payment-lifecycle)
-- [Quick Start](#quick-start)
-- [API Reference](#api-reference)
-- [Repository Layout](#repository-layout)
-- [Observability](#observability)
-- [Testing Strategy](#testing-strategy)
-- [Design Decisions](#design-decisions)
-- [Roadmap](#roadmap)
+## ✨ Features
 
-## Why This Project
-Most payment demos stop at "create and capture". PayFlow goes further:
-- Prevents duplicate charges with idempotency records backed by PostgreSQL + Redis cache
-- Uses state-machine enforcement for safe payment status transitions
-- Publishes domain events via transactional outbox to Kafka
-- Handles retries and poison messages with dead-letter topics
-- Supports asynchronous provider-driven outcomes through webhook listeners
-- Multi-currency: INR, USD, EUR, GBP
-- Full and partial refunds with amount validation
+| Capability | Details |
+|------------|---------|
+| **Full Payment Lifecycle** | Create → Confirm → Authorize → Capture → Refund → Settle |
+| **Multi-Currency** | INR, USD, EUR, GBP with full/partial refunds |
+| **3DS & OTP Flows** | Simulated 3D Secure challenge, OTP verification, failure scenarios |
+| **Event-Driven** | Transactional outbox → Kafka → Simulator/Analytics/Audit/Notification |
+| **Idempotency** | Atomic Redis `SET NX` + DB-level unique constraint — no duplicate charges |
+| **State Machine** | Enforced payment status transitions (CREATED → AUTHORIZED → CAPTURED → REFUNDED) |
+| **API Gateway** | JWT auth, rate limiting (Redis-based), CORS, correlation IDs |
+| **Webhooks** | HMAC-signed provider callbacks with inbox deduplication |
+| **DLQ & Retry** | Dead-letter queue with configurable retry and replay |
+| **Double-Entry Ledger** | Journal + ledger entries with balance validation |
+| **Settlement** | Batch settlement processing with fee calculation |
+| **Reconciliation** | Automated drift detection between local and provider state |
+| **Dev Tools** | Sandbox checkout with card scheme presets, outcome simulation, one-click payments |
 
-## Architecture
+## 🏗️ Architecture
 
-```text
-                                    +--------------------+
-                                    |   React Checkout   |
-                                    |  frontend/payment  |
-                                    +---------+----------+
-                                              |
-                                              v
-+--------------------------------------------------------------------------------+
-|                                API Gateway (8080)                              |
-| authn/authz | rate limiting | correlation-id | routing | fallback              |
-+------------------+-------------------------------+--------------------------------+
-                   |                               |
-                   | /api/auth/*                    | /api/payments/*
-                   | (JWT required)                | (API Key required)
-                   v                               v
-          +-------------------+              +---------------------------+
-          | Auth Service     |              | Payment Service            |
-          | (8082)          |              | (8083)                   |
-          |                 |              |                         |
-          | • JWT tokens   |              | • payment lifecycle    |
-          | • merchant    |              | • idempotency            |
-          |   registration|              | • currency validation   |
-          | • API keys    |              | • refunds              |
-          +-----------+--------+     +------------+------------+
-                      |             |
-                      +------+------+
-                             |
-                             v
-                      +--------------+
-                      | Kafka Topics |
-                      | payment.*    |
-                      | webhook.*    |
-                      | audit.*      |
-                      +------+-------+
-                             |
-           +----------------+-------------------+
-             |                               |
-             v                               v
-    +------------------+           +------------------+
-    | Analytics Service|          | Notification     |
-    | risk/settlement|          | Service          |
-    +------------------+           +------------------+
+```
+                          ┌──────────────────┐
+                          │  React Frontend   │
+                          │   localhost:5173  │
+                          └────────┬─────────┘
+                                   │ /api/*
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                     API Gateway · localhost:8080                      │
+│     JWT auth · rate limiting · CORS · correlation-id · routing      │
+└──────┬──────────────────────────────┬───────────────────────────────┘
+       │ /auth/*                       │ /api/payments/*
+       ▼                               ▼
+┌──────────────────┐       ┌──────────────────────────┐
+│  Auth Service    │       │   Payment Service         │
+│  localhost:8082  │       │   localhost:8083          │
+│                  │       │                           │
+│ • JWT tokens    │       │ • Payment lifecycle      │
+│ • Merchants     │       │ • Idempotency             │
+│ • API keys      │       │ • Refunds                 │
+│ • Dev seeder    │       │ • Ledger                  │
+└────────┬─────────┘       │ • Webhook processing    │
+         │                 └───────────┬───────────────┘
+         │                             │
+         └──────────┬──────────────────┘
+                    ▼
+           ┌────────────────┐
+           │   Kafka Bus    │
+           │  payment.*     │
+           │  webhook.*     │
+           │  audit.*       │
+           └───┬────┬────┬──┘
+       ┌───────┘    │    └────────┐
+       ▼            ▼             ▼
+┌──────────┐ ┌──────────┐ ┌──────────────┐
+│Simulator │ │Analytics │ │Audit Service │
+│:8086     │ │:8087     │ │:8088         │
+│          │ │          │ │              │
+│Mock      │ │Metrics   │ │Immutable log │
+│provider  │ │Settlement│ │Compliance    │
+└──────────┘ └──────────┘ └──────────────┘
 
-Shared Infrastructure: PostgreSQL | Redis | Kafka | Docker Compose
+· PostgreSQL · Redis · Kafka · Docker Compose
 ```
 
-### Service Boundaries
-- `api-gateway`: edge concerns only (routing, JWT auth, rate limiting, security headers)
-- `auth-service`: JWT authentication, merchant registration, API key management
-- `payment-service`: payment intent, authorization/capture, refunds, idempotency, currency validation
-- `notification-service`: outbound webhook and notification delivery
-- `simulator-service`: deterministic mock provider behavior for local and CI testing
-- `analytics-service`: risk and settlement analytics
-- `audit-service`: immutable compliance event log
+## 🚀 Quick Start
 
-### Trust Boundaries
-
-**All payment endpoints require authentication via API Gateway.**
-
-| Component | Zone | Authentication Method |
-|----------|------|---------------------|
-| Frontend | UNTRUSTED | JWT via API Gateway |
-| API Gateway | BOUNDARY | JWT validation for auth routes |
-| Auth Service | TRUSTED | JWT + API Key management |
-| Payment Service | TRUSTED | **JWT (via internal token)** |
-| Simulator | ISOLATED | None (internal) |
-| Notification | ISOLATED | None (internal) |
-
-**Critical Rule**: Frontend MUST NEVER call payment APIs directly. All payment requests use API keys.
-
-## Payment Lifecycle
-
-### Card: Intent -> Authorization -> Capture -> Settlement
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C as Client
-    participant G as API Gateway
-    participant P as Payment Service
-    participant S as Simulator
-    participant K as Kafka
-
-    C->>P: POST /api/payments/create-order
-    P->>P: Validate + idempotency check
-    P->>S: create intent
-    S-->>P: providerOrderId + checkoutUrl
-    P->>P: CREATED -> AUTHORIZATION_PENDING
-    P->>K: payment.created (outbox relay)
-    P-->>C: payment intent response
-
-    C->>P: POST /api/payments/{id}/capture
-    P->>S: capture provider order
-    alt success
-      S-->>P: providerPaymentId + signature
-      P->>P: AUTHORIZED -> CAPTURED
-      P->>K: payment.captured
-    else fail or timeout
-      S-->>P: error
-      P->>P: -> FAILED
-      P->>K: payment.failed
-    end
-```
-
-### Refund Flow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant M as Merchant
-    participant P as Payment Service
-
-    M->>P: POST /api/payments/refund
-    alt full refund
-      P->>P: refunded_amount = captured_amount
-      P->>P: CAPTURED -> REFUNDED
-    else partial refund
-      P->>P: refunded_amount += partial_amount
-      P->>P: CAPTURED -> CAPTURED (partial)
-    end
-    P-->>M: refund response
-```
-
-### Payment Status States
-
-**Card:**
-```
-CREATED → AUTHORIZATION_PENDING → CHALLENGE_REQUIRED → AUTHORIZED → CAPTURED
-                                                              ↓
-                                                         REFUNDED
-```
-
-**Refund:**
-```
-PENDING → PROCESSING → COMPLETED | FAILED
-```
-
-## Quick Start
-
-### Prerequisites
-- Java 21+
-- Maven 3.9+
-- Docker + Docker Compose
-
-### Setup
-1. Copy environment configuration:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Start infrastructure:
-   ```bash
-   make infra-up
-   ```
-
-3. Build and start all services:
-   ```bash
-   make all-services
-   ```
-
-4. Start frontend:
-   ```bash
-   make frontend
-   ```
-
-### One Command
 ```bash
-make dev
+# One command — starts everything (11 containers)
+docker compose --profile services up -d
+
+# Or start infrastructure only (dev mode)
+docker compose --profile infra up -d
 ```
 
-### URLs
-- API Gateway: `http://localhost:8080`
-- Payment API: `http://localhost:8083`
-- Auth API: `http://localhost:8082`
-- Frontend: `http://localhost:5173`
-- Swagger UI: `http://localhost:8083/swagger-ui.html`
+All services are up in ~30 seconds. No `.env` file needed — defaults are built into the `docker` Spring profile.
 
-## API Reference
+### Verify It Works
 
-All payment API calls MUST go through the API Gateway (port 8080) with a valid JWT token.
-
-### Authentication
-
-1. First, login to get a JWT token:
 ```bash
-curl -X POST http://localhost:8080/auth/login \
+# 1. Login
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"merchant@test.com","password":"Password123"}'
-```
+  -d '{"email":"dev@test.com","password":"Password123"}' | \
+  python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('accessToken',''))")
 
-2. Use the token for subsequent requests:
-```bash
-curl -X POST http://localhost:8080/api/payments/create-order \
+# 2. Create a payment
+PAYMENT_ID=$(curl -s -X POST http://localhost:8080/api/v1/payments/create-order \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <JWT_TOKEN>" \
-  -H "Idempotency-Key: pay_123" \
-  -d '{
-    "orderId": "order_abc123",
-    "amount": 500.00,
-    "currency": "USD",
-    "paymentMethod": "CARD"
-  }'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"orderId":"test-1","amount":5000,"currency":"INR","paymentMethod":"CARD"}' | \
+  python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('paymentId',''))")
+
+# 3. Process card
+curl -s -X POST "http://localhost:8080/api/v1/payments/$PAYMENT_ID/process" \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+  -d '{"cardNumber":"4111111111111111","expiry":"12/28","cvv":"123"}'
+
+# 4. OTP verify
+curl -s -X POST "http://localhost:8080/api/v1/payments/$PAYMENT_ID/verify-otp" \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+  -d '{"otp":"123456"}'
+
+# 5. Capture
+curl -s -X POST "http://localhost:8080/api/v1/payments/$PAYMENT_ID/capture" \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN"
+
+# Check status
+curl -s "http://localhost:8080/api/v1/payments/$PAYMENT_ID/status" \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
 ```
 
-**Supported Currencies:** INR, USD, EUR, GBP
+### Frontend
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "paymentId": "uuid-here",
-    "orderId": "order_abc123",
-    "amount": 500.00,
-    "currency": "USD",
-    "status": "CREATED",
-    "checkoutUrl": "/pay/uuid-here"
-  }
-}
-```
+Visit **http://localhost:5173** — use the Sandbox mode for the full checkout UX with OTP modal, 3DS challenge, and success/failure pages.
 
-#### Get Payment Status
+### Test Accounts (seeded automatically)
+
+| Email | Role | Password |
+|-------|------|----------|
+| `admin@payflow.dev` | Admin | `Password123` |
+| `merchant@test.com` | Merchant | `Password123` |
+| `dev@test.com` | Customer | `Password123` |
+
+## 🧭 Service Reference
+
+| Service | Port | Profile | Dependencies | Health |
+|---------|------|---------|-------------|--------|
+| `postgres` | 5432 | infra | — | `pg_isready` |
+| `redis` | 6379 | infra | — | `redis-cli ping` |
+| `kafka` | 9092 | infra | — | broker API versions |
+| `auth-service` | 8082 | services | postgres, redis | `/actuator/health` |
+| `api-gateway` | 8080 | services | auth, redis | `/actuator/health` |
+| `payment-service` | 8083 | services | postgres, redis, kafka | `/actuator/health` |
+| `notification-service` | 8085 | services | kafka | `/actuator/health` |
+| `simulator-service` | 8086 | services | kafka | `/actuator/health` |
+| `analytics-service` | 8087 | services | postgres, kafka | `/actuator/health` |
+| `audit-service` | 8088 | services | postgres, kafka | `/actuator/health` |
+| `frontend` | 5173 | services | api-gateway | HTTP 200 |
+
+### Docker Compose Profiles
 
 ```bash
-curl -X GET http://localhost:8080/api/payments/status/order_abc123 \
-  -H "Authorization: Bearer <JWT_TOKEN>"
+# Infrastructure only
+docker compose --profile infra up -d
+
+# All services (includes infra)
+docker compose --profile services up -d
+
+# Stop everything
+docker compose --profile services down
+
+# Wipe all data
+docker compose --profile services down --volumes
 ```
 
-#### Capture Payment
+## 💳 Payment Lifecycle
+
+```
+CREATED → AUTHORIZATION_PENDING → CHALLENGE_REQUIRED → AUTHORIZED → CAPTURED → REFUNDED
+                                     ↓                                       ↓
+                                   FAILED                                 PARTIAL_REFUND
+```
+
+### Card Test Scenarios
+
+| Card Number | Outcome | Test |
+|------------|---------|------|
+| `4111 1111 1111 1111` | **Success** | OTP → Authorize → Capture |
+| `4000 0000 0000 0000` | **Failure** | Declined |
+| `4002 0000 0000 0000` | **3DS** | 3D Secure challenge |
+| `4003 0000 0000 0000` | **OTP** | OTP verification |
+| `5111 1111 1111 1111` | **Mastercard** | Same as Visa success |
+
+### Net Banking Test
 
 ```bash
-curl -X POST http://localhost:8080/api/payments/{paymentId}/capture \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <JWT_TOKEN>"
+# Use the frontend Dev Tools panel to test
+# Click "NetBanking" tab → pick a bank → "Pay ₹2,500 via HDFC NetBanking"
 ```
 
-#### Authorize Payment (Pending)
+### Wallet Test
 
 ```bash
-curl -X POST http://localhost:8080/api/payments/{paymentId}/authorize-pending \
-   -H "Content-Type: application/json" \
-   -H "Authorization: Bearer <JWT_TOKEN>"
+# Use the frontend Dev Tools panel
+# Click "Amounts" tab → "Pay ₹1,500 via PhonePe Wallet"
 ```
 
-#### Authorize Payment
+## 🔧 Development
+
+### Local (Maven, no Docker for services)
 
 ```bash
-curl -X POST http://localhost:8080/api/payments/{paymentId}/authorize \
-   -H "Content-Type: application/json" \
-   -H "Authorization: Bearer <JWT_TOKEN>"
+# Start infra
+docker compose --profile infra up -d
+
+# Build everything
+mvn clean package -DskipTests
+
+# Run a specific service
+mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local
+
+# Start frontend
+cd frontend/payment-page && npm run dev
 ```
 
-#### Verify OTP (for 3DS)
+### Makefile
 
 ```bash
-curl -X POST http://localhost:8080/api/payments/{paymentId}/verify-otp \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <JWT_TOKEN>" \
-  -d '{"otp": "123456"}'
+make infra-up       # Docker: postgres + redis + kafka
+make infra-down     # Stop infrastructure
+make build          # Build all JARs
+make test           # Run backend tests
+make frontend       # Start frontend dev server
+make all-services   # Start all microservices (Maven)
+make dev            # Full environment
+make dev-lite       # Infra + payment + frontend
+make test-payment-card    # Quick card flow test via curl
+make test-payment-upi      # Quick UPI flow test via curl
 ```
 
-### Refund API
-
-#### Create Refund
+### Build Docker Images
 
 ```bash
-curl -X POST http://localhost:8080/api/payments/refund \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <JWT_TOKEN>" \
-  -d '{
-    "paymentId": "uuid-here",
-    "amount": 250.00,
-    "reason": "Customer request"
-  }'
+mvn clean package -DskipTests
+docker compose --profile services build
+docker compose --profile services up -d
 ```
 
-**Note:** If `amount` is omitted, full refund is issued. Partial refunds are supported.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "refundId": "ref_abc123",
-    "paymentId": "uuid-here",
-    "orderId": "order_abc123",
-    "amount": 250.00,
-    "refundedAmount": 250.00,
-    "currency": "USD",
-    "status": "COMPLETED",
-    "reason": "Customer request",
-    "createdAt": "2024-01-15T10:30:00Z"
-  }
-}
-```
-
-#### Get Refund Status
-
-```bash
-curl -X GET http://localhost:8080/api/payments/refund/ref_abc123 \
-  -H "Authorization: Bearer <JWT_TOKEN>"
-```
-
-### Error Response Format
-
-```json
-{
-  "success": false,
-  "error": "Payment not found",
-  "errorCode": "PAYMENT_NOT_FOUND"
-}
-```
-
-**Error Codes:**
-- `VALIDATION_ERROR` - Request validation failed
-- `PAYMENT_NOT_FOUND` - Payment not found
-- `INVALID_STATE_TRANSITION` - Invalid payment status transition
-- `INVALID_REQUEST` - Invalid request parameters
-- `PAYMENT_FAILED` - Payment processing failed
-- `REFUND_FAILED` - Refund processing failed
-- `IDEMPOTENCY_KEY_CONFLICT` - Duplicate idempotency key
-- `CURRENCY_NOT_SUPPORTED` - Currency not supported
-- `INTERNAL_ERROR` - Internal server error
-
-## Repository Layout
+## 📁 Repository Layout
 
 ```
 payflow/
 ├── src/
-│   ├── api-gateway/
-│   ├── auth-service/              # JWT + API Key management
-│   ├── payment-service/           # Payment + Refunds
-│   ├── notification-service/
-│   ├── simulator-service/
-│   ├── analytics-service/
-│   └── audit-service/
-├── frontend/payment-page/
+│   ├── api-gateway/           # Spring Cloud Gateway
+│   ├── auth-service/          # JWT + merchant auth
+│   ├── payment-service/       # Core payment engine
+│   ├── notification-service/  # Webhooks
+│   ├── simulator-service/     # Mock payment provider
+│   ├── analytics-service/     # Metrics & settlements
+│   └── audit-service/         # Compliance log
+├── frontend/
+│   └── payment-page/          # React + TypeScript checkout
 ├── config/
-│   ├── k8s/
-│   ├── helm/
-│   └── monitoring/
-├── docker-compose.yml
+│   ├── init-schemas.sql       # DB schema init
+│   ├── k8s/                   # Kubernetes manifests
+│   ├── helm/                  # Helm chart
+│   └── monitoring/            # Prometheus + Grafana + Loki
+├── docs/
+│   └── runbook.md             # On-call runbook
+├── docker-compose.yml         # Profiles: infra, services
 ├── Makefile
-└── .env.example
+├── AGENTS.md                  # AI-assisted dev guide
+└── .github/                   # CI, templates, CODEOWNERS
 ```
 
-## Observability
-- Structured logs with correlation ID propagation across services
-- Micrometer metrics for idempotency cache hits/misses, outbox success/failure
-- Distributed tracing ready through Micrometer + OpenTelemetry
-- Centralized log/metric stack (Prometheus, Grafana, Loki)
-
-## Testing Strategy
-- Unit tests: state machine, payment service logic
-- Integration tests: API contracts and security behavior
-- Kafka flow tests: event publication and dead-letter handling
-- Frontend tests: unit + e2e checkout scenarios
-
-Run:
-```bash
-make test
-make test-frontend
-```
-
-## Security Scanning
-
-PayFlow incorporates multiple security scanning tools to ensure code and container safety:
-
-- **Pre-commit checks**: Uses TruffleHog to prevent secrets from being committed.
-- **CI/CD Pipeline**: Includes Hadolint for Dockerfile linting and Trivy for container vulnerability scanning.
-- **Dependency Scanning**: Automated updates via Dependabot and vulnerability checks in Maven and npm.
-- **Static Analysis**: SonarQube for code quality and security hotspots.
-
-## Design Decisions
-- Idempotency is mandatory for mutable payment APIs
-- Payment state transitions are centralized in a state machine
-- Outbox pattern guarantees event publishing after DB commit
-- Supported currencies: INR (default), USD, EUR, GBP
-- Full and partial refunds supported
-- Standardized error codes across all services
-- API Key authentication for payment service
-- JWT for authentication service
-
-## Security Posture
-
-- **All payment endpoints require JWT** via API Gateway
-- **Internal service-to-service auth**: Signed tokens (`X-Internal-Service-Token`)
-- **No direct public access** to internal services (gateway-only ingress)
-- **Secrets rotated**: All secrets moved to environment variables
-
-### Secrets Configuration
-
-All secrets must be provided via environment variables. Copy `.env.example` and set values:
+## 🧪 Testing
 
 ```bash
-cp .env.example .env
-# Edit .env with actual secrets
+# Backend tests
+mvn test
+
+# Frontend tests
+cd frontend/payment-page && npm test
+
+# E2E tests (requires full stack running)
+cd frontend/payment-page && npm run test:e2e
+
+# Quick API smoke test
+make test-payment-card
 ```
 
-Required secrets:
-- `JWT_SECRET` - JWT signing key
-- `INTERNAL_AUTH_SECRET` - Internal service token signing key
-- `POSTGRES_PASSWORD` - Database password
-- `REDIS_PASSWORD` - Redis password
-- `PAYMENT_WEBHOOK_SECRET` - Webhook signature verification
-- `MERCHANT_API_KEYS` - Comma-separated merchant API keys
+## 📊 Observability
 
-## Roadmap
-- Webhook delivery system
-- Subscriptions/recurring payments
-- Multi-currency expansion (more currencies)
-- Disputes/chargebacks
-- Split payments (marketplaces)
-- Schema migrations via Flyway
-- mTLS for service-to-service auth
+- **Correlation IDs** flow through all services (header + MDC)
+- **Micrometer metrics** for idempotency cache, outbox, ledger
+- **Prometheus** endpoints at `/actuator/prometheus`
+- **Grafana** dashboard at `config/monitoring/grafana/`
+- **Structured JSON logs** with trace IDs
+- **Health checks** at `/actuator/health`
+
+## 🛡️ Security
+
+| Layer | Mechanism |
+|-------|-----------|
+| API Gateway | JWT validation, rate limiting, CORS |
+| Auth Service | HS384 JWT, refresh tokens, API key management |
+| Payment Service | Internal service token, merchant API keys |
+| Webhooks | HMAC-SHA256 signature with nonce replay protection |
+| Database | Connection-level auth, schema isolation per service |
+| Redis | Password-protected |
+| Secrets | No hardcoded secrets — all via environment/defaults in docker profile |
+
+### Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `VALIDATION_ERROR` | Request validation failed |
+| `PAYMENT_NOT_FOUND` | Payment not found |
+| `INVALID_STATE_TRANSITION` | Invalid payment status change |
+| `INVALID_REQUEST` | Invalid parameters |
+| `PAYMENT_FAILED` | Payment processing failed |
+| `REFUND_FAILED` | Refund processing failed |
+| `CURRENCY_NOT_SUPPORTED` | Unsupported currency |
+| `INTERNAL_ERROR` | Internal server error |
+
+## 📝 License
+
+MIT — see [LICENSE](LICENSE).
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports and feature requests welcome via GitHub Issues.

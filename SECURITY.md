@@ -78,7 +78,7 @@ This project follows these security practices:
 ## Secure Development Guidelines
 
 1. Never commit secrets, API keys, or credentials
-2. Use environment variables (see `.env.example`)
+2. Use environment variables or Spring profile defaults
 3. Sanitize all user inputs
 4. Use parameterized queries (prevent SQL injection)
 5. Implement proper error handling (don't leak sensitive data)

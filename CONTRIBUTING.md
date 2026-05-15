@@ -117,12 +117,12 @@ mvn clean package -DskipTests
 
 4. Run services locally
 ```bash
-./scripts/dev.sh start
+mvn spring-boot:run -pl src/payment-service -Dspring-boot.run.profiles=local
 ```
 
 5. Start the frontend
 ```bash
-cd web/payment-page && npm run dev
+cd frontend/payment-page && npm run dev
 ```
 
 ## Code Style
@@ -189,7 +189,7 @@ npm run test:coverage
 
 - **NEVER** commit secrets, API keys, or credentials to version control
 - Use environment variables for configuration
-- Reference `.env.example` for required variables
+- Use environment variables or Spring profile defaults (see `application-docker.yml` for dev values)
 - Report security vulnerabilities via the [Security Policy](SECURITY.md)
 
 ### Security Scanning
