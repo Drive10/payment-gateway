@@ -413,15 +413,29 @@ const processData = await processResponse.json();
       );
       const data = await response.json();
 
-      if (data.success && data.data?.status === "CAPTURED") {
-        navigate("/success", {
-          replace: true,
-          state: { transaction: buildTransaction("CAPTURED") },
-        });
-        return;
+      if (data.success) {
+        // OTP verified → payment is now AUTHORIZED → call capture
+        const capRes = await fetch(
+          `${API_ROOT}/payments/${checkout.payment.id}/capture`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${checkout.token}`,
+            },
+          }
+        );
+        const capData = await capRes.json().catch(() => ({}));
+        if (capData?.success || capData?.data?.status === "CAPTURED") {
+          navigate("/success", {
+            replace: true,
+            state: { transaction: buildTransaction("CAPTURED") },
+          });
+          return;
+        }
       }
 
-      // After OTP verify, poll backend for final status
+      // Fallback: poll backend for final status
       pollBackendForStatus();
     } catch (err) {
       setOtpError("Verification failed. Please try again.");
