@@ -218,59 +218,54 @@ const processData = await processResponse.json();
               // ── Net Banking ───────────────────────────────
               if (checkout.method === "netbanking") {
                 setProgressMessage("Redirecting to bank portal...");
-                await new Promise(r => setTimeout(r, 2000));
-
-                // Simulate redirect to bank page
+                await new Promise(r => setTimeout(r, 1500));
                 setStatus("redirecting_bank");
                 setProgressMessage("Connected to " + (checkout.bankName || "bank"));
+                await new Promise(r => setTimeout(r, 1000));
+                setProgressMessage("Awaiting authentication...");
                 await new Promise(r => setTimeout(r, 1500));
 
-                setProgressMessage("Awaiting authentication...");
-                await new Promise(r => setTimeout(r, 2000));
+                const headers = { "Content-Type": "application/json", ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}) };
+                const api = (p: string, body?: string) => fetch(`${API_ROOT}/payments${p}`, { method: "POST", headers, body });
 
-                // Auto-complete test mode payment
-                try {
-                  const captureRes = await fetch(
-                    `${API_ROOT}/payments/${checkout.payment.id}/capture`,
-                    { method: "POST", headers: { "Content-Type": "application/json", ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}) } }
-                  );
-                  const captureData = await captureRes.json();
-                  if (captureData.success) {
-                    setStatus("CAPTURED");
-                    setProgressMessage("Payment completed via Net Banking!");
-                    navigate("/success", { replace: true, state: { transaction: buildTransaction("CAPTURED") } });
-                    return;
-                  }
-                } catch (_) {}
+                // Transition CREATED → AUTHORIZATION_PENDING → AUTHORIZED → CAPTURED
+                await api(`/${checkout.payment.id}/authorize-pending`);
+                await new Promise(r => setTimeout(r, 400));
+                await api(`/${checkout.payment.id}/authorize`);
+                await new Promise(r => setTimeout(r, 400));
+                const capRes = await api(`/${checkout.payment.id}/capture`);
+                const capData = await capRes.json().catch(() => ({}));
+                if (capData?.success || capData?.data?.status === "CAPTURED") {
+                  navigate("/success", { replace: true, state: { transaction: buildTransaction("CAPTURED") } });
+                  return;
+                }
+                // Fall through to status polling
                 continue;
               }
 
               // ── Wallet ────────────────────────────────────
               if (checkout.method === "wallet") {
                 setProgressMessage("Connecting to " + (checkout.walletName || "wallet") + "...");
-                await new Promise(r => setTimeout(r, 1500));
-
-                setProgressMessage("Checking balance...");
                 await new Promise(r => setTimeout(r, 1000));
-
+                setProgressMessage("Checking balance...");
+                await new Promise(r => setTimeout(r, 800));
                 setStatus("pending_wallet");
                 setProgressMessage("Enter your wallet PIN to confirm");
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise(r => setTimeout(r, 1500));
 
-                // Auto-complete test mode payment
-                try {
-                  const captureRes = await fetch(
-                    `${API_ROOT}/payments/${checkout.payment.id}/capture`,
-                    { method: "POST", headers: { "Content-Type": "application/json", ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}) } }
-                  );
-                  const captureData = await captureRes.json();
-                  if (captureData.success) {
-                    setStatus("CAPTURED");
-                    setProgressMessage("Payment completed via Wallet!");
-                    navigate("/success", { replace: true, state: { transaction: buildTransaction("CAPTURED") } });
-                    return;
-                  }
-                } catch (_) {}
+                const headers = { "Content-Type": "application/json", ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}) };
+                const api = (p: string) => fetch(`${API_ROOT}/payments${p}`, { method: "POST", headers });
+
+                await api(`/${checkout.payment.id}/authorize-pending`);
+                await new Promise(r => setTimeout(r, 400));
+                await api(`/${checkout.payment.id}/authorize`);
+                await new Promise(r => setTimeout(r, 400));
+                const capRes = await api(`/${checkout.payment.id}/capture`);
+                const capData = await capRes.json().catch(() => ({}));
+                if (capData?.success || capData?.data?.status === "CAPTURED") {
+                  navigate("/success", { replace: true, state: { transaction: buildTransaction("CAPTURED") } });
+                  return;
+                }
                 continue;
               }
 
