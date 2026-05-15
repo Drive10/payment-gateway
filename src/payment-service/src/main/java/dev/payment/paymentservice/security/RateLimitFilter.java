@@ -16,15 +16,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final StringRedisTemplate redisTemplate;
-    private final Map<String, Bucket> localBuckets = new ConcurrentHashMap<>();
 
     @Value("${app.rate-limit.requests-per-second:100}")
     private int requestsPerSecond;
@@ -91,12 +88,21 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private Bucket resolveBucket(String key) {
-        return localBuckets.computeIfAbsent(key, k -> createBucket());
-    }
-
-    private Bucket createBucket() {
+        String redisKey = "ratelimit:" + key;
+        String countStr = redisTemplate.opsForValue().get(redisKey);
+        long count = 0;
+        if (countStr != null) {
+            count = Long.parseLong(countStr);
+        }
+        if (count >= burstCapacity) {
+            return Bucket.builder()
+                    .addLimit(Bandwidth.classic(0, Refill.greedy(0, Duration.ofSeconds(1))))
+                    .build();
+        }
+        redisTemplate.opsForValue().increment(redisKey);
+        redisTemplate.expire(redisKey, Duration.ofSeconds(1));
         return Bucket.builder()
-                .addLimit(Bandwidth.classic(burstCapacity,
+                .addLimit(Bandwidth.classic(burstCapacity - (int) count,
                         Refill.greedy(requestsPerSecond, Duration.ofSeconds(1))))
                 .build();
     }

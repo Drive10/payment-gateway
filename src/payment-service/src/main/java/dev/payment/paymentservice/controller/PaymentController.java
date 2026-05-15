@@ -18,6 +18,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -237,12 +238,15 @@ return ResponseEntity.ok(ApiResponse.success(Map.of("status", "AUTHORIZED")));
         if (card.startsWith("4000")) {
             status = "FAILED";
             dbStatus = dev.payment.paymentservice.entity.Payment.PaymentStatus.FAILED;
+            paymentService.updatePaymentStatus(paymentId, dbStatus);
         } else if (card.startsWith("4002")) {
             status = "CHALLENGE_REQUIRED";
             dbStatus = dev.payment.paymentservice.entity.Payment.PaymentStatus.CHALLENGE_REQUIRED;
             nextAction = new java.util.HashMap<>();
             nextAction.put("type", "3DS");
             nextAction.put("url", "/3ds/challenge?txn=" + paymentId);
+            paymentService.updatePaymentStatus(paymentId, dev.payment.paymentservice.entity.Payment.PaymentStatus.AUTHORIZATION_PENDING);
+            paymentService.updatePaymentStatus(paymentId, dbStatus);
         } else {
             // All other cards require OTP
             status = "AUTHORIZATION_PENDING";
@@ -250,10 +254,8 @@ return ResponseEntity.ok(ApiResponse.success(Map.of("status", "AUTHORIZED")));
             nextAction = new java.util.HashMap<>();
             nextAction.put("type", "OTP");
             nextAction.put("method", "card");
+            paymentService.updatePaymentStatus(paymentId, dbStatus);
         }
-        
-        // Update status in database
-        paymentService.updatePaymentStatus(paymentId, dbStatus);
         
         Map<String, Object> response = new java.util.HashMap<>();
         response.put("transactionId", paymentId);
@@ -304,11 +306,11 @@ return ResponseEntity.ok(ApiResponse.success(Map.of("status", "AUTHORIZED")));
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             byte[] hash = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hex = new StringBuilder();
-            for (byte b : hash) {
-                hex.append(String.format("%02x", b));
-            }
-            return MessageDigest.isEqual(hex.toString().getBytes(StandardCharsets.UTF_8), signature.getBytes(StandardCharsets.UTF_8));
+            String computedSignature = Base64.getEncoder().encodeToString(hash);
+            return MessageDigest.isEqual(
+                computedSignature.getBytes(StandardCharsets.UTF_8),
+                signature.getBytes(StandardCharsets.UTF_8)
+            );
         } catch (Exception e) {
             return false;
         }

@@ -119,15 +119,25 @@ public class SettlementService {
         batch.setSettledAt(Instant.now());
         
         String merchantId = batch.getMerchantId();
-        String paymentRef = "SETTLEMENT_" + batch.getBatchId();
+        String batchIdStr = batch.getBatchId().toString();
         
         for (LedgerEntry entry : ledgerRepository.findByMerchantId(merchantId)) {
             if ("SETTLEMENT_HOLD".equals(entry.getAccountType().name()) && 
                 entry.getEntryType() == LedgerEntry.EntryType.CREDIT &&
                 entry.getPostedAt() != null) {
                 
-                entry.setEntryType(LedgerEntry.EntryType.DEBIT);
-                ledgerRepository.save(entry);
+                LedgerEntry contraEntry = LedgerEntry.builder()
+                    .accountId(entry.getAccountId())
+                    .accountType(entry.getAccountType())
+                    .entryType(LedgerEntry.EntryType.DEBIT)
+                    .amount(entry.getAmount())
+                    .currency(entry.getCurrency())
+                    .reference(entry.getReference() + ":settled:" + batchIdStr)
+                    .paymentId(entry.getPaymentId())
+                    .merchantId(merchantId)
+                    .postedAt(Instant.now())
+                    .build();
+                ledgerRepository.save(contraEntry);
             }
         }
         

@@ -44,10 +44,10 @@ public class LedgerService {
         journal = journalRepository.save(journal);
 
         if (payment.getStatus() == Payment.PaymentStatus.CAPTURED) {
-            createEntry(journal, merchantId, AccountType.MERCHANT_RECEivable, dev.payment.paymentservice.entity.LedgerEntry.EntryType.CREDIT, amount, currency, paymentId, paymentId);
+            createEntry(journal, merchantId, AccountType.MERCHANT_RECEIVABLE, dev.payment.paymentservice.entity.LedgerEntry.EntryType.CREDIT, amount, currency, paymentId, paymentId);
             createEntry(journal, "SYSTEM", AccountType.CUSTOMER_ESCROW, EntryType.DEBIT, amount, currency, paymentId, paymentId);
             
-            createEntry(journal, merchantId, AccountType.MERCHANT_RECEivable, EntryType.DEBIT, netAmount, currency, paymentId, paymentId);
+            createEntry(journal, merchantId, AccountType.MERCHANT_RECEIVABLE, EntryType.DEBIT, netAmount, currency, paymentId, paymentId);
             createEntry(journal, merchantId + "_SETTLEMENT", AccountType.SETTLEMENT_HOLD, EntryType.CREDIT, netAmount, currency, paymentId, paymentId);
             
             if (platformFee.compareTo(BigDecimal.ZERO) > 0) {
@@ -83,7 +83,7 @@ public class LedgerService {
                 .build();
         journal = journalRepository.save(journal);
 
-        createEntry(journal, merchantId, AccountType.MERCHANT_RECEivable, EntryType.DEBIT, refundAmount, currency, paymentId, "REFUND");
+        createEntry(journal, merchantId, AccountType.MERCHANT_RECEIVABLE, EntryType.DEBIT, refundAmount, currency, paymentId, "REFUND");
         createEntry(journal, merchantId + "_SETTLEMENT", AccountType.SETTLEMENT_HOLD, EntryType.CREDIT, refundAmount, currency, paymentId, "REFUND");
         
         createEntry(journal, "SYSTEM", AccountType.CUSTOMER_ESCROW, EntryType.CREDIT, refundAmount, currency, paymentId, "REFUND");

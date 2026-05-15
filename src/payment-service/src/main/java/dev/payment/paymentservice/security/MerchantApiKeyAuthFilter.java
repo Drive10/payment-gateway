@@ -71,6 +71,8 @@ public class MerchantApiKeyAuthFilter extends OncePerRequestFilter {
     }
     
     private String extractMerchantId(String apiKey) {
-        return "merchant-" + Math.abs(apiKey.hashCode() % 10000);
+        int hash = apiKey.hashCode();
+        int positiveHash = hash & Integer.MAX_VALUE;
+        return "merchant-" + (positiveHash % 10000);
     }
 }

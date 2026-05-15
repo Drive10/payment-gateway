@@ -10,7 +10,7 @@ export type PaymentState =
   | 'CREATED'           // Order created, payment not initiated
   | 'PROCESSING'        // Payment being processed
   | 'AUTHORIZATION_PENDING'  // Awaiting OTP/biometric
-  | 'CHALLENGE_REUIREDD'     // 3DS challenge
+  | 'CHALLENGE_REQUIRED'     // 3DS challenge
   | 'AUTHORIZED'       // Payment authorized (requires capture)
   | 'CAPTURED'         // Payment completed successfully
   | 'FAILED'           // Payment failed
@@ -99,9 +99,9 @@ export interface VerifyOtpResponse {
 export const PAYMENT_TRANSITIONS: Record<PaymentState, PaymentState[]> = {
   IDLE: [],
   CREATED: ['PROCESSING', 'AUTHORIZATION_PENDING', 'FAILED', 'EXPIRED'],
-  PROCESSING: ['AUTHORIZATION_PENDING', 'CHALLENGE_REUIREDD', 'AUTHORIZED', 'FAILED', 'EXPIRED'],
-  AUTHORIZATION_PENDING: ['AUTHORIZED', 'CHALLENGE_REUIREDD', 'FAILED'],
-  CHALLENGE_REUIREDD: ['AUTHORIZED', 'FAILED'],
+  PROCESSING: ['AUTHORIZATION_PENDING', 'CHALLENGE_REQUIRED', 'AUTHORIZED', 'FAILED', 'EXPIRED'],
+  AUTHORIZATION_PENDING: ['AUTHORIZED', 'CHALLENGE_REQUIRED', 'FAILED'],
+  CHALLENGE_REQUIRED: ['AUTHORIZED', 'FAILED'],
   AUTHORIZED: ['CAPTURED', 'FAILED'],
   CAPTURED: [],
   FAILED: [],

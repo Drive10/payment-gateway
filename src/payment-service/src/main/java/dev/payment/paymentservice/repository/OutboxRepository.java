@@ -2,6 +2,7 @@ package dev.payment.paymentservice.repository;
 
 import dev.payment.paymentservice.entity.Outbox;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;
@@ -17,4 +18,11 @@ public interface OutboxRepository extends JpaRepository<Outbox, UUID> {
 
     @Query("SELECT o FROM Outbox o WHERE o.processedAt IS NULL AND o.deadLettered = false ORDER BY o.createdAt ASC")
     List<Outbox> findUnprocessedEvents();
+
+    @Query("SELECT o FROM Outbox o WHERE o.processedAt IS NOT NULL ORDER BY o.processedAt DESC")
+    List<Outbox> findProcessedEvents();
+
+    @Modifying
+    @Query("UPDATE Outbox o SET o.processedAt = CURRENT_TIMESTAMP WHERE o.id = :id AND o.processedAt IS NULL")
+    int claimEvent(UUID id);
 }

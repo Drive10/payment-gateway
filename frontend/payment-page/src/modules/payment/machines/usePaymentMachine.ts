@@ -151,8 +151,6 @@ export function usePaymentMachine() {
     setError(null);
     
     try {
-      setTransaction(tx => tx ? { ...tx, state: 'PROCESSING' } : null);
-      
       const response = await api.capturePayment(transaction.id);
       
       const updatedTx: PaymentTransaction = {
@@ -170,7 +168,23 @@ export function usePaymentMachine() {
       const message = err instanceof Error ? err.message : 'Failed to capture payment';
       setError(message);
       
-      // Mark as failed
+      // Check if backend actually succeeded by re-fetching status
+      try {
+        const status = await api.getPaymentStatus(transaction.id);
+        if (status.status === 'CAPTURED') {
+          const updatedTx: PaymentTransaction = {
+            ...transaction,
+            state: 'CAPTURED',
+            capturedAt: Date.now(),
+          };
+          setTransaction(updatedTx);
+          persistTransaction(updatedTx);
+          return updatedTx;
+        }
+      } catch {
+        // Re-fetch failed, mark as failed
+      }
+      
       setTransaction(tx => tx ? { 
         ...tx, 
         state: 'FAILED',
@@ -245,6 +259,7 @@ export function usePaymentMachine() {
       return;
     }
     
+    const paymentId = transaction.id;
     pollAbortRef.current = new AbortController();
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -253,23 +268,25 @@ export function usePaymentMachine() {
       }
       
       try {
-        const status = await api.getPaymentStatus(transaction.id);
+        const status = await api.getPaymentStatus(paymentId);
         
-        if (status.status !== transaction.state) {
-          const updatedTx: PaymentTransaction = {
-            ...transaction,
-            state: status.status,
-          };
-          
-          setTransaction(updatedTx);
-          persistTransaction(updatedTx);
-          
-          onStatusChange?.(status.status);
-          
-          // Stop polling on terminal state
-          if (isTerminalState(status.status)) {
-            break;
+        setTransaction(prev => {
+          if (!prev || prev.id !== paymentId) return prev;
+          if (status.status !== prev.state) {
+            const updatedTx: PaymentTransaction = {
+              ...prev,
+              state: status.status,
+            };
+            persistTransaction(updatedTx);
+            onStatusChange?.(status.status);
+            return updatedTx;
           }
+          return prev;
+        });
+        
+        // Stop polling on terminal state
+        if (isTerminalState(status.status)) {
+          break;
         }
       } catch {
         // Continue polling on error
@@ -277,7 +294,7 @@ export function usePaymentMachine() {
       
       await new Promise(r => setTimeout(r, interval));
     }
-  }, [transaction]);
+  }, [transaction?.id]);
 
   /**
    * Stop polling

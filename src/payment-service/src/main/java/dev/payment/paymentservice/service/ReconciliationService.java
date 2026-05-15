@@ -79,6 +79,11 @@ public class ReconciliationService {
         if (correctStatus == null) return;
         
         PaymentStatus fromStatus = payment.getStatus();
+        if (!correctStatus.isValidTransitionFrom(fromStatus)) {
+            log.warn("Cannot fix drift for payment {}: invalid transition {} -> {}", 
+                payment.getId(), fromStatus, correctStatus);
+            return;
+        }
         payment.setStatus(correctStatus);
         payment.setUpdatedAt(Instant.now());
         paymentRepository.save(payment);

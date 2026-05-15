@@ -12,8 +12,7 @@ const DEFAULT_MERCHANT_ID = import.meta.env.VITE_MERCHANT_ID ?? null;
 const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION === true;
 const MERCHANT_API_KEY =
   window.__ENV__?.MERCHANT_API_KEY ||
-  import.meta.env.VITE_MERCHANT_API_KEY ||
-  (IS_PRODUCTION ? "" : "sk_test_88573d07c94d45f58ead0e698918f420");
+  import.meta.env.VITE_MERCHANT_API_KEY || "";
 const DEFAULT_ERROR_MESSAGE =
   "Unable to reach the payment backend. Confirm the platform is running and try again.";
 const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
@@ -54,7 +53,8 @@ function persistCheckoutState(value) {
 }
 
 export function persistCardDetails(value) {
-  sessionStorage.setItem(STORAGE_KEY_CARD, JSON.stringify(value));
+  const safeValue = { last4: value.cardNumber?.slice(-4), cardholder: value.cardholder, scheme: detectCardBrand(value.cardNumber) };
+  sessionStorage.setItem(STORAGE_KEY_CARD, JSON.stringify(safeValue));
 }
 
 export function getStoredCardDetails() {

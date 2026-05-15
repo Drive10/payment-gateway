@@ -23,7 +23,7 @@ public class LedgerEntry {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "entry_id", nullable = false, unique = true)
+    @Column(name = "entry_id", nullable = false)
     private String entryId;
 
     @Column(name = "account_id", nullable = false)
@@ -67,14 +67,19 @@ public class LedgerEntry {
     @Column(name = "payment_id")
     private String paymentId;
 
-    @Column(name = "reference", unique = true)
+    @Column(name = "reference")
     private String reference;
 
     @Column(name = "refund_id")
     private String refundId;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
+
     public enum AccountType {
-        MERCHANT_RECEivable,
+        MERCHANT_RECEIVABLE,
         PLATFORM_RECEIVABLE,
         PAYMENT_GATEWAY,
         PLATFORM_FEE_RECEIVABLE,

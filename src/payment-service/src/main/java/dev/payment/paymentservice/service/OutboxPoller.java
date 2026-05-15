@@ -35,7 +35,10 @@ public class OutboxPoller {
         log.info("Processing {} outbox events", events.size());
 
         for (Outbox event : events) {
-            processEvent(event);
+            boolean claimed = outboxRepository.claimEvent(event.getId()) > 0;
+            if (claimed) {
+                processEvent(event);
+            }
         }
     }
 
@@ -91,7 +94,8 @@ public class OutboxPoller {
     public EventStatus getEventStatus() {
         List<Outbox> pending = outboxRepository.findUnprocessedEvents();
         List<Outbox> dlq = outboxRepository.findDeadLetteredEvents();
-        return new EventStatus(pending.size(), dlq.size(), dlq.size());
+        List<Outbox> processed = outboxRepository.findProcessedEvents();
+        return new EventStatus(pending.size(), dlq.size(), processed.size());
     }
 
     public void replayEvent(UUID eventId) {

@@ -8,8 +8,10 @@ import dev.payment.paymentservice.exception.PaymentException;
 import dev.payment.paymentservice.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,8 +32,9 @@ public class PaymentService {
     private final LedgerEntryRepository ledgerEntryRepository;
     private final WebhookInboxEventRepository webhookInboxEventRepository;
     private final StringRedisTemplate redisTemplate;
+    private final LedgerService ledgerService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     private static final String IDEMPOTENCY_PREFIX = "idempotency:";
     private static final String OPERATION_IDEMPOTENCY_PREFIX = "operation-idempotency:";
@@ -40,13 +43,16 @@ public class PaymentService {
     @Transactional
     public CreatePaymentResponse createPayment(String idempotencyKey, CreateOrderRequest request, String merchantId) {
         if (idempotencyKey != null && !idempotencyKey.isEmpty()) {
-            String cached = redisTemplate.opsForValue().get(IDEMPOTENCY_PREFIX + idempotencyKey);
-            if (cached != null) {
-                log.info("Duplicate request detected for idempotency key: {}. Returning cached response.", idempotencyKey);
-                try {
-                    return objectMapper.readValue(cached, CreatePaymentResponse.class);
-                } catch (JsonProcessingException e) {
-                    log.error("Error deserializing cached idempotency response: {}", e.getMessage());
+            Boolean wasSet = redisTemplate.opsForValue().setIfAbsent(IDEMPOTENCY_PREFIX + idempotencyKey, "IN_PROGRESS", IDEMPOTENCY_TTL);
+            if (Boolean.FALSE.equals(wasSet)) {
+                String cached = redisTemplate.opsForValue().get(IDEMPOTENCY_PREFIX + idempotencyKey);
+                if (cached != null && !"IN_PROGRESS".equals(cached)) {
+                    log.info("Duplicate request detected for idempotency key: {}. Returning cached response.", idempotencyKey);
+                    try {
+                        return objectMapper.readValue(cached, CreatePaymentResponse.class);
+                    } catch (JsonProcessingException e) {
+                        log.error("Error deserializing cached idempotency response: {}", e.getMessage());
+                    }
                 }
             }
         }
@@ -129,7 +135,7 @@ public class PaymentService {
             return cachedResponse;
         }
 
-        Payment payment = paymentRepository.findById(UUID.fromString(paymentId))
+        Payment payment = paymentRepository.findByIdWithLock(UUID.fromString(paymentId))
             .orElseThrow(() -> PaymentException.notFound("Payment not found: " + paymentId));
 
         if (payment.getStatus() != PaymentStatus.AUTHORIZED) {
@@ -146,7 +152,7 @@ public class PaymentService {
         payment.setCapturedAt(Instant.now());
         paymentRepository.save(payment);
         
-        writeCaptureLedgerEntries(payment);
+        ledgerService.createPaymentJournal(payment);
         Map<String, Object> payload = new java.util.HashMap<>();
         payload.put("paymentId", paymentId);
         if (idempotencyKey != null) payload.put("idempotencyKey", idempotencyKey);
@@ -169,6 +175,7 @@ public class PaymentService {
             outboxRepository.save(event);
         } catch (JsonProcessingException e) {
             log.error("Error serializing outbox payload: {}", e.getMessage());
+            throw new RuntimeException("Failed to serialize outbox event for " + aggregateId, e);
         }
     }
 
@@ -244,13 +251,14 @@ public class PaymentService {
             );
         }
 
+        PaymentStatus oldStatus = payment.getStatus();
         payment.setStatus(newStatus);
         paymentRepository.save(payment);
         
         saveEvent(paymentId, "PAYMENT_STATUS_UPDATED", Map.of(
             "paymentId", paymentId,
-            "oldStatus", payment.getStatus(),
-            "newStatus", newStatus
+            "oldStatus", oldStatus.name(),
+            "newStatus", newStatus.name()
         ));
         
         log.info("Payment {} transitioned to {}", paymentId, newStatus);
@@ -258,7 +266,7 @@ public class PaymentService {
 
     @Transactional
     public void verifyOtp(String paymentId, String otp) {
-        Payment payment = paymentRepository.findById(UUID.fromString(paymentId))
+        Payment payment = paymentRepository.findByIdWithLock(UUID.fromString(paymentId))
             .orElseThrow(() -> PaymentException.notFound("Payment not found: " + paymentId));
 
         if (payment.getStatus() != PaymentStatus.CHALLENGE_REQUIRED && 
@@ -266,11 +274,14 @@ public class PaymentService {
             throw PaymentException.badRequest("Payment is not in CHALLENGE_REQUIRED or AUTHORIZATION_PENDING state");
         }
 
-        if ("123456".equals(otp)) {
-            payment.setStatus(PaymentStatus.CAPTURED);
+        String configuredOtp = redisTemplate.opsForValue().get("otp:" + paymentId);
+        boolean validOtp = configuredOtp != null ? configuredOtp.equals(otp) : "123456".equals(otp);
+
+        if (validOtp) {
+            payment.setStatus(PaymentStatus.AUTHORIZED);
             paymentRepository.save(payment);
             saveEvent(paymentId, "PAYMENT_AUTHORIZED", Map.of("paymentId", paymentId));
-            log.info("Payment {} verified successfully", paymentId);
+            log.info("Payment {} authorized successfully via OTP", paymentId);
         } else {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason("Invalid OTP");
@@ -281,6 +292,8 @@ public class PaymentService {
 
     @Transactional
     public void processProviderWebhook(String webhookId, String eventType, String paymentId, String payload) {
+        Payment payment = paymentRepository.findByIdWithLock(UUID.fromString(paymentId))
+            .orElseThrow(() -> PaymentException.notFound("Payment not found: " + paymentId));
         if (webhookInboxEventRepository.existsByWebhookId(webhookId)) {
             log.info("Duplicate webhook received: {}", webhookId);
             return;
@@ -295,9 +308,6 @@ public class PaymentService {
             .build();
         webhookInboxEventRepository.save(event);
 
-        Payment payment = paymentRepository.findById(UUID.fromString(paymentId))
-            .orElseThrow(() -> PaymentException.notFound("Payment not found: " + paymentId));
-
         switch (eventType) {
             case "payment.authorized" -> {
                 if (payment.getStatus() == PaymentStatus.AUTHORIZATION_PENDING || payment.getStatus() == PaymentStatus.CHALLENGE_REQUIRED) {
@@ -309,8 +319,9 @@ public class PaymentService {
             case "payment.captured" -> {
                 if (payment.getStatus() == PaymentStatus.AUTHORIZED) {
                     payment.setStatus(PaymentStatus.CAPTURED);
+                    payment.setCapturedAt(Instant.now());
                     paymentRepository.save(payment);
-                    writeCaptureLedgerEntries(payment);
+                    ledgerService.createPaymentJournal(payment);
                     saveEvent(paymentId, "PAYMENT_CAPTURED", Map.of("paymentId", paymentId, "source", "webhook"));
                 }
             }
@@ -328,50 +339,6 @@ public class PaymentService {
         event.setProcessed(true);
         event.setProcessedAt(Instant.now());
         webhookInboxEventRepository.save(event);
-    }
-
-    private void writeCaptureLedgerEntries(Payment payment) {
-        String paymentId = payment.getId().toString();
-        String merchantId = payment.getMerchantId();
-        BigDecimal platformFee = payment.getPlatformFee() != null ? payment.getPlatformFee() : BigDecimal.ZERO;
-        BigDecimal gatewayFee = payment.getGatewayFee() != null ? payment.getGatewayFee() : BigDecimal.ZERO;
-        BigDecimal amount = payment.getAmount();
-        BigDecimal merchantNet = amount.subtract(platformFee).subtract(gatewayFee);
-
-        persistLedgerEntry(paymentId, null, "CUSTOMER_DEBIT", amount, payment.getCurrency(), paymentId + ":customer_debit",
-            merchantId + "_CUSTOMER", LedgerEntry.AccountType.CUSTOMER_ESCROW);
-        if (platformFee.compareTo(BigDecimal.ZERO) > 0) {
-            persistLedgerEntry(paymentId, null, "PLATFORM_FEE", platformFee, payment.getCurrency(), paymentId + ":platform_fee",
-                "PLATFORM", LedgerEntry.AccountType.PLATFORM_FEE_RECEIVABLE);
-        }
-        if (gatewayFee.compareTo(BigDecimal.ZERO) > 0) {
-            persistLedgerEntry(paymentId, null, "GATEWAY_FEE", gatewayFee, payment.getCurrency(), paymentId + ":gateway_fee",
-                "GATEWAY", LedgerEntry.AccountType.PAYMENT_GATEWAY);
-        }
-        persistLedgerEntry(paymentId, null, "MERCHANT_CREDIT", merchantNet, payment.getCurrency(), paymentId + ":merchant_credit",
-            merchantId, LedgerEntry.AccountType.MERCHANT_RECEivable);
-    }
-
-    private synchronized void persistLedgerEntry(String paymentId, String refundId, String entryTypeStr, BigDecimal amount, String currency, String reference,
-                                     String accountId, LedgerEntry.AccountType accountType) {
-        if (ledgerEntryRepository.existsByReference(reference)) {
-            return;
-        }
-
-        LedgerEntry.EntryType entryType = "CUSTOMER_DEBIT".equals(entryTypeStr) || "REFUND_DEBIT_CUSTOMER".equals(entryTypeStr)
-            ? LedgerEntry.EntryType.DEBIT : LedgerEntry.EntryType.CREDIT;
-        
-        LedgerEntry entry = LedgerEntry.builder()
-            .accountId(accountId)
-            .accountType(accountType)
-            .entryType(entryType)
-            .amount(amount)
-            .currency(currency)
-            .reference(reference)
-            .paymentId(paymentId)
-            .refundId(refundId)
-            .build();
-        ledgerEntryRepository.save(entry);
     }
 
     private CreatePaymentResponse getOperationCachedResponse(String paymentId, String operation, String idempotencyKey) {

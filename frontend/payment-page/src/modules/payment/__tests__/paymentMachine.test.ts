@@ -28,8 +28,8 @@ describe('Payment State Machine', () => {
       expect(canTransitionTo('AUTHORIZATION_PENDING', 'AUTHORIZED')).toBe(true);
     });
     
-    it('allows AUTHORIZATION_PENDING to CHALLENGE_REUIREDD', () => {
-      expect(canTransitionTo('AUTHORIZATION_PENDING', 'CHALLENGE_REUIREDD')).toBe(true);
+    it('allows AUTHORIZATION_PENDING to CHALLENGE_REQUIRED', () => {
+      expect(canTransitionTo('AUTHORIZATION_PENDING', 'CHALLENGE_REQUIRED')).toBe(true);
     });
     
     it('allows AUTHORIZED to CAPTURED', () => {

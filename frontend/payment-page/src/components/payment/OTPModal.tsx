@@ -28,6 +28,7 @@ export function OTPModal({ isOpen, onClose, onVerify, onResendOtp, onCancel }: O
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen) return;
     if (countdown > 0) {
       const timer = setInterval(() => setCountdown(c => c - 1), 1000);
       return () => clearInterval(timer);

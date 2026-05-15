@@ -21,13 +21,8 @@ const IS_PRODUCTION = window.__ENV__?.IS_PRODUCTION === true;
 
 // API Key for merchant
 const getApiKey = (): string => {
-  if (IS_PRODUCTION) {
-    return window.__ENV__?.MERCHANT_API_KEY || '';
-  }
-  // Test key from env or fallback
   return window.__ENV__?.MERCHANT_API_KEY 
-    || import.meta.env.VITE_MERCHANT_API_KEY 
-    || 'sk_test_88573d07c94d45f58ead0e698918f420';
+    || import.meta.env.VITE_MERCHANT_API_KEY || '';
 };
 
 /**
@@ -88,6 +83,9 @@ async function apiRequest<T>(
       return data as T;
     } catch (error) {
       lastError = error as Error;
+      
+      // Clear timeout to prevent resource leak
+      if (timeoutId) clearTimeout(timeoutId);
       
       // Don't retry on client errors (4xx)
       if (error && typeof error === 'object' && 'status' in error) {

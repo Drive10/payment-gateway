@@ -83,10 +83,10 @@ export default function Processing() {
                         ...(checkout.token ? { Authorization: `Bearer ${checkout.token}` } : {}),
                       },
                       body: JSON.stringify({
-                        cardNumber: cardDetails.cardNumber,
+                        last4: cardDetails.cardNumber?.slice(-4),
                         expiry: cardDetails.expiry,
-                        cvv: cardDetails.cvv,
                         cardholder: cardDetails.cardholder,
+                        token: 'sim_token_' + checkout.payment.id,
                       }),
                     }
                   );
@@ -297,8 +297,7 @@ const processData = await processResponse.json();
     setTimeout(() => {
       navigate("/failure", {
         replace: true,
-        transaction: checkout,
-        error: "Payment timeout",
+        state: { transaction: checkout, error: "Payment timeout" },
       });
     }, 3000);
   };
@@ -332,16 +331,35 @@ const processData = await processResponse.json();
 
     // Test mode: accept any 6-digit or 123456
     if (!IS_PRODUCTION && (otp === "123456" || otp.length === 6)) {
-      const transaction = buildTransaction("CAPTURED");
-      updateStoredTransaction({ status: "CAPTURED", ...transaction });
-      setStatus("CAPTURED");
-      setProgressMessage("Payment completed (test mode)");
-      setShowOtpModal(false);
-      navigate("/success", {
-        replace: true,
-        state: { transaction: buildTransaction("CAPTURED") },
-      });
-      return;
+      // Call backend to verify before marking success
+      try {
+        const response = await fetch(
+          `${API_ROOT}/payments/${checkout.payment.id}/verify-otp`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${checkout.token}`,
+            },
+            body: JSON.stringify({ otp }),
+          }
+        );
+        const data = await response.json();
+        if (data.success) {
+          const transaction = buildTransaction("CAPTURED");
+          updateStoredTransaction({ status: "CAPTURED", ...transaction });
+          setStatus("CAPTURED");
+          setProgressMessage("Payment completed (test mode)");
+          setShowOtpModal(false);
+          navigate("/success", {
+            replace: true,
+            state: { transaction: buildTransaction("CAPTURED") },
+          });
+          return;
+        }
+      } catch (err) {
+        // Fall through to verify-otp API call
+      }
     }
 
     setOtpError("");
@@ -373,7 +391,7 @@ const processData = await processResponse.json();
       // After OTP verify, poll backend for final status
       pollBackendForStatus();
     } catch (err) {
-      setOtpError("Verification failed. Try 123456");
+      setOtpError("Verification failed. Please try again.");
       setShowOtpModal(true);
       setStatus("pending_otp");
     }
@@ -451,14 +469,27 @@ const processData = await processResponse.json();
               }
             );
             const data = await response.json();
-            if (data.success && data.data?.status === "CAPTURED") {
-              navigate("/success", {
-                replace: true,
-                state: { transaction: buildTransaction("CAPTURED") },
-              });
-            } else {
-              pollBackendForStatus();
+            if (data.success && data.data?.status === "AUTHORIZED") {
+              const captureResponse = await fetch(
+                `${API_ROOT}/payments/${checkout.payment.id}/capture`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${checkout.token}`,
+                  },
+                }
+              );
+              const captureData = await captureResponse.json();
+              if (captureData.success && captureData.data?.status === "CAPTURED") {
+                navigate("/success", {
+                  replace: true,
+                  state: { transaction: buildTransaction("CAPTURED") },
+                });
+                return;
+              }
             }
+            pollBackendForStatus();
           } catch {
             pollBackendForStatus();
           }

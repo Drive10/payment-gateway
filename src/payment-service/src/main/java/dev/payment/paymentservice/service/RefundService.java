@@ -51,13 +51,26 @@ public class RefundService {
         Payment payment = paymentRepository.findById(UUID.fromString(request.getPaymentId()))
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
 
-        if (payment.getStatus() != Payment.PaymentStatus.CAPTURED && payment.getStatus() != Payment.PaymentStatus.REFUNDED) {
+        if (payment.getStatus() != Payment.PaymentStatus.CAPTURED) {
             throw PaymentException.badRequest("Only captured payments can be refunded");
         }
 
         java.math.BigDecimal refundAmount = request.getAmount();
+        java.math.BigDecimal alreadyRefunded = payment.getRefundAmount() != null ? payment.getRefundAmount() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal remainingBalance = payment.getAmount().subtract(alreadyRefunded);
+
         if (refundAmount == null) {
-            refundAmount = payment.getAmount();
+            refundAmount = remainingBalance;
+        }
+
+        if (refundAmount.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw PaymentException.badRequest("Refund amount must be positive");
+        }
+
+        if (refundAmount.compareTo(remainingBalance) > 0) {
+            throw PaymentException.badRequest(
+                "Refund amount " + refundAmount + " exceeds remaining balance " + remainingBalance
+            );
         }
 
         Refund refund = Refund.builder()
@@ -79,7 +92,7 @@ public class RefundService {
         paymentRepository.save(payment);
 
         persistLedgerEntry(payment.getId().toString(), refund.getId().toString(), "REFUND_DEBIT_MERCHANT", refundAmount, payment.getCurrency(),
-                payment.getId() + ":refund_debit:" + refund.getId(), payment.getMerchantId(), LedgerEntry.AccountType.MERCHANT_RECEivable);
+                payment.getId() + ":refund_debit:" + refund.getId(), payment.getMerchantId(), LedgerEntry.AccountType.MERCHANT_RECEIVABLE);
         persistLedgerEntry(payment.getId().toString(), refund.getId().toString(), "REFUND_CREDIT_CUSTOMER", refundAmount, payment.getCurrency(),
                 payment.getId() + ":refund_credit:" + refund.getId(), payment.getMerchantId() + "_CUSTOMER", LedgerEntry.AccountType.CUSTOMER_ESCROW);
 
@@ -124,7 +137,7 @@ public class RefundService {
                 .build();
     }
 
-    public Optional<Refund> getRefundsByPaymentId(String paymentId) {
+    public List<Refund> getRefundsByPaymentId(String paymentId) {
         return refundRepository.findByPaymentId(paymentId);
     }
 

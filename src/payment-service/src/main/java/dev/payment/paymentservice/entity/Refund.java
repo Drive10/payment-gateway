@@ -20,6 +20,11 @@ public class Refund {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
+
     @Column(name = "payment_id", nullable = false)
     private String paymentId;
 

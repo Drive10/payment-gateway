@@ -126,9 +126,12 @@ export default function Checkout() {
       } else {
         setSubmitError("Invalid or expired payment link");
       }
-} catch (err) {
-        setLoadingLink(false);
-      }
+    } catch (err) {
+      setSubmitError("Could not load payment link");
+    } finally {
+      setLoadingLink(false);
+      setPaymentLinkChecked(true);
+    }
   };
 
   if (loadingLink) {
@@ -161,7 +164,7 @@ export default function Checkout() {
   };
 
   const sanitizeInput = (value: string) => {
-    return value.replace(/[<>'";&]/g, "");
+    return value.replace(/[<>"]/g, "");
   };
 
   const handlePay = async () => {

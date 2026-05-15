@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = window.__ENV__?.API_BASE_URL || 'http://localhost:3001';
 const API_ROOT = API_BASE_URL.endsWith('/api/v1') ? API_BASE_URL : `${API_BASE_URL}/api/v1`;
 
 export default function ThreeDsChallenge() {
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
 
-  const transactionId = searchParams.get('transactionId');
-  const challengeUrl = searchParams.get('challengeUrl');
+  const transactionId = location.state?.transactionId;
+  const challengeUrl = location.state?.challengeUrl;
 
   useEffect(() => {
     if (!transactionId || !challengeUrl) {
@@ -38,7 +38,7 @@ export default function ThreeDsChallenge() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ authenticationStatus })
+          body: JSON.stringify({ status: authenticationStatus })
         }
       );
 

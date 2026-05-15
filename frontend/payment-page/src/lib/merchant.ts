@@ -34,7 +34,7 @@ export const merchantApi = {
     refund: (paymentId: string, amount?: number, reason?: string) =>
       request("/payments/refund", {
         method: "POST",
-        body: JSON.stringify({ paymentId, amount, reason, idempotencyKey: crypto.randomUUID() }),
+        body: JSON.stringify({ paymentId, amount, reason }),
       }),
     status: (id: string) => request(`/payments/${id}/status`),
   },
