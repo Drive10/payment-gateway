@@ -28,7 +28,7 @@
         <spring-boot.version>3.4.13</spring-boot.version>
         <spring-cloud.version>2024.0.3</spring-cloud.version>
         <lombok.version>1.18.46</lombok.version>
-        <flyway.version>10.22.0</flyway.version>
+        <flyway.version>12.9.0</flyway.version>
     </properties>
 
 <dependencyManagement>
