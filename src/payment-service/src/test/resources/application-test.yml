@@ -1,0 +1,42 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: payment_schema
+  flyway:
+    locations: classpath:db/migration
+    schemas: payment_schema
+    baseline-on-migrate: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration, org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration, org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration, org.springframework.boot.testcontainers.service.connection.ServiceConnectionAutoConfiguration
+
+app:
+  auth-service:
+    url: http://localhost:8082
+  simulator:
+    url: http://localhost:8086
+  notification:
+    url: http://localhost:8085
+  webhook:
+    secret: test-webhook-secret
+  internal-auth:
+    secret: test-internal-secret
+  merchant:
+    api-keys: test-key-1,test-key-2
+
+payment:
+  supported-currencies:
+    - INR
+    - USD
+    - EUR
+    - GBP

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, develop]
 
+env:
+  JAVA_VERSION: '21'
+  NODE_VERSION: '22'
+
 jobs:
   sonarcloud:
     name: SonarCloud
@@ -15,10 +19,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 21
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
           cache: 'maven'
 
@@ -42,21 +46,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: frontend/payment-page/package-lock.json
 
-      - name: Install frontend dependencies
-        run: cd frontend/payment-page && npm ci
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend/payment-page
 
       - name: Run ESLint
-        run: cd frontend/payment-page && npm run lint
+        run: npm run lint
+        working-directory: frontend/payment-page
 
       - name: Run Tests
-        run: cd frontend/payment-page && npm run test -- --coverage
+        run: npm test -- --run --coverage
+        working-directory: frontend/payment-page
 
       - name: SonarCloud Frontend Scan
         uses: SonarSource/sonarcloud-github-action@master

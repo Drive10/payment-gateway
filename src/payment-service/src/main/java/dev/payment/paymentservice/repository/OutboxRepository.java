@@ -22,7 +22,7 @@ public interface OutboxRepository extends JpaRepository<Outbox, UUID> {
     @Query("SELECT o FROM Outbox o WHERE o.processedAt IS NOT NULL ORDER BY o.processedAt DESC")
     List<Outbox> findProcessedEvents();
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Outbox o SET o.processedAt = CURRENT_TIMESTAMP WHERE o.id = :id AND o.processedAt IS NULL")
     int claimEvent(UUID id);
 }

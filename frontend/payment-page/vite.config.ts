@@ -48,16 +48,23 @@ proxy: {
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            "vendor-react": ["react", "react-dom", "react-router-dom"],
-            "vendor-motion": ["framer-motion"],
-            "vendor-forms": ["react-hook-form", "@hookform/resolvers", "zod"],
-            "vendor-axios": ["axios"],
+          manualChunks(id: string) {
+            if (id.includes("node_modules/react") || id.includes("node_modules/react-dom") || id.includes("node_modules/react-router-dom")) {
+              return "vendor-react";
+            }
+            if (id.includes("node_modules/framer-motion")) {
+              return "vendor-motion";
+            }
+            if (id.includes("node_modules/react-hook-form") || id.includes("node_modules/@hookform") || id.includes("node_modules/zod")) {
+              return "vendor-forms";
+            }
+            if (id.includes("node_modules/axios")) {
+              return "vendor-axios";
+            }
           },
         },
       },
       chunkSizeWarningLimit: 500,
-      minify: "esbuild",
       target: "esnext",
     },
     optimizeDeps: {

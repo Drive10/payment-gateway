@@ -53,10 +53,9 @@ async function apiRequest<T>(
   const token = await getAuthToken();
   
   for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-      
       const response = await fetch(`${API_ROOT}${endpoint}`, {
         ...fetchOptions,
         signal: controller.signal,
@@ -84,8 +83,7 @@ async function apiRequest<T>(
     } catch (error) {
       lastError = error as Error;
       
-      // Clear timeout to prevent resource leak
-      if (timeoutId) clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
       
       // Don't retry on client errors (4xx)
       if (error && typeof error === 'object' && 'status' in error) {

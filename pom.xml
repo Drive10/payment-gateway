@@ -25,9 +25,10 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot.version>3.2.5</spring-boot.version>
-        <spring-cloud.version>2023.0.1</spring-cloud.version>
-        <flyway.version>9.22.3</flyway.version>
+        <spring-boot.version>3.4.13</spring-boot.version>
+        <spring-cloud.version>2024.0.3</spring-cloud.version>
+        <lombok.version>1.18.46</lombok.version>
+        <flyway.version>10.22.0</flyway.version>
     </properties>
 
 <dependencyManagement>
@@ -51,6 +52,12 @@
             <artifactId>flyway-core</artifactId>
             <version>${flyway.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <version>${flyway.version}</version>
+        </dependency>
+
     </dependencies>
 </dependencyManagement>
 
@@ -61,7 +68,15 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
+                        <release>21</release>
                         <parameters>true</parameters>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
                     </configuration>
                 </plugin>
                 <plugin>

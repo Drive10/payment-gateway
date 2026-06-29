@@ -1,10 +1,10 @@
 <div align="center">
-  <img src="https://img.shields.io/badge/Java-21-%23ED8B00?logo=openjdk" alt="Java 21"/>
-  <img src="https://img.shields.io/badge/Spring_Boot-3.2.5-%236DB33F?logo=springboot" alt="Spring Boot 3.2"/>
-  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript" alt="TypeScript"/>
-  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" alt="React 18"/>
+  <img src="https://img.shields.io/badge/Java-25-%23ED8B00?logo=openjdk" alt="Java 25"/>
+  <img src="https://img.shields.io/badge/Spring_Boot-3.4.13-%236DB33F?logo=springboot" alt="Spring Boot 3.4"/>
+  <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript" alt="TypeScript 6"/>
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react" alt="React 19"/>
   <img src="https://img.shields.io/badge/Apache_Kafka-231F20?logo=apachekafka" alt="Kafka"/>
-  <img src="https://img.shields.io/badge/PostgreSQL-14-4169E1?logo=postgresql" alt="PostgreSQL 14"/>
+  <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql" alt="PostgreSQL 16"/>
   <img src="https://img.shields.io/badge/Redis-7-DC382D?logo=redis" alt="Redis 7"/>
   <img src="https://img.shields.io/badge/Docker_Compose-2496ED?logo=docker" alt="Docker Compose"/>
   <br/>

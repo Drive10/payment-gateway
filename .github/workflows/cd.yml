@@ -13,7 +13,7 @@ on:
       services:
         description: 'Services to deploy (comma-separated)'
         required: false
-        default: 'api-gateway,auth-service,order-service,payment-service,notification-service'
+        default: 'api-gateway,auth-service,payment-service,notification-service,analytics-service,audit-service,simulator-service'
 
 env:
   JAVA_VERSION: '21'
